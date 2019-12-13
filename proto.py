@@ -19,8 +19,12 @@ from torch.optim.lr_scheduler import StepLR
 
 
 params = {}
-path_root = "/work/alex/data/DL_outs/NLP/embed_ptoto1"
-params["path_results"] = os.path.join(path_root, f"{get_time_str()}_{platform.node()}")
+hostname = platform.node()
+if hostname.endswith("titech.ac.jp"):
+    path_results_base = "/work/alex/data/DL_outs/NLP/embed_ptoto1"
+else:
+    path_results_base = "./out"
+params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}")
 os.makedirs(params["path_results"], exist_ok=True)
 
 path_corpus = "../corpus/brown.txt"
