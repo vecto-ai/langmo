@@ -28,7 +28,7 @@ params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hos
 os.makedirs(params["path_results"], exist_ok=True)
 
 path_corpus = "./corpus/brown.txt"
-
+print("creating vocab")
 vocab = vecto.vocabulary.create_from_file(path_corpus)
 corpus_ids = vecto.corpus.load_file_as_ids(path_corpus, vocab)
 corpus_ids = corpus_ids.astype(np.int64)
@@ -95,7 +95,9 @@ def train_sequence():
     return float(loss.data)
 
 
+print("creating 0th snapshot")
 make_snapshot()
+print("training")
 time_start_training = timer()
 
 for id_epoch in range(cnt_epochs):
