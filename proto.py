@@ -27,7 +27,7 @@ else:
 params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}")
 os.makedirs(params["path_results"], exist_ok=True)
 
-path_corpus = "../corpus/brown.txt"
+path_corpus = "./corpus/brown.txt"
 
 vocab = vecto.vocabulary.create_from_file(path_corpus)
 corpus_ids = vecto.corpus.load_file_as_ids(path_corpus, vocab)
@@ -36,9 +36,9 @@ corpus_ids.shape
 print(len(corpus_ids), max(corpus_ids))
 
 corpus_ids = torch.tensor(corpus_ids)
-corpus_ids = corpus_ids.to("cuda")
+#corpus_ids = corpus_ids.to("cuda")
 net = Net(vocab.cnt_words)
-net.to("cuda")
+#net.to("cuda")
 
 # optimizer = optim.SGD(net.parameters(), 0.01)
 optimizer = optim.Adam(net.parameters(), 0.01)
