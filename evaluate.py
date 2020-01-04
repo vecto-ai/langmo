@@ -4,6 +4,9 @@ from vecto.benchmarks.analogy import Analogy
 from vecto.data import get_dataset_by_name
 
 
+# TODO: take this from config or command line args
+# TODO: and dataset name or path
+
 path_emb = "/home/blackbird/Cloud/remote/berlin/data/NLP/embeddings/test/w2v_ref/brown_thrd24__SG_d128_w3_neg4_i10"
 
 
