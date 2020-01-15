@@ -31,7 +31,7 @@ path_corpus = "./corpus/brown.txt"
 print("creating vocab")
 vocab = vecto.vocabulary.create_from_file(path_corpus)
 corpus_ids = vecto.corpus.load_file_as_ids(path_corpus, vocab)
-corpus_ids = corpus_ids.astype(np.int64)
+corpus_ids = corpus_ids.astype(np.int64)[:6048]
 corpus_ids.shape
 print(len(corpus_ids), max(corpus_ids))
 
@@ -68,16 +68,26 @@ def make_snapshot():
     embeddings.save_to_dir(os.path.join(params["path_results"], name_snapshot))
 
 
-def train_sequence():
+def train_epoch():
     global pos_corpus
-    global cnt_corpus_passes
-    optimizer.zero_grad()
+    # global cnt_corpus_passes
+    pos_corpus = 0
+    losses_epoch = []
+    # for id_batch in range(cnt_batches_per_epoch):
+    # TODO: iterate oven number of batches with non-sequential sampling
     if pos_corpus > corpus_ids.shape[0] - len_sequence - offset_negative - offset_negative_max_random_add:
-        print("reseting corpus pointer to start")
-        pos_corpus = 0
-        cnt_corpus_passes += 1
-        make_snapshot()
-        scheduler.step()
+        RuntimeError("training corpus too short")
+    while pos_corpus < corpus_ids.shape[0] - len_sequence - offset_negative - offset_negative_max_random_add:
+        losses_epoch.append(train_batch())
+    # cnt_corpus_passes += 1
+    make_snapshot()
+    scheduler.step()
+    return np.mean(losses_epoch)
+
+
+def train_batch():
+    global pos_corpus
+    optimizer.zero_grad()
     for _ in range(len_sequence):
         # TODO: sample sequences from different parts of the corpus
         batch = corpus_ids[pos_corpus:pos_corpus + batch_size]
@@ -102,10 +112,7 @@ time_start_training = timer()
 
 for id_epoch in range(cnt_epochs):
     time_start = timer()
-    loss_epoch = 0
-    for id_batch in range(cnt_batches_per_epoch):
-        loss_epoch += train_sequence()
-    loss_epoch /= cnt_batches_per_epoch
+    loss_epoch = train_epoch()
     loss_history.append(loss_epoch)
     time_end = timer()
     print(cnt_corpus_passes,
