@@ -36,9 +36,10 @@ corpus_ids.shape
 print(len(corpus_ids), max(corpus_ids))
 
 corpus_ids = torch.tensor(corpus_ids)
-#corpus_ids = corpus_ids.to("cuda")
 net = Net(vocab.cnt_words)
-#net.to("cuda")
+if torch.cuda.is_available():
+    corpus_ids = corpus_ids.to("cuda")
+    net.to("cuda")
 
 # optimizer = optim.SGD(net.parameters(), 0.01)
 optimizer = optim.Adam(net.parameters(), 0.01)
@@ -50,13 +51,15 @@ pos_corpus = 0
 cnt_corpus_passes = 0
 batch_size = 4
 len_sequence = 12
-cnt_batches_per_epoch = 256
+# cnt_batches_per_epoch = 256
 cnt_epochs = 4000
 offset_negative = 2000
 offset_negative_max_random_add = 100
 
 
 def make_snapshot():
+    # TODO: save model for resume training
+    # TODO: save training stats
     embeddings = WordEmbeddingsDense()
     embeddings.vocabulary = vocab
     embeddings.metadata["vocabulary"] = vocab.metadata
@@ -65,7 +68,7 @@ def make_snapshot():
     embeddings.metadata.update(params)
     embeddings.matrix = net.embed.weight.data.cpu().numpy()
     name_snapshot = f"snap_ep_{cnt_corpus_passes}"
-    embeddings.save_to_dir(os.path.join(params["path_results"], name_snapshot))
+    embeddings.save_to_dir(os.path.join(params["path_results"], name_snapshot, "embs"))
 
 
 def train_epoch():
