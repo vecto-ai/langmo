@@ -31,23 +31,27 @@ path_corpus = "./corpus/brown.txt"
 print("creating vocab")
 vocab = vecto.vocabulary.create_from_file(path_corpus)
 corpus_ids = vecto.corpus.load_file_as_ids(path_corpus, vocab)
-corpus_ids = corpus_ids.astype(np.int64)[:6048]
+corpus_ids = corpus_ids.astype(np.int64)[:5048]
 corpus_ids.shape
 print(len(corpus_ids), max(corpus_ids))
 
 corpus_ids = torch.tensor(corpus_ids)
-net = Net(vocab.cnt_words)
-if torch.cuda.is_available():
-    corpus_ids = corpus_ids.to("cuda")
-    net.to("cuda")
 
-# optimizer = optim.SGD(net.parameters(), 0.01)
-optimizer = optim.Adam(net.parameters(), 0.01)
-scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+def init_model():
+    global net, optimizer, scheduler
+    net = Net(vocab.cnt_words)
+    if torch.cuda.is_available():
+        corpus_ids = corpus_ids.to("cuda")
+        net.to("cuda")
+    # optimizer = optim.SGD(net.parameters(), 0.01)
+    optimizer = optim.Adam(net.parameters(), 0.01)
+    scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
 
+
+
+id_epoch = 0
 loss_history = []
 pos_corpus = 0
-id_epoch = 0
 batch_size = 4
 len_sequence = 12
 # cnt_batches_per_epoch = 256
@@ -56,7 +60,7 @@ offset_negative = 2000
 offset_negative_max_random_add = 100
 
 
-def make_snapshot():
+def make_snapshot(id_epoch):
     print(f"creating ep {id_epoch} snapshot")
     # TODO: save model for resume training
     # TODO: save training stats
@@ -104,7 +108,7 @@ def train_batch():
         predicted = net(batch)
         pos_corpus += 1
     targets_positive = corpus_ids[pos_corpus: pos_corpus + batch_size]
-    loss_positive = F.cosine_similarity(predicted,  net.embed(targets_positive)).sum()
+    loss_positive = F.cosine_similarity(predicted, net.embed(targets_positive)).sum()
     pos_start_negative = pos_corpus + offset_negative + random.randint(0, offset_negative_max_random_add)
     targets_negative = corpus_ids[pos_start_negative: pos_start_negative + batch_size]
     loss_negative = - F.cosine_similarity(predicted, net.embed(targets_negative)).sum()
@@ -114,8 +118,8 @@ def train_batch():
     optimizer.step()
     return float(loss.data)
 
-
-make_snapshot()
+init_model()
+make_snapshot(id_epoch)
 print("training")
 time_start_training = timer()
 
@@ -124,9 +128,7 @@ for id_epoch in range(cnt_epochs):
     loss_epoch = train_epoch()
     loss_history.append(loss_epoch)
     time_end = timer()
-    print(cnt_corpus_passes,
-          id_epoch,
-          pos_corpus,
+    print(id_epoch,
           f"loss: {loss_history[-1]:.4f}",
           f"lr: {optimizer.param_groups[0]['lr']:.5f}",
           f"time ep: {time_end - time_start:.3f}s",
