@@ -2,7 +2,6 @@ import os
 import random
 import datetime
 import vecto.corpus
-import vecto.vocabulary
 import vecto.embeddings.dense
 from vecto.embeddings.dense import WordEmbeddingsDense
 import vecto.benchmarks
@@ -16,6 +15,7 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
+from data import load_corpus
 
 
 params = {}
@@ -27,26 +27,15 @@ else:
 params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}")
 os.makedirs(params["path_results"], exist_ok=True)
 
-path_corpus = "./corpus/brown.txt"
-print("creating vocab")
-vocab = vecto.vocabulary.create_from_file(path_corpus)
-corpus_ids = vecto.corpus.load_file_as_ids(path_corpus, vocab)
-corpus_ids = corpus_ids.astype(np.int64)[:5048]
-corpus_ids.shape
-print(len(corpus_ids), max(corpus_ids))
 
-corpus_ids = torch.tensor(corpus_ids)
-
-def init_model():
+def init_model(cnt_words):
     global net, optimizer, scheduler
-    net = Net(vocab.cnt_words)
+    net = Net(cnt_words)
     if torch.cuda.is_available():
-        corpus_ids = corpus_ids.to("cuda")
         net.to("cuda")
     # optimizer = optim.SGD(net.parameters(), 0.01)
     optimizer = optim.Adam(net.parameters(), 0.01)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
-
 
 
 id_epoch = 0
@@ -60,7 +49,7 @@ offset_negative = 2000
 offset_negative_max_random_add = 100
 
 
-def make_snapshot(id_epoch):
+def make_snapshot(id_epoch, vocab):
     print(f"creating ep {id_epoch} snapshot")
     # TODO: save model for resume training
     # TODO: save training stats
@@ -81,7 +70,7 @@ def make_snapshot(id_epoch):
                 os.path.join(params["path_results"], name_snapshot, "model"))
 
 
-def train_epoch():
+def train_epoch(corpus_ids, vocab):
     global pos_corpus
     global id_epoch
     # global cnt_corpus_passes
@@ -92,14 +81,14 @@ def train_epoch():
     if pos_corpus > corpus_ids.shape[0] - len_sequence - offset_negative - offset_negative_max_random_add:
         RuntimeError("training corpus too short")
     while pos_corpus < corpus_ids.shape[0] - len_sequence - offset_negative - offset_negative_max_random_add:
-        losses_epoch.append(train_batch())
+        losses_epoch.append(train_batch(corpus_ids))
     id_epoch += 1
-    make_snapshot(id_epoch)
+    make_snapshot(id_epoch, vocab)
     scheduler.step()
     return np.mean(losses_epoch)
 
 
-def train_batch():
+def train_batch(corpus_ids):
     global pos_corpus
     optimizer.zero_grad()
     for _ in range(len_sequence):
@@ -118,24 +107,30 @@ def train_batch():
     optimizer.step()
     return float(loss.data)
 
-init_model()
-make_snapshot(id_epoch)
-print("training")
-time_start_training = timer()
 
-for id_epoch in range(cnt_epochs):
-    time_start = timer()
-    loss_epoch = train_epoch()
-    loss_history.append(loss_epoch)
-    time_end = timer()
-    print(id_epoch,
-          f"loss: {loss_history[-1]:.4f}",
-          f"lr: {optimizer.param_groups[0]['lr']:.5f}",
-          f"time ep: {time_end - time_start:.3f}s",
-          f"time total: {datetime.timedelta(seconds=(time_end - time_start_training))}",
-          )
-    plt.plot(np.arange(len(loss_history)), loss_history)
-    plt.xlabel("iter")
-    plt.ylabel("loss")
-    plt.savefig(os.path.join(params["path_results"], "loss.pdf"))
-    plt.clf()
+def main():
+    vocab, corpus_ids = load_corpus()
+    init_model(vocab.cnt_words)
+    make_snapshot(0, vocab)
+    print("training")
+    time_start_training = timer()
+
+    for id_epoch in range(cnt_epochs):
+        time_start = timer()
+        loss_epoch = train_epoch(corpus_ids, vocab)
+        loss_history.append(loss_epoch)
+        time_end = timer()
+        print(id_epoch,
+              f"loss: {loss_history[-1]:.4f}",
+              f"lr: {optimizer.param_groups[0]['lr']:.5f}",
+              f"time ep: {time_end - time_start:.3f}s",
+              f"time total: {datetime.timedelta(seconds=(time_end - time_start_training))}",
+              )
+        plt.plot(np.arange(len(loss_history)), loss_history)
+        plt.xlabel("iter")
+        plt.ylabel("loss")
+        plt.savefig(os.path.join(params["path_results"], "loss.pdf"))
+        plt.clf()
+
+if __name__ == "__main__":
+    main()
