@@ -137,18 +137,3 @@ for id_epoch in range(cnt_epochs):
     plt.ylabel("loss")
     plt.savefig(os.path.join(params["path_results"], "loss.pdf"))
     plt.clf()
-
-
-# ---------------------evalutation --------------
-# embeddings = WordEmbeddingsDense()
-# embeddings.matrix = net.embed.W.data
-# embeddings.vocabulary = vocab
-# #embeddings.metadata = {}
-
-# embeddings.get_most_similar_words("man")
-
-
-# from vecto.benchmarks.similarity import Similarity
-# my_similarity = Similarity()
-
-# my_similarity.run(embeddings, "/mnt/work/Data/similarity")
