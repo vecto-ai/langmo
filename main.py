@@ -47,8 +47,7 @@ scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
 
 loss_history = []
 pos_corpus = 0
-
-cnt_corpus_passes = 0
+id_epoch = 0
 batch_size = 4
 len_sequence = 12
 # cnt_batches_per_epoch = 256
@@ -58,21 +57,29 @@ offset_negative_max_random_add = 100
 
 
 def make_snapshot():
+    print(f"creating ep {id_epoch} snapshot")
     # TODO: save model for resume training
     # TODO: save training stats
     embeddings = WordEmbeddingsDense()
     embeddings.vocabulary = vocab
     embeddings.metadata["vocabulary"] = vocab.metadata
     embeddings.metadata["vsmlib_version"] = vecto.__version__
-    embeddings.metadata["cnt_epochs"] = cnt_corpus_passes
+    embeddings.metadata["cnt_epochs"] = id_epoch
     embeddings.metadata.update(params)
     embeddings.matrix = net.embed.weight.data.cpu().numpy()
-    name_snapshot = f"snap_ep_{cnt_corpus_passes}"
+    name_snapshot = f"snap_ep_{id_epoch}"
     embeddings.save_to_dir(os.path.join(params["path_results"], name_snapshot, "embs"))
+
+    torch.save({'epoch': id_epoch,
+                'model_state_dict': net.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict()},
+                os.path.join(params["path_results"], name_snapshot, "model"))
 
 
 def train_epoch():
     global pos_corpus
+    global id_epoch
     # global cnt_corpus_passes
     pos_corpus = 0
     losses_epoch = []
@@ -82,8 +89,8 @@ def train_epoch():
         RuntimeError("training corpus too short")
     while pos_corpus < corpus_ids.shape[0] - len_sequence - offset_negative - offset_negative_max_random_add:
         losses_epoch.append(train_batch())
-    # cnt_corpus_passes += 1
-    make_snapshot()
+    id_epoch += 1
+    make_snapshot(id_epoch)
     scheduler.step()
     return np.mean(losses_epoch)
 
@@ -108,7 +115,6 @@ def train_batch():
     return float(loss.data)
 
 
-print("creating 0th snapshot")
 make_snapshot()
 print("training")
 time_start_training = timer()
