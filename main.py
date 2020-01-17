@@ -37,9 +37,6 @@ def init_model(cnt_words):
     optimizer = optim.Adam(net.parameters(), 0.01)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
 
-
-id_epoch = 0
-loss_history = []
 pos_corpus = 0
 batch_size = 4
 len_sequence = 12
@@ -108,9 +105,9 @@ def main():
     vocab, corpus_ids = load_corpus()
     init_model(vocab.cnt_words)
     make_snapshot(0, vocab)
+    loss_history = []
     print("training")
     time_start_training = timer()
-
     for id_epoch in range(cnt_epochs):
         time_start = timer()
         loss_epoch = train_epoch(corpus_ids, vocab)
