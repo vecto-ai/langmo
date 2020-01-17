@@ -21,7 +21,6 @@ from data import load_corpus
 
 
 pos_corpus = 0
-len_sequence = 12
 cnt_epochs = 4000
 offset_negative = 2000
 offset_negative_max_random_add = 100
@@ -63,9 +62,10 @@ def train_epoch(corpus_ids, optimizer, net, params):
     pos_corpus = 0
     losses_epoch = []
     # TODO: iterate oven number of batches with non-sequential sampling
-    if pos_corpus > corpus_ids.shape[0] - len_sequence - offset_negative - offset_negative_max_random_add:
+    max_pos_corpus = corpus_ids.shape[0] - params["len_sequence"] - offset_negative - offset_negative_max_random_add
+    if pos_corpus > max_pos_corpus:
         RuntimeError("training corpus too short")
-    while pos_corpus < corpus_ids.shape[0] - len_sequence - offset_negative - offset_negative_max_random_add:
+    while pos_corpus < max_pos_corpus:
         losses_epoch.append(train_batch(corpus_ids, optimizer, net, params))
     return np.mean(losses_epoch)
 
@@ -74,7 +74,7 @@ def train_batch(corpus_ids, optimizer, net, params):
     global pos_corpus
     batch_size = params["batch_size"]
     optimizer.zero_grad()
-    for _ in range(len_sequence):
+    for _ in range(params["len_sequence"]):
         # TODO: sample sequences from different parts of the corpus
         batch = corpus_ids[pos_corpus:pos_corpus + batch_size]
         predicted = net(batch)
@@ -115,6 +115,8 @@ def main():
             path_results_base = "./out"
         params["batch_size"] = 4
         params["loss_history"] = []
+        params["len_sequence"] = 12
+
         net, optimizer, scheduler = init_model(vocab.cnt_words)
         params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}")
         os.makedirs(params["path_results"], exist_ok=True)
