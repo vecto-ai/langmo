@@ -102,9 +102,9 @@ def train_batch(corpus_ids):
 def main():
     vocab, corpus_ids = load_corpus()
     init_model(vocab.cnt_words)
+    params["time_start_training"] = timer()
     make_snapshot(0, vocab, params)
     print("training")
-    params["time_start_training"] = timer()
     for id_epoch in range(cnt_epochs):
         time_start = timer()
         loss_epoch = train_epoch(corpus_ids, vocab)
