@@ -104,17 +104,18 @@ def main():
     init_model(vocab.cnt_words)
     make_snapshot(0, vocab, params)
     print("training")
-    time_start_training = timer()
+    params["time_start_training"] = timer()
     for id_epoch in range(cnt_epochs):
         time_start = timer()
         loss_epoch = train_epoch(corpus_ids, vocab)
         params["loss_history"].append(loss_epoch)
         time_end = timer()
+        time_total = (time_end - params["time_start_training"])
         print(id_epoch,
               f"loss: {params['loss_history'][-1]:.4f}",
               f"lr: {optimizer.param_groups[0]['lr']:.5f}",
               f"time ep: {time_end - time_start:.3f}s",
-              f"time total: {datetime.timedelta(seconds=(time_end - time_start_training))}",
+              f"time total: {datetime.timedelta(seconds=time_total)}",
               )
         plt.plot(np.arange(len(params["loss_history"])), params["loss_history"])
         plt.xlabel("iter")
