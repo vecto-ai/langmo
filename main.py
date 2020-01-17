@@ -26,6 +26,13 @@ else:
     path_results_base = "./out"
 params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}")
 os.makedirs(params["path_results"], exist_ok=True)
+params["batch_size"] = 4
+
+pos_corpus = 0
+len_sequence = 12
+cnt_epochs = 4000
+offset_negative = 2000
+offset_negative_max_random_add = 100
 
 
 def init_model(cnt_words):
@@ -36,14 +43,6 @@ def init_model(cnt_words):
     # optimizer = optim.SGD(net.parameters(), 0.01)
     optimizer = optim.Adam(net.parameters(), 0.01)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
-
-pos_corpus = 0
-batch_size = 4
-len_sequence = 12
-# cnt_batches_per_epoch = 256
-cnt_epochs = 4000
-offset_negative = 2000
-offset_negative_max_random_add = 100
 
 
 def make_snapshot(id_epoch, vocab):
@@ -83,6 +82,7 @@ def train_epoch(corpus_ids, vocab):
 
 def train_batch(corpus_ids):
     global pos_corpus
+    batch_size = params["batch_size"]
     optimizer.zero_grad()
     for _ in range(len_sequence):
         # TODO: sample sequences from different parts of the corpus
