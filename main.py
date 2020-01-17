@@ -1,5 +1,6 @@
 import os
 import random
+import sys
 from pathlib import Path
 import datetime
 import vecto.corpus
@@ -8,6 +9,8 @@ from vecto.embeddings.dense import WordEmbeddingsDense
 import vecto.benchmarks
 import numpy as np
 from timeit import default_timer as timer
+import matplotlib
+matplotlib.use('pdf')
 from matplotlib import pyplot as plt
 from model import Net
 from protonn.utils import get_time_str
@@ -104,12 +107,11 @@ def load_model(path):
 
 
 def main():
-    # TODO: decide init or load by args or presence of metadata file
-    if False:  # init vs load
+    if len(sys.argv) == 1:
         params = {}
         hostname = platform.node()
         if hostname.endswith("titech.ac.jp"):
-            path_results_base = "/work/alex/data/DL_outs/NLP/embed_ptoto1"
+            path_results_base = "/work/alex/data/DL_outs/NLP/embed_proto1"
         else:
             path_results_base = "./out"
         params["batch_size"] = 4
@@ -123,7 +125,8 @@ def main():
         params["time_start_training"] = timer()
         make_snapshot(net, optimizer, scheduler, 0, vocab, params)
     else:  # load
-        path_load = "/home/blackbird/Projects_heavy/NLP/langmo/out/20.01.17_11.31.56_cornus"
+        print("resuming")
+        path_load = sys.argv[1]
         net, optimizer, scheduler, params, vocab, corpus_ids = load_model(path_load)
 
     print("training")
