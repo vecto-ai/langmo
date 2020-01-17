@@ -72,7 +72,6 @@ def make_snapshot(id_epoch, vocab):
 
 def train_epoch(corpus_ids, vocab):
     global pos_corpus
-    global id_epoch
     # global cnt_corpus_passes
     pos_corpus = 0
     losses_epoch = []
@@ -82,9 +81,6 @@ def train_epoch(corpus_ids, vocab):
         RuntimeError("training corpus too short")
     while pos_corpus < corpus_ids.shape[0] - len_sequence - offset_negative - offset_negative_max_random_add:
         losses_epoch.append(train_batch(corpus_ids))
-    id_epoch += 1
-    make_snapshot(id_epoch, vocab)
-    scheduler.step()
     return np.mean(losses_epoch)
 
 
@@ -131,6 +127,10 @@ def main():
         plt.ylabel("loss")
         plt.savefig(os.path.join(params["path_results"], "loss.pdf"))
         plt.clf()
+        id_epoch += 1
+        make_snapshot(id_epoch, vocab)
+        scheduler.step()
+
 
 if __name__ == "__main__":
     main()
