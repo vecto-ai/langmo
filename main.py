@@ -1,5 +1,6 @@
 import os
 import random
+from pathlib import Path
 import datetime
 import vecto.corpus
 import vecto.embeddings.dense
@@ -10,7 +11,7 @@ from timeit import default_timer as timer
 from matplotlib import pyplot as plt
 from model import Net
 from protonn.utils import get_time_str
-from protonn.utils import save_data_json
+from protonn.utils import save_data_json, load_json
 import platform
 import torch
 import torch.nn.functional as F
@@ -18,17 +19,6 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 from data import load_corpus
 
-
-params = {}
-hostname = platform.node()
-if hostname.endswith("titech.ac.jp"):
-    path_results_base = "/work/alex/data/DL_outs/NLP/embed_ptoto1"
-else:
-    path_results_base = "./out"
-params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}")
-os.makedirs(params["path_results"], exist_ok=True)
-params["batch_size"] = 4
-params["loss_history"] = []
 
 pos_corpus = 0
 len_sequence = 12
@@ -38,16 +28,16 @@ offset_negative_max_random_add = 100
 
 
 def init_model(cnt_words):
-    global net, optimizer, scheduler
     net = Net(cnt_words)
     if torch.cuda.is_available():
         net.to("cuda")
     # optimizer = optim.SGD(net.parameters(), 0.01)
     optimizer = optim.Adam(net.parameters(), 0.01)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+    return net, optimizer, scheduler
 
 
-def make_snapshot(id_epoch, vocab, params):
+def make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params):
     print(f"creating ep {id_epoch} snapshot")
     save_data_json(params, os.path.join(params["path_results"], "metadata.json"))
     embeddings = WordEmbeddingsDense()
@@ -64,9 +54,11 @@ def make_snapshot(id_epoch, vocab, params):
                 'model_state_dict': net.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'scheduler_state_dict': scheduler.state_dict()},
-                os.path.join(params["path_results"], name_snapshot, "model"))
+                os.path.join(params["path_results"], "model_last.pkl"))
 
-def train_epoch(corpus_ids, vocab):
+
+# TODO: write trainer or use existing lib
+def train_epoch(corpus_ids, optimizer, net, params):
     global pos_corpus
     pos_corpus = 0
     losses_epoch = []
@@ -74,11 +66,11 @@ def train_epoch(corpus_ids, vocab):
     if pos_corpus > corpus_ids.shape[0] - len_sequence - offset_negative - offset_negative_max_random_add:
         RuntimeError("training corpus too short")
     while pos_corpus < corpus_ids.shape[0] - len_sequence - offset_negative - offset_negative_max_random_add:
-        losses_epoch.append(train_batch(corpus_ids))
+        losses_epoch.append(train_batch(corpus_ids, optimizer, net, params))
     return np.mean(losses_epoch)
 
 
-def train_batch(corpus_ids):
+def train_batch(corpus_ids, optimizer, net, params):
     global pos_corpus
     batch_size = params["batch_size"]
     optimizer.zero_grad()
@@ -99,15 +91,43 @@ def train_batch(corpus_ids):
     return float(loss.data)
 
 
+def load_model(path, vocab):
+    path = Path(path)
+    checkpoint = torch.load(path / "model_last.pkl")
+    net, optimizer, scheduler = init_model(vocab.cnt_words)
+    net.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+    # TODO: load metadata
+    params = load_json(path / "metadata.json")
+    return net, optimizer, scheduler, params
+
+
 def main():
     vocab, corpus_ids = load_corpus()
-    init_model(vocab.cnt_words)
-    params["time_start_training"] = timer()
-    make_snapshot(0, vocab, params)
+    # TODO: decide init or load by args or presence of metadata file
+    if True:  # init vs load
+        params = {}
+        hostname = platform.node()
+        if hostname.endswith("titech.ac.jp"):
+            path_results_base = "/work/alex/data/DL_outs/NLP/embed_ptoto1"
+        else:
+            path_results_base = "./out"
+        params["batch_size"] = 4
+        params["loss_history"] = []
+        net, optimizer, scheduler = init_model(vocab.cnt_words)
+        params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}")
+        os.makedirs(params["path_results"], exist_ok=True)
+        params["time_start_training"] = timer()
+        make_snapshot(net, optimizer, scheduler, 0, vocab, params)
+    else:  # load
+        path_load = "/home/blackbird/Projects_heavy/NLP/langmo/out/20.01.17_10.27.27_cornus"
+        net, optimizer, scheduler, params = load_model(path_load, vocab)
+
     print("training")
-    for id_epoch in range(cnt_epochs):
+    for id_epoch in range(len(params["loss_history"]), cnt_epochs):
         time_start = timer()
-        loss_epoch = train_epoch(corpus_ids, vocab)
+        loss_epoch = train_epoch(corpus_ids, optimizer, net, params)
         params["loss_history"].append(loss_epoch)
         time_end = timer()
         time_total = (time_end - params["time_start_training"])
@@ -123,7 +143,7 @@ def main():
         plt.savefig(os.path.join(params["path_results"], "loss.pdf"))
         plt.clf()
         id_epoch += 1
-        make_snapshot(id_epoch, vocab, params)
+        make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params)
         scheduler.step()
 
 
