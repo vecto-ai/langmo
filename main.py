@@ -91,22 +91,21 @@ def train_batch(corpus_ids, optimizer, net, params):
     return float(loss.data)
 
 
-def load_model(path, vocab):
+def load_model(path):
     path = Path(path)
+    params = load_json(path / "metadata.json")
     checkpoint = torch.load(path / "model_last.pkl")
+    vocab, corpus_ids = load_corpus(params["path_corpus"])
     net, optimizer, scheduler = init_model(vocab.cnt_words)
     net.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-    # TODO: load metadata
-    params = load_json(path / "metadata.json")
-    return net, optimizer, scheduler, params
+    return net, optimizer, scheduler, params, vocab, corpus_ids
 
 
 def main():
-    vocab, corpus_ids = load_corpus()
     # TODO: decide init or load by args or presence of metadata file
-    if True:  # init vs load
+    if False:  # init vs load
         params = {}
         hostname = platform.node()
         if hostname.endswith("titech.ac.jp"):
@@ -116,15 +115,16 @@ def main():
         params["batch_size"] = 4
         params["loss_history"] = []
         params["len_sequence"] = 12
-
+        params["path_corpus"] = "./corpus/brown.txt"
+        vocab, corpus_ids = load_corpus(params["path_corpus"])
         net, optimizer, scheduler = init_model(vocab.cnt_words)
         params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}")
         os.makedirs(params["path_results"], exist_ok=True)
         params["time_start_training"] = timer()
         make_snapshot(net, optimizer, scheduler, 0, vocab, params)
     else:  # load
-        path_load = "/home/blackbird/Projects_heavy/NLP/langmo/out/20.01.17_10.27.27_cornus"
-        net, optimizer, scheduler, params = load_model(path_load, vocab)
+        path_load = "/home/blackbird/Projects_heavy/NLP/langmo/out/20.01.17_11.31.56_cornus"
+        net, optimizer, scheduler, params, vocab, corpus_ids = load_model(path_load)
 
     print("training")
     for id_epoch in range(len(params["loss_history"]), cnt_epochs):
