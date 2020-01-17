@@ -25,7 +25,6 @@ from data import load_corpus
 
 pos_corpus = 0
 cnt_epochs = 4000
-offset_negative = 2000
 offset_negative_max_random_add = 100
 
 
@@ -65,7 +64,7 @@ def train_epoch(corpus_ids, optimizer, net, params):
     pos_corpus = 0
     losses_epoch = []
     # TODO: iterate oven number of batches with non-sequential sampling
-    max_pos_corpus = corpus_ids.shape[0] - params["len_sequence"] - offset_negative - offset_negative_max_random_add
+    max_pos_corpus = corpus_ids.shape[0] - params["len_sequence"] - params["offset_negative"] - offset_negative_max_random_add
     if pos_corpus > max_pos_corpus:
         RuntimeError("training corpus too short")
     while pos_corpus < max_pos_corpus:
@@ -75,6 +74,7 @@ def train_epoch(corpus_ids, optimizer, net, params):
 
 def train_batch(corpus_ids, optimizer, net, params):
     global pos_corpus
+    offset_negative = params["offset_negative"]
     batch_size = params["batch_size"]
     optimizer.zero_grad()
     for _ in range(params["len_sequence"]):
@@ -117,6 +117,7 @@ def main():
         params["batch_size"] = 4
         params["loss_history"] = []
         params["len_sequence"] = 12
+        params["offset_negative"] = 2000
         params["path_corpus"] = "./corpus/brown.txt"
         vocab, corpus_ids = load_corpus(params["path_corpus"])
         net, optimizer, scheduler = init_model(vocab.cnt_words)
