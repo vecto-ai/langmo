@@ -42,8 +42,8 @@ def make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params):
     save_data_json(params, os.path.join(params["path_results"], "metadata.json"))
     embeddings = WordEmbeddingsDense()
     embeddings.vocabulary = vocab
+    embeddings.metadata.update(params)
     embeddings.metadata["vocabulary"] = vocab.metadata
-    embeddings.metadata["vsmlib_version"] = vecto.__version__
     embeddings.metadata["cnt_epochs"] = id_epoch
     embeddings.metadata.update(params)
     embeddings.matrix = net.embed.weight.data.cpu().numpy()
@@ -122,6 +122,7 @@ def main():
         params["offset_negative"] = 2000
         params["offset_negative_max_random_add"] = 100
         params["path_corpus"] = "./corpus/brown.txt"
+        params["vecto_version"] = vecto.__version__
         vocab, corpus_ids = load_corpus(params["path_corpus"])
         net, optimizer, scheduler = init_model(vocab.cnt_words)
         params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}")
