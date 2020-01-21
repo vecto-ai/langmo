@@ -2,7 +2,7 @@ import numpy as np
 from vecto.embeddings import load_from_dir
 from vecto.benchmarks.analogy import Benchmark as Analogy
 from vecto.data import get_dataset_by_name
-from vecto.utils.data import save_json
+from vecto.utils.data import save_json, jsonify
 import logging
 # TODO: take this from config or command line args
 # TODO: and dataset name or path
@@ -29,6 +29,8 @@ embeddings.cache_normalized_copy()
 ds = get_dataset_by_name(name_dataset)
 bench_analogy = Analogy()
 results = bench_analogy.run(embeddings, ds)
+
+save_json(jsonify(results), "/tmp/vecto/results.json")
 
 # TODO: move summarization of results to a separate module
 summary = {}
