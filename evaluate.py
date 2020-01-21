@@ -1,11 +1,14 @@
 import numpy as np
 from vecto.embeddings import load_from_dir
-from vecto.benchmarks.analogy import Analogy
+from vecto.benchmarks.analogy import Benchmark as Analogy
 from vecto.data import get_dataset_by_name
 from vecto.utils.data import save_json
-
+import logging
 # TODO: take this from config or command line args
 # TODO: and dataset name or path
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 path_emb = "/home/blackbird/Cloud/remote/berlin/data/NLP/embeddings/test/w2v_ref/brown_thrd24__SG_d128_w3_neg4_i10"
 name_dataset = "dummy_analogy"  # "BATS"
