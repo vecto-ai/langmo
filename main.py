@@ -49,6 +49,8 @@ def make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params):
     embeddings.matrix = net.embed.weight.data.cpu().numpy()
     name_snapshot = f"snap_ep_{id_epoch}"
     embeddings.save_to_dir(os.path.join(params["path_results"], name_snapshot, "embs"))
+    command_eval = "python3 evaluate.py"
+    # TODO: create evaluation script and schedule to job queue
 
     torch.save({'epoch': id_epoch,
                 'model_state_dict': net.state_dict(),
