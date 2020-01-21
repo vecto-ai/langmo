@@ -6,7 +6,7 @@ import vecto.vocabulary
 def load_corpus(path_corpus):
     print("creating vocab")
     vocab = vecto.vocabulary.create_from_file(path_corpus)
-    corpus_ids = vecto.corpus.load_file_as_ids(path_corpus, vocab)
+    corpus_ids = vecto.corpus.load_file_as_ids(path_corpus, vocab)[:3000]
     corpus_ids = corpus_ids.astype(np.int64)
     corpus_ids.shape
     print(len(corpus_ids), max(corpus_ids))

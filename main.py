@@ -1,6 +1,7 @@
 import os
 import random
 import sys
+import uuid
 from pathlib import Path
 import datetime
 import vecto.corpus
@@ -37,6 +38,20 @@ def init_model(cnt_words):
     return net, optimizer, scheduler
 
 
+# TODO: move this to protonn
+def schedule_eval_script(command):
+    path_scrypts = "/tmp/protonn/scripts"
+    if not os.path.exists(path_scrypts):
+        os.makedirs(path_scrypts, exist_ok=True)
+    unique_name = uuid.uuid4().hex + ".sh"
+    with open(os.path.join(path_scrypts, unique_name), "w") as f:
+        f.write("path_scrypt=$(pwd)/$0\n")
+        f.write("set -e\n")
+        f.write(command)
+        f.write("\nrm $path_scrypt\n")
+    # TODO: schedule to job queue
+
+
 def make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params):
     print(f"creating ep {id_epoch} snapshot")
     save_data_json(params, os.path.join(params["path_results"], "metadata.json"))
@@ -48,9 +63,11 @@ def make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params):
     embeddings.metadata.update(params)
     embeddings.matrix = net.embed.weight.data.cpu().numpy()
     name_snapshot = f"snap_ep_{id_epoch}"
-    embeddings.save_to_dir(os.path.join(params["path_results"], name_snapshot, "embs"))
-    command_eval = "python3 evaluate.py"
-    # TODO: create evaluation script and schedule to job queue
+    path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs")
+    embeddings.save_to_dir(path_embeddings)
+    path_eval_results = os.path.join(params["path_results"], name_snapshot, "eval")
+    command_eval = f"python3 evaluate.py {path_embeddings} {path_eval_results}"
+    schedule_eval_script(command_eval)
 
     torch.save({'epoch': id_epoch,
                 'model_state_dict': net.state_dict(),
