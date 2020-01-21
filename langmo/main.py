@@ -13,7 +13,6 @@ from timeit import default_timer as timer
 import matplotlib
 matplotlib.use('pdf')
 from matplotlib import pyplot as plt
-from model import Net
 from protonn.utils import get_time_str
 from protonn.utils import save_data_json, load_json
 import platform
@@ -21,7 +20,8 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
-from data import load_corpus
+from .model import Net
+from .data import load_corpus
 
 
 pos_corpus = 0
@@ -40,15 +40,16 @@ def init_model(cnt_words):
 
 # TODO: move this to protonn
 def schedule_eval_script(command):
-    path_scrypts = "/tmp/protonn/scripts"
-    if not os.path.exists(path_scrypts):
-        os.makedirs(path_scrypts, exist_ok=True)
+    path_scripts = "/tmp/protonn/scripts"
+    os.makedirs(path_scripts, exist_ok=True)
     unique_name = uuid.uuid4().hex + ".sh"
-    with open(os.path.join(path_scrypts, unique_name), "w") as f:
+    path_script = os.path.join(path_scripts, unique_name)
+    with open(path_script, "w") as f:
         f.write("path_scrypt=$(pwd)/$0\n")
         f.write("set -e\n")
         f.write(command)
         f.write("\nrm $path_scrypt\n")
+    os.chmod(path_script, 0o766)
     # TODO: schedule to job queue
 
 
@@ -66,7 +67,8 @@ def make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params):
     path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs")
     embeddings.save_to_dir(path_embeddings)
     path_eval_results = os.path.join(params["path_results"], name_snapshot, "eval")
-    command_eval = f"python3 evaluate.py {path_embeddings} {path_eval_results}"
+    path_this_module = Path(__file__).parent.parent
+    command_eval = f"cd {path_this_module}\npython3 -m langmo.evaluate {path_embeddings} {path_eval_results}"
     schedule_eval_script(command_eval)
 
     torch.save({'epoch': id_epoch,
