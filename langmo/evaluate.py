@@ -11,14 +11,13 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
-def main():
-    path_emb = sys.argv[1]
-    path_dest = sys.argv[2]
-    name_dataset = "dummy_analogy"  # "BATS"
+def run(path_emb, path_dest):
+    # name_dataset = "dummy_analogy"
+    name_dataset = "BATS"
     embeddings = load_from_dir(path_emb)
     embeddings.cache_normalized_copy()
     ds = get_dataset_by_name(name_dataset)
-    bench_analogy = Analogy()
+    bench_analogy = Analogy(method="LRCos")
     results = bench_analogy.run(embeddings, ds)
 
     summary = {}
@@ -27,6 +26,12 @@ def main():
     save_json(jsonify(results), os.path.join(path_dest, "results_detailed.json"))
     save_json(jsonify(summary), os.path.join(path_dest, "results.json"))
     print("done")
+
+
+def main():
+    path_emb = sys.argv[1]
+    path_dest = sys.argv[2]
+    run(path_emb, path_dest)
 
 
 if __name__ == "__main__":
