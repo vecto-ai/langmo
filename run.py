@@ -1,8 +1,8 @@
 from pathlib import Path
 from langmo import evaluate
+import sys
 
-
-path = Path("/work/alex/data/DL_outs/NLP/embed_proto1/20.01.17_13.52.10_kiev1.m.gsic.titech.ac.jp")
+path = Path(sys.argv[1])
 for folder in path.iterdir():
     print(folder)
     if not folder.is_dir():
