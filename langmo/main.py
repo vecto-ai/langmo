@@ -106,10 +106,10 @@ def train_batch(corpus_ids, optimizer, net, params):
         predicted = net(batch)
         pos_corpus += 1
     targets_positive = corpus_ids[pos_corpus: pos_corpus + batch_size]
-    loss_positive = F.cosine_similarity(predicted, net.embed(targets_positive)).sum()
+    loss_positive = - F.cosine_similarity(predicted, net.embed(targets_positive)).sum()
     pos_start_negative = pos_corpus + offset_negative + random.randint(0, params["offset_negative_max_random_add"])
     targets_negative = corpus_ids[pos_start_negative: pos_start_negative + batch_size]
-    loss_negative = - F.cosine_similarity(predicted, net.embed(targets_negative)).sum()
+    loss_negative = F.cosine_similarity(predicted, net.embed(targets_negative)).sum()
     loss = loss_positive + loss_negative
     loss.backward()
     # loss.unchain_backward()
