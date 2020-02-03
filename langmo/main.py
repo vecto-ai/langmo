@@ -62,7 +62,7 @@ def make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params):
     embeddings.metadata["vocabulary"] = vocab.metadata
     embeddings.metadata["cnt_epochs"] = id_epoch
     embeddings.metadata.update(params)
-    embeddings.matrix = net.embed.weight.data.cpu().numpy()
+    embeddings.matrix = net.embed.weight.data.cpu().numpy()[1:]
     name_snapshot = f"snap_ep_{id_epoch}"
     path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs")
     embeddings.save_to_dir(path_embeddings)
@@ -142,11 +142,11 @@ def main():
         params["len_sequence"] = 12
         params["offset_negative"] = 2000
         params["offset_negative_max_random_add"] = 100
-        params["path_corpus"] = "/work/data/NLP/corpora/raw_texts/Eng/BNC/bnc.txt.gz"
-        # params["path_corpus"] = "./corpus/brown.txt"
+        # params["path_corpus"] = "/work/data/NLP/corpora/raw_texts/Eng/BNC/bnc.txt.gz"
+        params["path_corpus"] = "./corpus/brown.txt"
         params["vecto_version"] = vecto.__version__
         vocab, corpus_ids = load_corpus(params["path_corpus"])
-        net, optimizer, scheduler = init_model(vocab.cnt_words)
+        net, optimizer, scheduler = init_model(vocab.cnt_words+1)
         params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}")
         os.makedirs(params["path_results"], exist_ok=True)
         params["time_start_training"] = timer()
