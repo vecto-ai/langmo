@@ -99,11 +99,16 @@ def train_batch(corpus_ids, optimizer, net, params):
     global pos_corpus
     offset_negative = params["offset_negative"]
     batch_size = params["batch_size"]
-    optimizer.zero_grad()
+    net.zero_grad()
+    # unchain properly here
+    net.hidden = None
+    print(pos_corpus)
     for _ in range(params["len_sequence"]):
         # TODO: sample sequences from different parts of the corpus
         batch = corpus_ids[pos_corpus:pos_corpus + batch_size]
         predicted = net(batch)
+        #print(predicted)
+        #exit(-1)
         pos_corpus += 1
     targets_positive = corpus_ids[pos_corpus: pos_corpus + batch_size]
     loss_positive = - F.cosine_similarity(predicted, net.embed(targets_positive)).sum()
@@ -142,8 +147,8 @@ def main():
         params["len_sequence"] = 12
         params["offset_negative"] = 2000
         params["offset_negative_max_random_add"] = 100
-        params["path_corpus"] = "/work/data/NLP/corpora/raw_texts/Eng/BNC/bnc.txt.gz"
-        # params["path_corpus"] = "./corpus/brown.txt"
+        # params["path_corpus"] = "/work/data/NLP/corpora/raw_texts/Eng/BNC/bnc.txt.gz"
+        params["path_corpus"] = "./corpus/brown.txt"
         params["vecto_version"] = vecto.__version__
         vocab, corpus_ids = load_corpus(params["path_corpus"])
         net, optimizer, scheduler = init_model(vocab.cnt_words+1)
