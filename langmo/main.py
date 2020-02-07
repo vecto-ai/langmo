@@ -101,8 +101,9 @@ def train_batch(corpus_ids, optimizer, net, params):
     batch_size = params["batch_size"]
     net.zero_grad()
     # unchain properly here
-    net.hidden = None
-    print(pos_corpus)
+    # net.hidden = None
+    net.truncate()
+    # print(pos_corpus)
     for _ in range(params["len_sequence"]):
         # TODO: sample sequences from different parts of the corpus
         batch = corpus_ids[pos_corpus:pos_corpus + batch_size]

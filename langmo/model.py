@@ -1,5 +1,5 @@
+import torch
 import torch.nn as nn
-
 SIZE_EMB = 256
 
 
@@ -18,3 +18,14 @@ class Net(nn.Module):
         # TODO: move loop over sequence inside and don't compute unused dense outputs
         h = self.dense_1(h[0])
         return h
+
+    def _repackage_hidden(self, h):
+        """Wraps hidden states in new Tensors, to detach them from their history."""
+        if isinstance(h, torch.Tensor):
+            return h.detach()
+        else:
+            return tuple(self._repackage_hidden(v) for v in h)
+
+    def truncate(self):
+        if self.hidden is not None:
+            self.hidden = self._repackage_hidden(self.hidden)
