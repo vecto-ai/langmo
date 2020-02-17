@@ -33,7 +33,7 @@ def main():
     if len(sys.argv) == 3:
         path_dest = sys.argv[2]
     else:
-        path_dest = os.path.join(path_emb, "/eval/analogy")
+        path_dest = os.path.join(path_emb, "eval/analogy")
     run(path_emb, path_dest)
 
 
