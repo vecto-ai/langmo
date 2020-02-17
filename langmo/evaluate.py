@@ -30,7 +30,10 @@ def run(path_emb, path_dest):
 
 def main():
     path_emb = sys.argv[1]
-    path_dest = sys.argv[2]
+    if len(sys.argv == 3):
+        path_dest = sys.argv[2]
+    else:
+        path_dest = os.path.join(path_emb, "/eval/analogy")
     run(path_emb, path_dest)
 
 

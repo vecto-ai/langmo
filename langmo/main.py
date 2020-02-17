@@ -111,7 +111,7 @@ def train_batch(corpus_ids, optimizer, net, params):
         #print(predicted)
         #exit(-1)
         pos_corpus += 1
-    targets_positive = corpus_ids[pos_corpus: pos_corpus + batch_size]
+    targets_positive = corpus_ids[pos_corpus: pos_corpus + batch_size]ts_positive)).sum()
     loss_positive = - F.cosine_similarity(predicted, net.embed(targets_positive)).sum()
     pos_start_negative = pos_corpus + offset_negative + random.randint(0, params["offset_negative_max_random_add"])
     targets_negative = corpus_ids[pos_start_negative: pos_start_negative + batch_size]
