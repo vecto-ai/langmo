@@ -32,8 +32,8 @@ def init_model(cnt_words):
     net = Net(cnt_words)
     if torch.cuda.is_available():
         net.to("cuda")
-    optimizer = optim.SGD(net.parameters(), 0.01)
-    # optimizer = optim.Adam(net.parameters(), 0.01)
+    # optimizer = optim.SGD(net.parameters(), 0.01)
+    optimizer = optim.Adam(net.parameters())
     scheduler = StepLR(optimizer, step_size=1, gamma=0.99)
     return net, optimizer, scheduler
 
