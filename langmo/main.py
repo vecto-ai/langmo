@@ -25,7 +25,7 @@ from .data import load_corpus
 
 
 pos_corpus = 0
-cnt_epochs = 200
+cnt_epochs = 300
 
 
 def init_model(cnt_words):
