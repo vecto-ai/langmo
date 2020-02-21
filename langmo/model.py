@@ -10,6 +10,11 @@ class Net(nn.Module):
         self.lstm_1 = nn.LSTM(SIZE_EMB, 512)
         self.dense_1 = nn.Linear(512, SIZE_EMB)
         self.hidden = None
+        self.init_weights()
+
+    def init_weights(self):
+        initrange = 0.1
+        self.embed.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, x):
         h = self.embed(x)

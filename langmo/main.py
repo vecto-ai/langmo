@@ -63,7 +63,7 @@ def make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params):
     embeddings.metadata["cnt_epochs"] = id_epoch
     embeddings.metadata.update(params)
     embeddings.matrix = net.embed.weight.data.cpu().numpy()[1:]
-    name_snapshot = f"snap_ep_{id_epoch}"
+    name_snapshot = f"snap_ep_{id_epoch:03}"
     path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs")
     embeddings.save_to_dir(path_embeddings)
     path_eval_results = os.path.join(params["path_results"], name_snapshot, "eval")
