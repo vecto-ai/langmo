@@ -1,7 +1,11 @@
+import os
 import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import vecto.embeddings.dense
+from vecto.embeddings.dense import WordEmbeddingsDense
+
 
 class RNNModel(nn.Module):
     """Container module with an encoder, a recurrent module, and a decoder."""
@@ -58,6 +62,18 @@ class RNNModel(nn.Module):
                     weight.new_zeros(self.nlayers, bsz, self.nhid))
         else:
             return weight.new_zeros(self.nlayers, bsz, self.nhid)
+
+    def save_embeddings(self, vocab, params, id_epoch):
+        embeddings = WordEmbeddingsDense()
+        embeddings.vocabulary = vocab
+        embeddings.metadata.update(params)
+        embeddings.metadata["vocabulary"] = vocab.metadata
+        embeddings.metadata["cnt_epochs"] = id_epoch
+        embeddings.metadata.update(params)
+        embeddings.matrix = self.encoder.weight.data.cpu().numpy()
+        name_snapshot = f"snap_ep_{id_epoch:03}"
+        path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs")
+        embeddings.save_to_dir(path_embeddings)
 
 # Temporarily leave PositionalEncoding module here. Will be moved somewhere else.
 class PositionalEncoding(nn.Module):

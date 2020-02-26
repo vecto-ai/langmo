@@ -6,9 +6,13 @@ import os
 import torch
 import torch.nn as nn
 import torch.onnx
+import platform
+from protonn.utils import get_time_str
+import vecto.vocabulary
 
 import data
 import model
+
 
 parser = argparse.ArgumentParser(description='PyTorch Wikitext-2 RNN/LSTM Language Model')
 parser.add_argument('--data', type=str, default='../../data/wikitext-2',
@@ -45,11 +49,19 @@ parser.add_argument('--save', type=str, default='model.pt',
                     help='path to save the final model')
 parser.add_argument('--onnx-export', type=str, default='',
                     help='path to export the final model in onnx format')
-
 parser.add_argument('--nhead', type=int, default=2,
                     help='the number of heads in the encoder/decoder of the transformer model')
 
 args = parser.parse_args()
+
+params = {}
+params.update(vars(args))
+hostname = platform.node()
+if hostname.endswith("titech.ac.jp"):
+    path_results_base = "/work/alex/data/DL_outs/NLP/embed_proto1"
+else:
+    path_results_base = "./out"
+params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}")
 
 # Set the random seed manually for reproducibility.
 torch.manual_seed(args.seed)
@@ -94,7 +106,7 @@ test_data = batchify(corpus.test, eval_batch_size)
 ###############################################################################
 # Build the model
 ###############################################################################
-
+print("building a model")
 ntokens = len(corpus.dictionary)
 if args.model == 'Transformer':
     model = model.TransformerModel(ntokens, args.emsize, args.nhead, args.nhid, args.nlayers, args.dropout).to(device)
@@ -153,7 +165,7 @@ def evaluate(data_source):
     return total_loss / (len(data_source) - 1)
 
 
-def train():
+def train_epoch():
     # Turn on training mode which enables dropout.
     model.train()
     total_loss = 0.
@@ -206,16 +218,22 @@ lr = args.lr
 best_val_loss = None
 
 # At any point you can hit Ctrl + C to break out of training early.
+vocab = vecto.vocabulary.Vocabulary()
+vocab.dic_words_ids = corpus.dictionary.word2idx
+vocab.lst_words = corpus.dictionary.idx2word
+model.save_embeddings(vocab, params, 0)
 try:
-    for epoch in range(1, args.epochs+1):
+    for epoch in range(1, args.epochs + 1):
+        # TODO: export emeddings
         epoch_start_time = time.time()
-        train()
+        train_epoch()
         val_loss = evaluate(val_data)
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
                 'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
                                            val_loss, math.exp(val_loss)))
         print('-' * 89)
+        model.save_embeddings(vocab, params, epoch)
         # Save the model if the validation loss is the best we've seen so far.
         if not best_val_loss or val_loss < best_val_loss:
             with open(args.save, 'wb') as f:

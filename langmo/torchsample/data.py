@@ -32,7 +32,8 @@ class Corpus(object):
             for line in f:
                 words = line.split() + ['<eos>']
                 for word in words:
-                    self.dictionary.add_word(word)
+                    # TODO: make lower-casing optional
+                    self.dictionary.add_word(word.lower())
 
         # Tokenize file content
         with open(path, 'r', encoding="utf8") as f:
@@ -41,7 +42,7 @@ class Corpus(object):
                 words = line.split() + ['<eos>']
                 ids = []
                 for word in words:
-                    ids.append(self.dictionary.word2idx[word])
+                    ids.append(self.dictionary.word2idx[word.lower()])
                 idss.append(torch.tensor(ids).type(torch.int64))
             ids = torch.cat(idss)
 
