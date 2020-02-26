@@ -61,7 +61,7 @@ if hostname.endswith("titech.ac.jp"):
     path_results_base = "/work/alex/data/DL_outs/NLP/embed_proto1"
 else:
     path_results_base = "./out"
-params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}")
+params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}_SMPL")
 
 # Set the random seed manually for reproducibility.
 torch.manual_seed(args.seed)
