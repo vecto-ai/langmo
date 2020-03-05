@@ -8,7 +8,7 @@ paths = [str(x) for x in Path("/work/data/NLP/corpora/raw_texts/Eng/BNC").glob("
 tokenizer = ByteLevelBPETokenizer()
 
 # Customize training
-tokenizer.train(files=paths, vocab_size=52_000, min_frequency=2, special_tokens=[
+tokenizer.train(files=paths, vocab_size=52_000, min_frequency=5, special_tokens=[
     "<s>",
     "<pad>",
     "</s>",
