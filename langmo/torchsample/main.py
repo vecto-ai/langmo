@@ -19,7 +19,7 @@ parser.add_argument('--data', type=str, default='../../data/wikitext-2',
                     help='location of the data corpus')
 parser.add_argument('--model', type=str, default='LSTM',
                     help='type of recurrent net (RNN_TANH, RNN_RELU, LSTM, GRU, Transformer)')
-parser.add_argument('--emsize', type=int, default=200,
+parser.add_argument('--emsize', type=int, default=256,
                     help='size of word embeddings')
 parser.add_argument('--nhid', type=int, default=200,
                     help='number of hidden units per layer')
@@ -49,7 +49,7 @@ parser.add_argument('--save', type=str, default='model.pt',
                     help='path to save the final model')
 parser.add_argument('--onnx-export', type=str, default='',
                     help='path to export the final model in onnx format')
-parser.add_argument('--nhead', type=int, default=2,
+parser.add_argument('--nhead', type=int, default=4,
                     help='the number of heads in the encoder/decoder of the transformer model')
 
 args = parser.parse_args()
@@ -61,7 +61,9 @@ if hostname.endswith("titech.ac.jp"):
     path_results_base = "/work/alex/data/DL_outs/NLP/embed_proto1"
 else:
     path_results_base = "./out"
-params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}_SMPL")
+params["path_results"] = os.path.join(path_results_base,
+                                      f"torchsampl_{params['model']}",
+                                      f"{get_time_str()}_{hostname}")
 
 # Set the random seed manually for reproducibility.
 torch.manual_seed(args.seed)

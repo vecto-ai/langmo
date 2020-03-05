@@ -164,3 +164,15 @@ class TransformerModel(nn.Module):
         output = self.transformer_encoder(src, self.src_mask)
         output = self.decoder(output)
         return F.log_softmax(output, dim=-1)
+
+    def save_embeddings(self, vocab, params, id_epoch):
+        embeddings = WordEmbeddingsDense()
+        embeddings.vocabulary = vocab
+        embeddings.metadata.update(params)
+        embeddings.metadata["vocabulary"] = vocab.metadata
+        embeddings.metadata["cnt_epochs"] = id_epoch
+        embeddings.metadata.update(params)
+        embeddings.matrix = self.encoder.weight.data.cpu().numpy()
+        name_snapshot = f"snap_ep_{id_epoch:03}"
+        path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs")
+        embeddings.save_to_dir(path_embeddings)
