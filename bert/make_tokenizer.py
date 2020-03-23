@@ -26,23 +26,25 @@ def main():
                   "charBPE": CharBPETokenizer,
                   "BertWP": BertWordPieceTokenizer}
 
-    tokenizer = tokenizers[args.tokenizer]()
+    tokenizer = tokenizers[args.tokenizer](lowercase=True)
 
+#                                           unk_token="<unk>",
+#                                           sep_token="</s>",
+#                                           cls_token="<s>"
     # Customize training
     tokenizer.train(files=paths,
                     vocab_size=args.vocab_size,
-                    min_frequency=args.min_frequency,
-                    special_tokens=["<s>",
-                                    "<pad>",
-                                    "</s>",
-                                    "<unk>",
-                                    "<mask>"])
-
+                    min_frequency=args.min_frequency)
+#                    special_tokens=["<s>",
+#                                    "<pad>",
+#                                    "</s>",
+#                                    "<unk>",
+#                                    "<mask>"]
     path_out = Path(args.path_out)
     path_out = path_out / f"{args.tokenizer}_vs_{args.vocab_size}_m{args.min_frequency}"
     os.makedirs(path_out, exist_ok=True)
     tokenizer.save(str(path_out), "t")
-    r = tokenizer.encode("Hi, how do you do NoNeXistingTkn?")
+    r = tokenizer.encode("hi, how do you do nonetkn?")
     print(r.tokens)
     metadata = {}
     metadata.update(vars(args))
