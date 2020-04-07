@@ -149,7 +149,7 @@ def main():
         params["offset_negative"] = 2000
         params["offset_negative_max_random_add"] = 100
         # params["path_corpus"] = "/work/data/NLP/corpora/raw_texts/Eng/BNC/bnc.txt.gz"
-        params["path_corpus"] = "./corpus/brown.txt"
+        params["path_corpus"] = "./corpus/"
         params["vecto_version"] = vecto.__version__
         vocab, corpus_ids = load_corpus(params["path_corpus"])
         net, optimizer, scheduler = init_model(vocab.cnt_words+1)
