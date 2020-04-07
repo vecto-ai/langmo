@@ -14,28 +14,16 @@ import matplotlib
 matplotlib.use('pdf')
 from matplotlib import pyplot as plt
 from protonn.utils import get_time_str
-from protonn.utils import save_data_json, load_json
+from protonn.utils import save_data_json
 import platform
 import torch
 import torch.nn.functional as F
-import torch.optim as optim
-from torch.optim.lr_scheduler import StepLR
-from .model import Net
+from .model import Net, init_model, load_model
 from .data import load_corpus
 
 
 pos_corpus = 0
 cnt_epochs = 300
-
-
-def init_model(cnt_words):
-    net = Net(cnt_words)
-    if torch.cuda.is_available():
-        net.to("cuda")
-    # optimizer = optim.SGD(net.parameters(), 0.01)
-    optimizer = optim.Adam(net.parameters())
-    scheduler = StepLR(optimizer, step_size=1, gamma=0.99)
-    return net, optimizer, scheduler
 
 
 # TODO: move this to protonn
@@ -56,13 +44,14 @@ def schedule_eval_script(command):
 def make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params):
     print(f"creating ep {id_epoch} snapshot")
     save_data_json(params, os.path.join(params["path_results"], "metadata.json"))
+    vocab.save_to_dir(os.path.join(params["path_results"], "vocab"))
     embeddings = WordEmbeddingsDense()
     embeddings.vocabulary = vocab
     embeddings.metadata.update(params)
     embeddings.metadata["vocabulary"] = vocab.metadata
     embeddings.metadata["cnt_epochs"] = id_epoch
     embeddings.metadata.update(params)
-    embeddings.matrix = net.embed.weight.data.cpu().numpy()[1:]
+    embeddings.matrix = net.embed.weight.data.cpu().numpy()
     name_snapshot = f"snap_ep_{id_epoch:03}"
     path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs")
     embeddings.save_to_dir(path_embeddings)
@@ -123,18 +112,6 @@ def train_batch(corpus_ids, optimizer, net, params):
     return float(loss.data)
 
 
-def load_model(path):
-    path = Path(path)
-    params = load_json(path / "metadata.json")
-    checkpoint = torch.load(path / "model_last.pkl")
-    vocab, corpus_ids = load_corpus(params["path_corpus"])
-    net, optimizer, scheduler = init_model(vocab.cnt_words)
-    net.load_state_dict(checkpoint['model_state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-    return net, optimizer, scheduler, params, vocab, corpus_ids
-
-
 def main():
     if len(sys.argv) == 1:
         params = {}
@@ -151,8 +128,10 @@ def main():
         # params["path_corpus"] = "/work/data/NLP/corpora/raw_texts/Eng/BNC/bnc.txt.gz"
         params["path_corpus"] = "./corpus/"
         params["vecto_version"] = vecto.__version__
-        vocab, corpus_ids = load_corpus(params["path_corpus"])
-        net, optimizer, scheduler = init_model(vocab.cnt_words+1)
+        # TODO: cmd arg for load vocab
+        vocab = vecto.vocabulary.create_from_path(params["path_corpus"], min_frequency=10)
+        corpus_ids = load_corpus(params["path_corpus"], vocab)
+        net, optimizer, scheduler = init_model(vocab.cnt_words)
         params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}")
         os.makedirs(params["path_results"], exist_ok=True)
         params["time_start_training"] = timer()
