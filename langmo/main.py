@@ -162,6 +162,7 @@ def main():
         net, optimizer, scheduler, params, vocab, corpus_ids = load_model(path_load)
 
     print("training")
+    print("id min", corpus_ids.min())
     for id_epoch in range(len(params["loss_history"]), cnt_epochs):
         time_start = timer()
         loss_epoch = train_epoch(corpus_ids, optimizer, net, params)
