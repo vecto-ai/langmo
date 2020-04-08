@@ -71,7 +71,7 @@ def make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params):
     embeddings.normalize()
     seeds = ["the meaning of life is",
              "once upon a time",
-             "this is the poing of my proposal",
+             "this is the point of my proposal",
              "man is to woman as king is to"]
 
     with open(os.path.join(params["path_results"], name_snapshot, "generated.txt"), "w") as f:
@@ -162,7 +162,6 @@ def main():
         net, optimizer, scheduler, params, vocab, corpus_ids = load_model(path_load)
 
     print("training")
-    print("id min", corpus_ids.min())
     for id_epoch in range(len(params["loss_history"]), cnt_epochs):
         time_start = timer()
         loss_epoch = train_epoch(corpus_ids, optimizer, net, params)
