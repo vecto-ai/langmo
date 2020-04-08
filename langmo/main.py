@@ -20,6 +20,7 @@ import torch
 import torch.nn.functional as F
 from .model import Net, init_model, load_model
 from .data import load_corpus
+from .generate import generate
 
 
 pos_corpus = 0
@@ -43,6 +44,8 @@ def schedule_eval_script(command):
 
 def make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params):
     print(f"creating ep {id_epoch} snapshot")
+    net.cpu()
+    net.hidden = None
     save_data_json(params, os.path.join(params["path_results"], "metadata.json"))
     vocab.save_to_dir(os.path.join(params["path_results"], "vocab"))
     embeddings = WordEmbeddingsDense()
@@ -58,13 +61,27 @@ def make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params):
     path_eval_results = os.path.join(params["path_results"], name_snapshot, "eval")
     path_this_module = Path(__file__).parent.parent
     command_eval = f"cd {path_this_module}\npython3 -m langmo.evaluate {path_embeddings} {path_eval_results}"
-    schedule_eval_script(command_eval)
+    # schedule_eval_script(command_eval)
 
     torch.save({'epoch': id_epoch,
                 'model_state_dict': net.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'scheduler_state_dict': scheduler.state_dict()},
                 os.path.join(params["path_results"], "model_last.pkl"))
+    embeddings.normalize()
+    seeds = ["the meaning of life is",
+             "once upon a time",
+             "this is the poing of my proposal",
+             "man is to woman as king is to"]
+
+    with open(os.path.join(params["path_results"], name_snapshot, "generated.txt"), "w") as f:
+        for seed in seeds:
+            generated = generate(seed, net, embeddings, vocab)
+            f.write(f"seed: {seed}\n")
+            f.write(f"generated {generated}\n\n")
+    net.hidden = None
+    if torch.cuda.is_available():
+        net.to("cuda")
 
 
 # TODO: write trainer or use existing lib
@@ -135,6 +152,9 @@ def main():
         params["path_results"] = os.path.join(path_results_base, f"{get_time_str()}_{hostname}")
         os.makedirs(params["path_results"], exist_ok=True)
         params["time_start_training"] = timer()
+        print("pre-heating for bs")
+        batch = corpus_ids[0: params["batch_size"]]
+        predicted = net(batch)
         make_snapshot(net, optimizer, scheduler, 0, vocab, params)
     else:  # load
         print("resuming")
