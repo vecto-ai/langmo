@@ -123,15 +123,6 @@ criterion = nn.CrossEntropyLoss()
 # Training code
 ###############################################################################
 
-def repackage_hidden(h):
-    """Wraps hidden states in new Tensors, to detach them from their history."""
-
-    if isinstance(h, torch.Tensor):
-        return h.detach()
-    else:
-        return tuple(repackage_hidden(v) for v in h)
-
-
 # get_batch subdivides the source data into chunks of length args.bptt.
 # If source is equal to the example output of the batchify function, with
 # a bptt-limit of 2, we'd get the following two Variables for i = 0:
@@ -155,15 +146,12 @@ def evaluate(data_source):
     total_loss = 0.
     ntokens = len(corpus.dictionary)
     if args.model != 'Transformer':
-        hidden = model.init_hidden(eval_batch_size)
+        model.hidden = None
     with torch.no_grad():
         for i in range(0, data_source.size(0) - 1, args.bptt):
             data, targets = get_batch(data_source, i)
-            if args.model == 'Transformer':
-                output = model(data)
-            else:
-                output, hidden = model(data, hidden)
-                hidden = repackage_hidden(hidden)
+            output = model(data)
+            model.truncate()
             output_flat = output.view(-1, ntokens)
             total_loss += len(data) * criterion(output_flat, targets).item()
     return total_loss / (len(data_source) - 1)
@@ -176,17 +164,13 @@ def train_epoch():
     start_time = time.time()
     ntokens = len(corpus.dictionary)
     if args.model != 'Transformer':
-        hidden = model.init_hidden(args.batch_size)
+        model.init_hidden(args.batch_size)
     for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
         data, targets = get_batch(train_data, i)
         # Starting each batch, we detach the hidden state from how it was previously produced.
         # If we didn't, the model would try backpropagating all the way to start of the dataset.
-        model.zero_grad()
-        if args.model == 'Transformer':
-            output = model(data)
-        else:
-            hidden = repackage_hidden(hidden)
-            output, hidden = model(data, hidden)
+        model.truncate()
+        output = model(data)
         loss = criterion(output.view(-1, ntokens), targets)
         loss.backward()
 
@@ -230,6 +214,7 @@ vocab.lst_words = corpus.dictionary.idx2word
 
 def generate():
     print("generated")
+    model.reset()
     model.eval()
     seed = "the meaning of life is"
 
@@ -240,11 +225,11 @@ def generate():
     seed_ids = np.array([seed_ids])
     seed_ids = np.rollaxis(seed_ids, 1, start=0) 
     seed_ids = torch.from_numpy(seed_ids)
-    hidden = None
     generated = []
     for i in range(40):
         seed_ids = seed_ids.to("cuda")
-        pred, hidden  = model(seed_ids, hidden)
+        pred = model(seed_ids)
+        # print(seed_ids.shape, pred.shape)
         pred = pred.cpu().detach().numpy()[-1]
         # print(pred.shape)
         id_max = np.argmax(pred)

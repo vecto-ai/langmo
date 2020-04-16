@@ -7,6 +7,15 @@ import vecto.embeddings.dense
 from vecto.embeddings.dense import WordEmbeddingsDense
 
 
+def repackage_hidden(h):
+    """Wraps hidden states in new Tensors, to detach them from their history."""
+
+    if isinstance(h, torch.Tensor):
+        return h.detach()
+    else:
+        return tuple(repackage_hidden(v) for v in h)
+
+
 class RNNModel(nn.Module):
     """Container module with an encoder, a recurrent module, and a decoder."""
 
@@ -37,7 +46,7 @@ class RNNModel(nn.Module):
             self.decoder.weight = self.encoder.weight
 
         self.init_weights()
-
+        self.hidden = None
         self.rnn_type = rnn_type
         self.nhid = nhid
         self.nlayers = nlayers
@@ -48,20 +57,29 @@ class RNNModel(nn.Module):
         self.decoder.bias.data.zero_()
         self.decoder.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, input, hidden):
+    def forward(self, input):
         emb = self.drop(self.encoder(input))
-        output, hidden = self.rnn(emb, hidden)
+        output, self.hidden = self.rnn(emb, self.hidden)
         output = self.drop(output)
         decoded = self.decoder(output)
-        return decoded, hidden
+        return decoded
+        # , hidden
+
+    def truncate(self):
+        self.zero_grad()
+        self.hidden = repackage_hidden(self.hidden)
+
+    def reset(self):
+        self.zero_grad()
+        self.hidden = None
 
     def init_hidden(self, bsz):
         weight = next(self.parameters())
         if self.rnn_type == 'LSTM':
-            return (weight.new_zeros(self.nlayers, bsz, self.nhid),
+            self.hidden = (weight.new_zeros(self.nlayers, bsz, self.nhid),
                     weight.new_zeros(self.nlayers, bsz, self.nhid))
         else:
-            return weight.new_zeros(self.nlayers, bsz, self.nhid)
+            self.hidden = weight.new_zeros(self.nlayers, bsz, self.nhid)
 
     def save_embeddings(self, vocab, params, id_epoch):
         embeddings = WordEmbeddingsDense()
