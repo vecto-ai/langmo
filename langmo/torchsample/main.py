@@ -3,12 +3,14 @@ import argparse
 import time
 import math
 import os
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.onnx
 import platform
 from protonn.utils import get_time_str
 import vecto.vocabulary
+from vecto.corpus.tokenization import word_tokenize_txt
 
 import data
 import model
@@ -223,7 +225,37 @@ best_val_loss = None
 vocab = vecto.vocabulary.Vocabulary()
 vocab.dic_words_ids = corpus.dictionary.word2idx
 vocab.lst_words = corpus.dictionary.idx2word
-model.save_embeddings(vocab, params, 0)
+# model.save_embeddings(vocab, params, 0)
+
+
+def generate():
+    print("generated")
+    model.eval()
+    seed = "the meaning of life is"
+
+    #print("seed:", seed)
+    #seed_ids = torch.ones((1,1), dtype=torch.int64)
+    seed_ids = [vocab.get_id(w) for w in word_tokenize_txt(seed)]
+    # print(seed_ids)
+    seed_ids = np.array([seed_ids])
+    seed_ids = np.rollaxis(seed_ids, 1, start=0) 
+    seed_ids = torch.from_numpy(seed_ids)
+    hidden = None
+    generated = []
+    for i in range(40):
+        seed_ids = seed_ids.to("cuda")
+        pred, hidden  = model(seed_ids, hidden)
+        pred = pred.cpu().detach().numpy()[-1]
+        # print(pred.shape)
+        id_max = np.argmax(pred)
+        # print(id_max, vocab.cnt_words)
+        next_token = vocab.get_word_by_id(id_max)
+        generated.append(next_token)
+        seed_ids = torch.tensor([[id_max]])
+    print(" ".join(generated))
+
+
+generate()
 try:
     for epoch in range(1, args.epochs + 1):
         # TODO: export emeddings
@@ -244,6 +276,7 @@ try:
         else:
             # Anneal the learning rate if no improvement has been seen in the validation dataset.
             lr /= 4.0
+        generate()
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')

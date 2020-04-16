@@ -28,6 +28,7 @@ class Net(nn.Module):
     def forward(self, x):
         h = self.embed(x)
         h.unsqueeze_(0)
+        print(h.shape)
         h, self.hidden = self.lstm_1(h, self.hidden)
         # TODO: move loop over sequence inside and don't compute unused dense outputs
         h = self.dense_1(h[0])
