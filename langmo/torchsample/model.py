@@ -194,3 +194,9 @@ class TransformerModel(nn.Module):
         name_snapshot = f"snap_ep_{id_epoch:03}"
         path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs")
         embeddings.save_to_dir(path_embeddings)
+
+    def truncate(self):
+        self.zero_grad()
+
+    def reset(self):
+        self.zero_grad()
