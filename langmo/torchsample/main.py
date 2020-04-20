@@ -212,12 +212,24 @@ vocab.lst_words = corpus.dictionary.idx2word
 # model.save_embeddings(vocab, params, 0)
 
 
-def generate():
-    print("generated")
+def make_snapshot(model, vocab, params, id_epoch):
+    embeddings = model.get_embeddings(vocab, params)
+    embeddings.metadata["cnt_epochs"] = id_epoch
+    name_snapshot = f"snap_ep_{id_epoch:03}"
+    path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs")
+    embeddings.save_to_dir(path_embeddings)
+    # TODO: save generated
+    seeds = ["the meaning of life is"]
+    with open(os.path.join(params["path_results"], name_snapshot, "generated.txt"), "w") as f:
+        for seed in seeds:
+            generated = generate(seed, model, vocab)
+            f.write(f"seed: {seed}\n")
+            f.write(f"generated: {generated}\n\n")
+
+
+def generate(seed, model, vocab):
     model.reset()
     model.eval()
-    seed = "the meaning of life is"
-
     #print("seed:", seed)
     #seed_ids = torch.ones((1,1), dtype=torch.int64)
     seed_ids = [vocab.get_id(w) for w in word_tokenize_txt(seed)]
@@ -237,11 +249,12 @@ def generate():
         next_token = vocab.get_word_by_id(id_max)
         generated.append(next_token)
         seed_ids = torch.tensor([[id_max]])
-    print(" ".join(generated))
+    res = (" ".join(generated))
+    print(res)
+    return res
 
-
-generate()
 try:
+    make_snapshot(model, vocab, params, 0)
     for epoch in range(1, args.epochs + 1):
         # TODO: export emeddings
         epoch_start_time = time.time()
@@ -252,7 +265,7 @@ try:
                 'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
                                            val_loss, math.exp(val_loss)))
         print('-' * 89)
-        model.save_embeddings(vocab, params, epoch)
+        make_snapshot(model, vocab, params, epoch)
         # Save the model if the validation loss is the best we've seen so far.
         if not best_val_loss or val_loss < best_val_loss:
             with open(args.save, 'wb') as f:
@@ -261,7 +274,6 @@ try:
         else:
             # Anneal the learning rate if no improvement has been seen in the validation dataset.
             lr /= 4.0
-        generate()
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')
