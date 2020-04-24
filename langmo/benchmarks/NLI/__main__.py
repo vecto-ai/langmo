@@ -1,4 +1,5 @@
 import sys
+import os
 import yaml
 import torch
 import torch.optim as optim
@@ -6,6 +7,8 @@ import vecto
 import vecto.embeddings
 import numpy as np
 import torch.nn.functional as F
+from protonn.utils import save_data_json
+from langmo.utils import get_unique_results_path
 from .data import Iterator, read_ds
 from .model import Net
 
@@ -50,6 +53,10 @@ def main():
     path_config = sys.argv[1]
     with open(path_config, "r") as cfg:
         params = yaml.load(cfg)
+    path_results_base = "./out"
+    params["path_results"] = get_unique_results_path(path_results_base)
+    save_data_json(params, os.path.join(params["path_results"], "metadata.json"))
+
     embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
     print("loaded embeddings")
     net = Net(embs)
