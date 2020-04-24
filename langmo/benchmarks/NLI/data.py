@@ -10,7 +10,7 @@ def read_ds(path, embs, test=False):
         for line in f:
             train.append(json.loads(line))
             cnt += 1
-            if test and cnt > 127:
+            if test and cnt > 2048:
                 break
     print(f"{len(train)} samples loaded")
     df = pandas.DataFrame(train)

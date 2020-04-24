@@ -71,10 +71,9 @@ def main():
         return
     path_config = sys.argv[1]
     with open(path_config, "r") as cfg:
-        params = yaml.load(cfg)
+        params = yaml.load(cfg, Loader=yaml.SafeLoader)
     path_results_base = "./out/NLI"
     params["path_results"] = get_unique_results_path(path_results_base)
-    params["time_start_training"] = timer()
     save_data_json(params, os.path.join(params["path_results"], "metadata.json"))
     embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
     print("loaded embeddings")
@@ -87,6 +86,8 @@ def main():
     it_val = Iterator(val_tuples, batch_size)
     optimizer = optim.Adam([param for param in net.parameters() if param.requires_grad == True], lr=0.001)
     params["train_log"] = []
+    print("start training")
+    params["time_start_training"] = timer()
     for id_epoch in range(params["cnt_epochs"]):
         loss, acc = train_epoch(net, optimizer, it_train)
         time_end = timer()
