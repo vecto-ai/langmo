@@ -1,4 +1,28 @@
 import numpy as np
+import pandas
+import json
+
+
+def read_ds(path, embs, test=False):
+    train = []
+    cnt = 0
+    with open(path) as f:
+        for line in f:
+            train.append(json.loads(line))
+            cnt += 1
+            if test and cnt > 127:
+                break
+    print(f"{len(train)} samples loaded")
+    df = pandas.DataFrame(train)
+    dic_labels = {l: i for i, l in enumerate(sorted(df["gold_label"].unique()))}
+    df["sentence1"] = df["sentence1"].apply(lambda s: s.lower())
+    df["sentence2"] = df["sentence2"].apply(lambda s: s.lower())
+#    print(df["sentence1"][:10])
+    sent1 = map(embs.vocabulary.tokens_to_ids, df["sentence1"])
+    sent2 = map(embs.vocabulary.tokens_to_ids, df["sentence2"])
+    labels = map(lambda x: dic_labels[x], df["gold_label"])
+    tuples = zip(zip(sent1, sent2), labels)
+    return tuples
 
 
 # TODO: make it actually an iterator

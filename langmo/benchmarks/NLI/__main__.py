@@ -1,15 +1,13 @@
-import pandas
-import json
 import sys
 import yaml
 import torch
 import torch.optim as optim
 import vecto
 import vecto.embeddings
-from data import Iterator
-from model import Net
 import numpy as np
 import torch.nn.functional as F
+from .data import Iterator, read_ds
+from .model import Net
 
 
 def train_batch(net, optimizer, batch, train):
@@ -45,29 +43,10 @@ def train_epoch(net, optimizer, iter, train=True):
     return np.mean(losses), cnt_correct / iter.cnt_samples
 
 
-def read_ds(path, embs, test=False):
-    train = []
-    cnt = 0
-    with open(path) as f:
-        for line in f:
-            train.append(json.loads(line))
-            cnt += 1
-            if test and cnt > 127:
-                break
-    print(f"{len(train)} samples loaded")
-    df = pandas.DataFrame(train)
-    dic_labels = {l: i for i, l in enumerate(sorted(df["gold_label"].unique()))}
-    df["sentence1"] = df["sentence1"].apply(lambda s: s.lower())
-    df["sentence2"] = df["sentence2"].apply(lambda s: s.lower())
-#    print(df["sentence1"][:10])
-    sent1 = map(embs.vocabulary.tokens_to_ids, df["sentence1"])
-    sent2 = map(embs.vocabulary.tokens_to_ids, df["sentence2"])
-    labels = map(lambda x: dic_labels[x], df["gold_label"])
-    tuples = zip(zip(sent1, sent2), labels)
-    return tuples
-
-
 def main():
+    if len(sys.argv) < 2:
+        print("run main.py config.yaml")
+        return
     path_config = sys.argv[1]
     with open(path_config, "r") as cfg:
         params = yaml.load(cfg)
@@ -76,12 +55,12 @@ def main():
     net = Net(embs)
     print("constructed a model")
     batch_size = 4
-    train_tuples = read_ds(params["path_train"], embs)
-    val_tuples = read_ds(params["path_val"], embs)
+    train_tuples = read_ds(params["path_train"], embs, params["test"])
+    val_tuples = read_ds(params["path_val"], embs, params["test"])
     it_train = Iterator(train_tuples, batch_size)
     it_val = Iterator(val_tuples, batch_size)
     optimizer = optim.Adam([param for param in net.parameters() if param.requires_grad == True], lr=0.001)
-    for i in range(20):
+    for id_epoch in range(params["cnt_epochs"]):
         loss, acc = train_epoch(net, optimizer, it_train)
         loss_val, accuracy_val = train_epoch(net, optimizer, it_val, False)
         print(loss, acc, loss_val, accuracy_val)
