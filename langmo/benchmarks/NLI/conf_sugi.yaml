@@ -2,6 +2,6 @@
 path_embeddings: "/mnt/storage/data/NLP/embeddings/6b.wiki_giga"
 path_train: "/mnt/storage/data/NLP/datasets/comprehension/SNLI/snli_1.0_train.jsonl"
 path_val: "/mnt/storage/data/NLP/datasets/comprehension/SNLI/snli_1.0_dev.jsonl"
-cnt_epochs: 20
-test: false
+cnt_epochs: 4
+test: true
     

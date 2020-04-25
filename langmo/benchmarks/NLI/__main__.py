@@ -35,6 +35,10 @@ def make_snapshot(net, optimizer, scheduler, id_epoch, params):
 def train_batch(net, optimizer, batch, train):
     s1, s2 = batch[0]
     target = batch[1]
+    if train:
+        net.train()
+    else:
+        net.eval()
     net.zero_grad()
     s1 = torch.from_numpy(s1)
     s2 = torch.from_numpy(s2)
@@ -43,7 +47,6 @@ def train_batch(net, optimizer, batch, train):
     s2 = s2.to("cuda")
     target = target.to("cuda")
     logits = net(s1, s2)
-    # print(logits.shape)
     loss = F.cross_entropy(logits, target)
     if train:
         loss.backward()
@@ -90,9 +93,9 @@ def main():
     params["time_start_training"] = timer()
     for id_epoch in range(params["cnt_epochs"]):
         loss, acc = train_epoch(net, optimizer, it_train)
+        loss_val, acc_val = train_epoch(net, optimizer, it_val, False)
         time_end = timer()
         time_total = (time_end - params["time_start_training"])
-        loss_val, acc_val = train_epoch(net, optimizer, it_val, False)
         epoch_stats = {}
         epoch_stats["loss"] = loss
         epoch_stats["accuracy"] = acc
