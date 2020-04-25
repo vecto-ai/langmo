@@ -14,6 +14,7 @@ class Siamese(nn.Module):
         h_left = self.bottom(left)[-1]
         self.bottom.hidden = None
         h_right = self.bottom(right)[-1]
+        # TODO: add [optionally] product and difference to concat
         cnc = torch.cat((h_left, h_right), 1)
         h = self.top(cnc)
         return h
