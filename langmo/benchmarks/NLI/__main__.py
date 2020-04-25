@@ -69,6 +69,7 @@ def train_epoch(net, optimizer, iter, train=True):
 
 
 def main():
+    scheduler = None
     if len(sys.argv) < 2:
         print("run main.py config.yaml")
         return
@@ -102,15 +103,15 @@ def main():
         epoch_stats["val_loss"] = loss_val
         epoch_stats["val_accuracy"] = acc_val
         params["train_log"].append(epoch_stats)
+        make_snapshot(net, optimizer, scheduler, id_epoch, params)
+        time_end_snap = timer()
         print(id_epoch,
               f"loss: {loss:.4f}",
               f"acc: {acc:.4f}",
               f"loss_val: {loss_val:.4f}",
               f"acc_val: {acc_val:.4f}",
-              f"time total: {datetime.timedelta(seconds=time_total)}")
-        # TODO: log to fs
-        scheduler = None
-        make_snapshot(net, optimizer, scheduler, id_epoch, params)
+              f"time total: {datetime.timedelta(seconds=time_total)}",
+              f"time snap: {int(time_end_snap - time_end)}s")
 
 
 if __name__ == "__main__":
