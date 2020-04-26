@@ -78,7 +78,7 @@ def make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params):
         for seed in seeds:
             generated = generate(seed, net, embeddings, vocab)
             f.write(f"seed: {seed}\n")
-            f.write(f"generated {" ".join(generated)}\n\n")
+            f.write(f"generated {' '.join(generated)}\n\n")
     net.hidden = None
     if torch.cuda.is_available():
         net.to("cuda")
