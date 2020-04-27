@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+import os
 import yaml
 import torch
 import torch.nn as nn
@@ -8,6 +9,30 @@ import torch.optim as optim
 from vecto.corpus import DirSlidingWindowCorpus
 from vecto.corpus.tokenization import DEFAULT_TOKENIZER, DEFAULT_JAP_TOKENIZER
 import vecto.vocabulary
+from vecto.embeddings.dense import WordEmbeddingsDense
+from protonn.utils import save_data_json
+# from vecto.vocabulary import Vocabulary
+
+
+def make_snapshot(net, id_epoch, vocab, params):
+    # print(f"creating ep {id_epoch} snapshot")
+    net.cpu()
+    save_data_json(params, os.path.join(params["path_results"], "metadata.json"))
+    vocab.save_to_dir(os.path.join(params["path_results"], "vocab"))
+    embeddings = WordEmbeddingsDense()
+    embeddings.vocabulary = vocab
+    embeddings.metadata.update(params)
+    embeddings.metadata["vocabulary"] = vocab.metadata
+    embeddings.metadata["cnt_epochs"] = id_epoch
+    embeddings.metadata.update(params)
+    embeddings.matrix = net.emb_in.weight.data.cpu().numpy()
+    name_snapshot = f"snap_ep_{id_epoch:03}"
+    path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs")
+    embeddings.save_to_dir(path_embeddings)
+    # path_eval_results = os.path.join(params["path_results"], name_snapshot, "eval")
+    # path_this_module = Path(__file__).parent.parent
+    if torch.cuda.is_available():
+        net.to("cuda")
 
 
 class Net(nn.Module):
@@ -134,7 +159,7 @@ def train_batch(net, optimizer, batch, buf_old_context):
     return float(loss)
 
 
-def train_epoch(net, optimizer, it, buf_old_context):
+def train_epoch(id_epoch, net, optimizer, it, buf_old_context, vocab, params):
     losses_epoch = []
     while True:
         batch = next(it)
@@ -143,6 +168,7 @@ def train_epoch(net, optimizer, it, buf_old_context):
         if it.is_new_epoch:
             break
     print(np.mean(losses_epoch))
+    make_snapshot(net, id_epoch, vocab, params)
 
 
 def main():
@@ -173,7 +199,7 @@ def main():
     buf_old_context = RingBuffer((params["window_size"] * 2, params["batch_size"]),
                                  size_old_context)
     for i in range(params["cnt_epochs"]):
-        train_epoch(net, optimizer, it, buf_old_context)
+        train_epoch(i, net, optimizer, it, buf_old_context, vocab, params)
 
 
 if __name__ == "__main__":
