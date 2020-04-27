@@ -187,7 +187,7 @@ def main():
     vocab = vecto.vocabulary.load(params["path_vocab"])
     net = Net(vocab.cnt_words, 128)
     net.cuda()
-    optimizer = optim.Adam([param for param in net.parameters() if param.requires_grad is True],
+    optimizer = optim.SGD([param for param in net.parameters() if param.requires_grad is True],
                            lr=0.001)
 
     print(vocab.cnt_words)
