@@ -27,11 +27,25 @@ class Net(nn.Module):
         return res
 
 
+class RingBuffer():
+    def __init__(self, shape_batch, cnt_items):
+        self.buf = np.zeros((cnt_items, *shape_batch), dtype=np.int64)
+        self.pos = 0
+
+    def pop(self):
+        self.pos = (self.pos + 1) % self.buf.shape[0]
+        return self.buf[self.pos]
+
+    def push(self, data):
+        self.fpos = (self.pos + 1) % self.buf.shape[0]
+        self.buf[self.pos] = data
+
+
 class DirWindowIterator():
     def __init__(self, path, vocab, window_size, batch_size, language='eng', repeat=True):
         self.path = path
         self.vocab = vocab
-        self.window_size = window_size - 1
+        self.window_size = window_size
         self.language = language
         if language == 'jap':
             self.dswc = DirSlidingWindowCorpus(self.path, tokenizer=DEFAULT_JAP_TOKENIZER,
@@ -39,7 +53,8 @@ class DirWindowIterator():
                                                right_ctx_size=self.window_size)
         else:
             self.dswc = DirSlidingWindowCorpus(self.path, tokenizer=DEFAULT_TOKENIZER,
-                                               left_ctx_size=self.window_size, right_ctx_size=self.window_size)
+                                               left_ctx_size=self.window_size,
+                                               right_ctx_size=self.window_size)
         self.batch_size = batch_size
         self._repeat = repeat
         self.epoch = 0
@@ -67,7 +82,8 @@ class DirWindowIterator():
                                                        right_ctx_size=self.window_size)
                 else:
                     self.dswc = DirSlidingWindowCorpus(self.path, tokenizer=DEFAULT_TOKENIZER,
-                                                       left_ctx_size=self.window_size, right_ctx_size=self.window_size)
+                                                       left_ctx_size=self.window_size,
+                                                       right_ctx_size=self.window_size)
             if self.epoch > 0 and self.cnt_words_total < 3:
                 print("corpus empty")
                 raise RuntimeError("Corpus is empty")
@@ -95,9 +111,10 @@ class DirWindowIterator():
         return np.array(centers, dtype=np.int64), np.array(contexts, dtype=np.int64)
 
 
-def train_batch(net, optimizer, batch):
+def train_batch(net, optimizer, batch, buf_old_context):
     center, context = batch
     context = np.rollaxis(context, 1, start=0)
+    buf_old_context.push(context)
     center = torch.from_numpy(center)
     context = torch.from_numpy(context)
     center = center.to("cuda")
@@ -105,18 +122,23 @@ def train_batch(net, optimizer, batch):
     res = net(center, context)
     # print(res.shape)
     # print(res)
-    loss_positive = - torch.sigmoid(res).sum()
-    loss = loss_positive
+    loss_positive = - torch.sigmoid(res).mean()
+    context_negative = buf_old_context.pop()
+    context = torch.from_numpy(context_negative)
+    context = context.to("cuda")
+    res = net(center, context)
+    loss_negative = torch.sigmoid(res).mean()
+    loss = loss_positive + loss_negative
     loss.backward()
     optimizer.step()
     return float(loss)
 
 
-def train_epoch(net, optimizer, it):
+def train_epoch(net, optimizer, it, buf_old_context):
     losses_epoch = []
     while True:
         batch = next(it)
-        loss = train_batch(net, optimizer, batch)
+        loss = train_batch(net, optimizer, batch, buf_old_context)
         losses_epoch.append(loss)
         if it.is_new_epoch:
             break
@@ -136,7 +158,8 @@ def main():
     vocab = vecto.vocabulary.load(params["path_vocab"])
     net = Net(vocab.cnt_words, 128)
     net.cuda()
-    optimizer = optim.Adam([param for param in net.parameters() if param.requires_grad == True], lr=0.001)
+    optimizer = optim.Adam([param for param in net.parameters() if param.requires_grad is True],
+                           lr=0.001)
 
     print(vocab.cnt_words)
     it = DirWindowIterator(params["path_corpus"],
@@ -146,8 +169,12 @@ def main():
                            language='eng',
                            repeat=True)
     # print(context)
+    size_old_context = 10
+    buf_old_context = RingBuffer((params["window_size"] * 2, params["batch_size"]),
+                                 size_old_context)
     for i in range(params["cnt_epochs"]):
-        train_epoch(net, optimizer, it)
+        train_epoch(net, optimizer, it, buf_old_context)
+
 
 if __name__ == "__main__":
     main()
