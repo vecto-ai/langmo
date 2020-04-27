@@ -112,6 +112,17 @@ def train_batch(net, optimizer, batch):
     return float(loss)
 
 
+def train_epoch(net, optimizer, it):
+    losses_epoch = []
+    while True:
+        batch = next(it)
+        loss = train_batch(net, optimizer, batch)
+        losses_epoch.append(loss)
+        if it.is_new_epoch:
+            break
+    print(np.mean(losses_epoch))
+
+
 def main():
     print("hi")
     if len(sys.argv) < 2:
@@ -134,14 +145,9 @@ def main():
                            params["batch_size"],
                            language='eng',
                            repeat=True)
-    losses_epoch = []
-    while not it.is_new_epoch:
-        batch = next(it)
-        loss = train_batch(net, optimizer, batch)
-        losses_epoch.append(loss)
-    print(np.mean(losses_epoch))
     # print(context)
-
+    for i in range(params["cnt_epochs"]):
+        train_epoch(net, optimizer, it)
 
 if __name__ == "__main__":
     main()
