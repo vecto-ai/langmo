@@ -11,6 +11,7 @@ from vecto.corpus.tokenization import DEFAULT_TOKENIZER, DEFAULT_JAP_TOKENIZER
 import vecto.vocabulary
 from vecto.embeddings.dense import WordEmbeddingsDense
 from protonn.utils import save_data_json
+from timeit import default_timer as timer
 # from vecto.vocabulary import Vocabulary
 
 
@@ -160,6 +161,7 @@ def train_batch(net, optimizer, batch, buf_old_context):
 
 
 def train_epoch(id_epoch, net, optimizer, it, buf_old_context, vocab, params):
+    time_start = timer()
     losses_epoch = []
     while True:
         batch = next(it)
@@ -167,8 +169,9 @@ def train_epoch(id_epoch, net, optimizer, it, buf_old_context, vocab, params):
         losses_epoch.append(loss)
         if it.is_new_epoch:
             break
-    print(np.mean(losses_epoch))
     make_snapshot(net, id_epoch, vocab, params)
+    time_end = timer()
+    print(np.mean(losses_epoch), time_end - time_start)
 
 
 def main():

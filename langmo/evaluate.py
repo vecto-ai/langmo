@@ -11,15 +11,29 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
+def neigbours(embs, path_dest):
+    seeds = ["man", "woman", "quick", "fast", "one", "red"]
+    results = []
+    for w in seeds:
+        neigbours = embs.get_most_similar_words(w)
+        results.append([w, neigbours])
+    save_json(jsonify(results), os.path.join(path_dest, "results.json"))
+
+
 def run(path_emb, path_dest):
     # name_dataset = "dummy_analogy"
     name_dataset = "BATS"
     embeddings = load_from_dir(path_emb)
     embeddings.cache_normalized_copy()
+    neigbours(embeddings, os.path.join(path_dest, "neigbours"))
+
+    # --- run analogy --------------
+    # TODO: iterate over supported benchmarks
+    return
     ds = get_dataset_by_name(name_dataset)
     bench_analogy = Analogy(method="LRCos")
     results = bench_analogy.run(embeddings, ds)
-
+    path_dest = os.path.join(path_dest, "analogy")
     summary = {}
     summary["mean_reciprocal_rank"] = get_mean_reciprocal_rank(results)
     summary["mean_accuracy"] = get_mean_accuracy(results)
@@ -33,7 +47,7 @@ def main():
     if len(sys.argv) == 3:
         path_dest = sys.argv[2]
     else:
-        path_dest = os.path.join(path_emb, "eval/analogy")
+        path_dest = os.path.join(path_emb, "eval")
     run(path_emb, path_dest)
 
 

@@ -7,4 +7,4 @@ for folder in path.iterdir():
     print(folder)
     if not folder.is_dir():
         continue
-    evaluate.run(folder / "embs", folder / "eval" / "analogy")
+    evaluate.run(folder / "embs", folder / "eval")
