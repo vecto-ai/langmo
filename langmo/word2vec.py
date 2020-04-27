@@ -195,7 +195,7 @@ def main():
                            language='eng',
                            repeat=True)
     # print(context)
-    size_old_context = 10
+    size_old_context = 2000
     buf_old_context = RingBuffer((params["window_size"] * 2, params["batch_size"]),
                                  size_old_context)
     for i in range(params["cnt_epochs"]):
