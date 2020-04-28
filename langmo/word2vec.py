@@ -5,7 +5,7 @@ import yaml
 import torch
 import torch.nn as nn
 import torch.optim as optim
-# import torch.nn.functional as F
+import torch.nn.functional as F
 from vecto.corpus import DirSlidingWindowCorpus
 from vecto.corpus.tokenization import DEFAULT_TOKENIZER, DEFAULT_JAP_TOKENIZER
 import vecto.vocabulary
@@ -41,14 +41,22 @@ class Net(nn.Module):
         super().__init__()
         self.emb_in = nn.Embedding(size_vocab, size_embedding)
         self.emb_out = nn.Embedding(size_vocab, size_embedding)
+        initrange = 0.1
+        self.emb_in.weight.data.uniform_(-initrange, initrange)
+        self.emb_out.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, center, context):
         emb_in = self.emb_in(center)
         emb_out = self.emb_out(context)
         # print(emb_in.shape, emb_out.shape)
-        res = emb_in * emb_out
+        res = emb_out * emb_in
+        norm_in = torch.norm(emb_in, 2, 1)
+        norm_out = torch.norm(emb_out, 2, 2)
+        norm = norm_out * norm_in
+        # res = F.cosine_similarity(emb_in, emb_out)
         res = res.sum(axis=2)
-        # TODO: optional not    malization here
+        res /= norm
+        # TODO: optional notmalization here
         # TODO: loss to separate class?
         return res
 
@@ -148,12 +156,13 @@ def train_batch(net, optimizer, batch, buf_old_context):
     res = net(center, context)
     # print(res.shape)
     # print(res)
-    loss_positive = - torch.sigmoid(res).mean()
+    # loss_positive = - torch.sigmoid(res).mean()
+    loss_positive = -res.mean()
     context_negative = buf_old_context.pop()
     context = torch.from_numpy(context_negative)
     context = context.to("cuda")
     res = net(center, context)
-    loss_negative = torch.sigmoid(res).mean()
+    loss_negative = res.mean()
     loss = loss_positive + loss_negative
     loss.backward()
     optimizer.step()
@@ -188,7 +197,7 @@ def main():
     net = Net(vocab.cnt_words, 128)
     net.cuda()
     optimizer = optim.SGD([param for param in net.parameters() if param.requires_grad is True],
-                           lr=0.001)
+                           lr=0.01)
 
     print(vocab.cnt_words)
     it = DirWindowIterator(params["path_corpus"],
