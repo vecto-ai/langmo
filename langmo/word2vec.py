@@ -13,6 +13,7 @@ import vecto.vocabulary
 from vecto.embeddings.dense import WordEmbeddingsDense
 from protonn.utils import save_data_json
 from timeit import default_timer as timer
+from langmo.utils import get_unique_results_path
 # from vecto.vocabulary import Vocabulary
 
 
@@ -194,6 +195,8 @@ def main():
     path_config = sys.argv[1]
     with open(path_config, "r") as cfg:
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
+    params["path_results"] = get_unique_results_path(params["path_results"])
+
     # center = torch.zeros((batch_size), dtype=torch.int64)
     # context = torch.ones((window * 2, batch_size), dtype=torch.int64)
     vocab = vecto.vocabulary.load(params["path_vocab"])
