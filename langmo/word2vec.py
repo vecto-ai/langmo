@@ -5,7 +5,8 @@ import yaml
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
+import datetime
+# import torch.nn.functional as F
 from vecto.corpus import DirSlidingWindowCorpus
 from vecto.corpus.tokenization import DEFAULT_TOKENIZER, DEFAULT_JAP_TOKENIZER
 import vecto.vocabulary
@@ -180,7 +181,9 @@ def train_epoch(id_epoch, net, optimizer, it, buf_old_context, vocab, params):
             break
     make_snapshot(net, id_epoch, vocab, params)
     time_end = timer()
-    print(np.mean(losses_epoch), time_end - time_start)
+    elapsed_sec = time_end - time_start
+    elapsed_str = datetime.timedelta(seconds=elapsed_sec)
+    print(np.mean(losses_epoch), elapsed_str)
 
 
 def main():
