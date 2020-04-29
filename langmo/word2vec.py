@@ -59,7 +59,7 @@ class Net(nn.Module):
         return res
 
 
-class RingBuffer():
+class LousyRingBuffer():
     def __init__(self, shape_batch, cnt_items, max_id=100):
         # self.buf = np.zeros((cnt_items, *shape_batch), dtype=np.int64)
         self.buf = np.random.randint(0,
@@ -69,12 +69,13 @@ class RingBuffer():
         self.pos = 0
 
     def pop(self):
-        self.pos = (self.pos + 1) % self.buf.shape[0]
-        return self.buf[self.pos]
+        res = self.buf[self.pos]
+        # self.pos = (self.pos + 1) % self.buf.shape[0]
+        return res
 
     def push(self, data):
-        self.pos = (self.pos + 1) % self.buf.shape[0]
         self.buf[self.pos] = data
+        self.pos = (self.pos + 1) % self.buf.shape[0]
 
 
 class DirWindowIterator():
@@ -184,7 +185,10 @@ def train_epoch(id_epoch, net, optimizer, it, buf_old_context, vocab, params):
     time_end = timer()
     elapsed_sec = time_end - time_start
     elapsed_str = datetime.timedelta(seconds=elapsed_sec)
-    print(np.mean(losses_epoch), elapsed_str)
+    loss_ep = np.mean(losses_epoch)
+    mean_emb = float(net.emb_in.weight.data.mean())
+    std_emb = float(net.emb_in.weight.data.mean())
+    print(f"loss: {loss_ep:.3}, mean: {mean_emb:.3}, std: {std_emb:.3}", elapsed_str)
 
 
 def main():
@@ -213,7 +217,7 @@ def main():
                            language='eng',
                            repeat=True)
     size_old_context = 2000
-    buf_old_context = RingBuffer((params["window_size"] * 2, params["batch_size"]),
+    buf_old_context = LousyRingBuffer((params["window_size"] * 2, params["batch_size"]),
                                  size_old_context,
                                  vocab.cnt_words)
     for i in range(params["cnt_epochs"]):
