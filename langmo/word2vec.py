@@ -219,7 +219,8 @@ def main():
     # print(context)
     size_old_context = 2000
     buf_old_context = RingBuffer((params["window_size"] * 2, params["batch_size"]),
-                                 size_old_context)
+                                 size_old_context,
+                                 vocab.cnt_words)
     for i in range(params["cnt_epochs"]):
         train_epoch(i, net, optimizer, it, buf_old_context, vocab, params)
 
