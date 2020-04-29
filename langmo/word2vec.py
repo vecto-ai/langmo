@@ -14,7 +14,6 @@ from vecto.embeddings.dense import WordEmbeddingsDense
 from protonn.utils import save_data_json
 from timeit import default_timer as timer
 from langmo.utils import get_unique_results_path
-# from vecto.vocabulary import Vocabulary
 
 
 def make_snapshot(net, id_epoch, vocab, params):
@@ -50,15 +49,12 @@ class Net(nn.Module):
     def forward(self, center, context):
         emb_in = self.emb_in(center)
         emb_out = self.emb_out(context)
-        # print(emb_in.shape, emb_out.shape)
         res = emb_out * emb_in
         norm_in = torch.norm(emb_in, 2, 1)
         norm_out = torch.norm(emb_out, 2, 2)
         norm = norm_out * norm_in
-        # res = F.cosine_similarity(emb_in, emb_out)
         res = res.sum(axis=2)
         res /= norm
-        # TODO: optional notmalization here
         # TODO: loss to separate class?
         return res
 
@@ -206,7 +202,7 @@ def main():
     vocab = vecto.vocabulary.load(params["path_vocab"])
     net = Net(vocab.cnt_words, 128)
     net.cuda()
-    optimizer = optim.Adam([param for param in net.parameters() if param.requires_grad is True],
+    optimizer = optim.SGD([param for param in net.parameters() if param.requires_grad is True],
                            lr=0.001)
 
     print(vocab.cnt_words)
@@ -216,7 +212,6 @@ def main():
                            params["batch_size"],
                            language='eng',
                            repeat=True)
-    # print(context)
     size_old_context = 2000
     buf_old_context = RingBuffer((params["window_size"] * 2, params["batch_size"]),
                                  size_old_context,
