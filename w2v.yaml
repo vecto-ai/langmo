@@ -4,6 +4,6 @@ path_vocab: "/mnt/storage/data/NLP/vocabs/bnc/m100"
 path_results: "./out/w2v"
 batch_size: 256
 window_size: 2
-cnt_epochs: 2
+cnt_epochs: 20
 test: true
     

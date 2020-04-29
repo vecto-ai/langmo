@@ -64,8 +64,12 @@ class Net(nn.Module):
 
 
 class RingBuffer():
-    def __init__(self, shape_batch, cnt_items):
-        self.buf = np.zeros((cnt_items, *shape_batch), dtype=np.int64)
+    def __init__(self, shape_batch, cnt_items, max_id=100):
+        # self.buf = np.zeros((cnt_items, *shape_batch), dtype=np.int64)
+        self.buf = np.random.randint(0,
+                                     high=max_id,
+                                     size=(cnt_items, *shape_batch),
+                                     dtype=np.int64)
         self.pos = 0
 
     def pop(self):
@@ -73,7 +77,7 @@ class RingBuffer():
         return self.buf[self.pos]
 
     def push(self, data):
-        self.fpos = (self.pos + 1) % self.buf.shape[0]
+        self.pos = (self.pos + 1) % self.buf.shape[0]
         self.buf[self.pos] = data
 
 
