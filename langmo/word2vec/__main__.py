@@ -28,6 +28,8 @@ def make_snapshot(net, id_epoch, vocab, params):
     embeddings.metadata["cnt_epochs"] = id_epoch
     embeddings.metadata.update(params)
     embeddings.matrix = net.emb_in.weight.data.cpu().numpy()
+    sim_man_woman = embeddings.cmp_words("man", "woman")
+    print("sim_man_woman", sim_man_woman)
     name_snapshot = f"snap_ep_{id_epoch:03}"
     path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs")
     embeddings.save_to_dir(path_embeddings)
@@ -41,20 +43,23 @@ class Net(nn.Module):
     def __init__(self, size_vocab, size_embedding):
         super().__init__()
         self.emb_in = nn.Embedding(size_vocab, size_embedding)
-        self.emb_out = nn.Embedding(size_vocab, size_embedding)
+        # self.emb_out = nn.Embedding(size_vocab, size_embedding)
         initrange = 0.1
         self.emb_in.weight.data.uniform_(-initrange, initrange)
-        self.emb_out.weight.data.uniform_(-initrange, initrange)
+        # self.emb_out.weight.data.uniform_(-initrange, initrange)
+        self.out = nn.Linear(size_embedding, size_vocab)
 
     def forward(self, center, context):
         emb_in = self.emb_in(center)
-        emb_out = self.emb_out(context)
-        res = emb_out * emb_in
-        norm_in = torch.norm(emb_in, 2, 1)
-        norm_out = torch.norm(emb_out, 2, 2)
-        norm = norm_out * norm_in
-        res = res.sum(axis=2)
-        res /= norm
+        # emb_out = self.emb_out(context)
+        res = self.out(emb_in)
+        print(res.shape)
+        # res = emb_out * emb_in
+        # norm_in = torch.norm(emb_in, 2, 1)
+        # norm_out = torch.norm(emb_out, 2, 2)
+        # norm = norm_out * norm_in
+        # res = res.sum(axis=2)
+        # res /= norm
         # TODO: loss to separate class?
         return res
 
@@ -161,12 +166,12 @@ def train_batch(net, optimizer, batch, buf_old_context):
     # print(res)
     # loss_positive = - torch.sigmoid(res).mean()
     loss_positive = -res.mean()
-    context_negative = buf_old_context.pop()
-    context = torch.from_numpy(context_negative)
-    context = context.to("cuda")
-    res = net(center, context)
+    # context_negative = buf_old_context.pop()
+    # context = torch.from_numpy(context_negative)
+    # context = context.to("cuda")
+    # res = net(center, context)
     loss_negative = res.mean()
-    loss = loss_positive + loss_negative
+    loss = loss_positive #+ loss_negative
     loss.backward()
     optimizer.step()
     return float(loss)
