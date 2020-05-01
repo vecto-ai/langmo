@@ -50,6 +50,7 @@ class DirWindowIterator():
         while True:
             try:
                 next_value = next(self.dswc)
+                # print(next_value)
                 self.cnt_words_read += 1
                 if self.epoch == 0:
                     self.cnt_words_total += 1

@@ -15,7 +15,7 @@ class Net(nn.Module):
         emb_in = self.emb_in(center)
         # emb_out = self.emb_out(context)
         res = self.out(emb_in)
-        print(res.shape)
+        # print(res.shape)
         # res = emb_out * emb_in
         # norm_in = torch.norm(emb_in, 2, 1)
         # norm_out = torch.norm(emb_out, 2, 2)

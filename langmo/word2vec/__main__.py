@@ -5,7 +5,7 @@ import yaml
 import torch
 import torch.optim as optim
 import datetime
-# import torch.nn.functional as F
+import torch.nn.functional as F
 import vecto.vocabulary
 from vecto.embeddings.dense import WordEmbeddingsDense
 from protonn.utils import save_data_json
@@ -13,6 +13,7 @@ from timeit import default_timer as timer
 from langmo.utils import get_unique_results_path
 from .model import Net
 from .data import LousyRingBuffer, DirWindowIterator
+from langmo.evaluate import report_neigbours
 
 
 def make_snapshot(net, id_epoch, vocab, params):
@@ -32,6 +33,7 @@ def make_snapshot(net, id_epoch, vocab, params):
     name_snapshot = f"snap_ep_{id_epoch:03}"
     path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs")
     embeddings.save_to_dir(path_embeddings)
+    report_neigbours(embeddings, os.path.join(path_embeddings, "eval/neighbours"))
     # path_eval_results = os.path.join(params["path_results"], name_snapshot, "eval")
     # path_this_module = Path(__file__).parent.parent
     if torch.cuda.is_available():
@@ -46,17 +48,21 @@ def train_batch(net, optimizer, batch, buf_old_context):
     context = torch.from_numpy(context)
     center = center.to("cuda")
     context = context.to("cuda")
+    # print(center)
     res = net(center, context)
+    # softmax version
+    # print(res.shape, center.shape)
+    loss = F.cross_entropy(res, center)
     # print(res.shape)
     # print(res)
     # loss_positive = - torch.sigmoid(res).mean()
-    loss_positive = -res.mean()
+    #loss_positive = -res.mean()
     # context_negative = buf_old_context.pop()
     # context = torch.from_numpy(context_negative)
     # context = context.to("cuda")
     # res = net(center, context)
-    loss_negative = res.mean()
-    loss = loss_positive #+ loss_negative
+    #loss_negative = res.mean()
+    #loss = loss_positive #+ loss_negative
     loss.backward()
     optimizer.step()
     return float(loss)

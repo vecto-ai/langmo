@@ -11,8 +11,9 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 
-def neigbours(embs, path_dest):
-    seeds = ["man", "woman", "quick", "fast", "one", "red"]
+def report_neigbours(embs, path_dest, seeds=None):
+    if seeds is None:
+        seeds = ["man", "woman", "quick", "fast", "one", "red"]
     results = []
     for w in seeds:
         neigbours = embs.get_most_similar_words(w)
