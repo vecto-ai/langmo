@@ -49,20 +49,24 @@ def train_batch(net, optimizer, batch, buf_old_context):
     center = center.to("cuda")
     context = context.to("cuda")
     # print(center)
-    res = net(center, context)
+    pred = net(center, context)
+    size_seq = context.shape[0]
+    size_batch = context.shape[1]
+    cnt_classes = pred.shape[-1]
+    pred = pred.expand(size_seq, size_batch, cnt_classes).reshape(-1, cnt_classes)
     # softmax version
-    # print(res.shape, center.shape)
-    loss = F.cross_entropy(res, center)
+    # print(center.shape, context.shape, res.shape)
+    loss = F.cross_entropy(pred, context.flatten())
     # print(res.shape)
     # print(res)
     # loss_positive = - torch.sigmoid(res).mean()
-    #loss_positive = -res.mean()
+    # loss_positive = -res.mean()
     # context_negative = buf_old_context.pop()
     # context = torch.from_numpy(context_negative)
     # context = context.to("cuda")
     # res = net(center, context)
-    #loss_negative = res.mean()
-    #loss = loss_positive #+ loss_negative
+    # loss_negative = res.mean()
+    # loss = loss_positive #+ loss_negative
     loss.backward()
     optimizer.step()
     return float(loss)
