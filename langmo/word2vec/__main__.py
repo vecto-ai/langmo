@@ -57,7 +57,7 @@ def train_batch(net, optimizer, batch, buf_old_context):
     pred = pred.expand(size_seq, size_batch, cnt_classes).reshape(-1, cnt_classes)
     # softmax version
     # print(center.shape, context.shape, res.shape)
-    loss = F.cross_entropy(pred, context.flatten())
+    loss = F.cross_entropy(pred, context.flatten(), ignore_index=0)
     # print(res.shape)
     # print(res)
     # loss_positive = - torch.sigmoid(res).mean()
