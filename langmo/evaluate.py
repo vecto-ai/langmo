@@ -26,7 +26,7 @@ def run(path_emb, path_dest):
     name_dataset = "BATS"
     embeddings = load_from_dir(path_emb)
     embeddings.cache_normalized_copy()
-    neigbours(embeddings, os.path.join(path_dest, "neigbours"))
+    report_neigbours(embeddings, os.path.join(path_dest, "neigbours"))
 
     # --- run analogy --------------
     # TODO: iterate over supported benchmarks
