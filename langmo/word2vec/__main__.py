@@ -33,6 +33,7 @@ def make_snapshot(net, id_epoch, vocab, params):
     name_snapshot = f"snap_ep_{id_epoch:03}"
     path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs")
     embeddings.save_to_dir(path_embeddings)
+    embeddings.cache_normalized_copy()
     report_neigbours(embeddings, os.path.join(path_embeddings, "eval/neighbours"))
     # path_eval_results = os.path.join(params["path_results"], name_snapshot, "eval")
     # path_this_module = Path(__file__).parent.parent
