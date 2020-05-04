@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class Net(nn.Module):
@@ -14,7 +15,7 @@ class Net(nn.Module):
     def forward(self, center, context):
         emb_in = self.emb_in(center)
         # emb_out = self.emb_out(context)
-        res = self.out(emb_in)
+        pred = self.out(emb_in)
         # print(res.shape)
         # res = emb_out * emb_in
         # norm_in = torch.norm(emb_in, 2, 1)
@@ -23,4 +24,15 @@ class Net(nn.Module):
         # res = res.sum(axis=2)
         # res /= norm
         # TODO: loss to separate class?
-        return res
+        size_seq = context.shape[0]
+        size_batch = context.shape[1]
+        cnt_classes = pred.shape[-1]
+        pred = pred.expand(size_seq, size_batch, cnt_classes).reshape(-1, cnt_classes)
+        # softmax version
+        # print(center.shape, context.shape, res.shape)
+        loss = F.cross_entropy(pred, context.flatten(), ignore_index=0)
+        return loss
+
+
+#class NS(nn.Module):
+#    def 

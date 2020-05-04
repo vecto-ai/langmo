@@ -5,7 +5,6 @@ import yaml
 import torch
 import torch.optim as optim
 import datetime
-import torch.nn.functional as F
 import vecto.vocabulary
 from vecto.embeddings.dense import WordEmbeddingsDense
 from protonn.utils import save_data_json
@@ -51,14 +50,7 @@ def train_batch(net, optimizer, batch, buf_old_context):
     context = context.to("cuda")
     # print(center)
     net.zero_grad()
-    pred = net(center, context)
-    size_seq = context.shape[0]
-    size_batch = context.shape[1]
-    cnt_classes = pred.shape[-1]
-    pred = pred.expand(size_seq, size_batch, cnt_classes).reshape(-1, cnt_classes)
-    # softmax version
-    # print(center.shape, context.shape, res.shape)
-    loss = F.cross_entropy(pred, context.flatten(), ignore_index=0)
+    loss = net(center, context)
     # print(res.shape)
     # print(res)
     # loss_positive = - torch.sigmoid(res).mean()
