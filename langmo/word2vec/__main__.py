@@ -50,6 +50,7 @@ def train_batch(net, optimizer, batch, buf_old_context):
     center = center.to("cuda")
     context = context.to("cuda")
     # print(center)
+    net.zero_grad()
     pred = net(center, context)
     size_seq = context.shape[0]
     size_batch = context.shape[1]
