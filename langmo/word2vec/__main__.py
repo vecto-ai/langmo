@@ -15,25 +15,30 @@ from .data import DirWindowIterator
 from langmo.evaluate import report_neigbours
 
 
-def make_snapshot(net, id_epoch, vocab, params):
-    # print(f"creating ep {id_epoch} snapshot")
-    net.cpu()
-    save_data_json(params, os.path.join(params["path_results"], "metadata.json"))
-    vocab.save_to_dir(os.path.join(params["path_results"], "vocab"))
+def save_and_eval_embeddings(weights, name):
     embeddings = WordEmbeddingsDense()
     embeddings.vocabulary = vocab
     embeddings.metadata.update(params)
     embeddings.metadata["vocabulary"] = vocab.metadata
     embeddings.metadata["cnt_epochs"] = id_epoch
     embeddings.metadata.update(params)
-    embeddings.matrix = net.emb_in.weight.data.cpu().numpy()
+    embeddings.matrix = weights
     sim_man_woman = embeddings.cmp_words("man", "woman")
     print("sim_man_woman", sim_man_woman)
     name_snapshot = f"snap_ep_{id_epoch:03}"
-    path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs")
+    path_embeddings = os.path.join(params["path_results"], name_snapshot, "embs", "name")
     embeddings.save_to_dir(path_embeddings)
     embeddings.cache_normalized_copy()
     report_neigbours(embeddings, os.path.join(path_embeddings, "eval/neighbours"))
+
+
+def make_snapshot(net, id_epoch, vocab, params):
+    # print(f"creating ep {id_epoch} snapshot")
+    net.cpu()
+    save_data_json(params, os.path.join(params["path_results"], "metadata.json"))
+    vocab.save_to_dir(os.path.join(params["path_results"], "vocab"))
+    save_and_eval_embeddings(net.emb_in.weight.data.cpu().numpy(), "in")
+    save_and_eval_embeddings(net.emb_out.weight.data.cpu().numpy(), "out")
     # path_eval_results = os.path.join(params["path_results"], name_snapshot, "eval")
     # path_this_module = Path(__file__).parent.parent
     if torch.cuda.is_available():
@@ -42,7 +47,7 @@ def make_snapshot(net, id_epoch, vocab, params):
 
 def train_batch(net, optimizer, batch):
     center, context = batch
-    print(center)
+    # print(center)
     context = np.rollaxis(context, 1, start=0)
     center = torch.from_numpy(center)
     context = torch.from_numpy(context)
