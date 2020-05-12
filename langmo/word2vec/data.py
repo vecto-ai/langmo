@@ -1,6 +1,56 @@
 import numpy as np
+# import vecto.vocabulary
+from vecto.corpus.tokenization import word_tokenize_txt
 from vecto.corpus import DirSlidingWindowCorpus
 from vecto.corpus.tokenization import DEFAULT_TOKENIZER, DEFAULT_JAP_TOKENIZER
+
+
+class FilePairIter:
+    def __init__(self, path, vocab, params):
+        self.path = path
+        self.window_size = params["window_size"]
+        self.batch_size = params["batch_size"]
+        self.vocab = vocab
+        self.freqs = np.ones(vocab.cnt_words, dtype=np.float32)
+
+    def get_sample_proba(self, id_word):
+        self.freqs[id_word] += 1
+        frac = self.freqs[id_word] / self.freqs.sum()
+        prob = (np.sqrt(frac / 0.001) + 1) * (0.001 / frac)
+        return prob
+
+    def gen_from_ids(self, ids):
+        for i in range(len(ids)):
+            for j in range(max(0, i - self.window_size), i):
+                yield(ids[j], ids[i])
+            for j in range(i + 1, min(len(ids), i + self.window_size + 1)):
+                yield(ids[j], ids[i])
+
+    def clean_ids(self, ids):
+        for i in range(ids.shape[0]):
+            prob = self.get_sample_proba(ids[i])
+            if np.random.random() > prob:
+                ids[i] = 0
+        return ids[ids != 0]
+
+    def gen(self):
+        with open(self.path) as f:
+            for line in f:
+                tokens = word_tokenize_txt(line)
+                ids = self.vocab.tokens_to_ids(tokens)
+                ids = self.clean_ids(ids)
+                yield from self.gen_from_ids(ids)
+
+    def gen_batch(self):
+        center = []
+        context = []
+        for i, j in self.gen():
+            center.append(i)
+            context.append(j)
+            if len(center) >= self.batch_size:
+                yield np.array(center, dtype=np.int64), np.array(context, dtype=np.int64)
+                center = []
+                context = []
 
 
 class LousyRingBuffer():

@@ -1,10 +1,10 @@
-path_corpus: "/mnt/storage/data/NLP/corpora/text8"
+path_corpus: "/mnt/storage/data/NLP/corpora/brown/"
 # path_corpus: "/home/blackbird/Projects_heavy/NLP/langmo/data/sense_small"
-path_vocab: "/mnt/storage/data/NLP/vocabs/text8/m2/normal"
+path_vocab: "/mnt/storage/data/NLP/vocabs/brown/m3"
 path_results: "./out/w2v"
 batch_size: 256
-embedding_size: 256
+embedding_size: 128
 window_size: 2
-cnt_epochs: 20
-test: true
+cnt_epochs: 10
+test: false
     

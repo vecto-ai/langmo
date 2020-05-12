@@ -4,22 +4,24 @@ import torch.nn.functional as F
 from .data import LousyRingBuffer
 
 
-class Net(nn.Module):
+class W2V_SM(nn.Module):
     def __init__(self, size_vocab, size_embedding, params):
         super().__init__()
         self.emb_in = nn.Embedding(size_vocab, size_embedding)
-        initrange = 0.1
+        self.emb_out = nn.Linear(size_embedding, size_vocab, bias=False)
+        initrange = 0.01
         self.emb_in.weight.data.uniform_(-initrange, initrange)
-        self.out = nn.Linear(size_embedding, size_vocab)
+        self.emb_out.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, center, context):
         emb_in = self.emb_in(center)
-        pred = self.out(emb_in)
-        size_seq = context.shape[0]
-        size_batch = context.shape[1]
-        cnt_classes = pred.shape[-1]
-        pred = pred.expand(size_seq, size_batch, cnt_classes).reshape(-1, cnt_classes)
-        loss = F.cross_entropy(pred, context.flatten(), ignore_index=0)
+        pred = self.emb_out(emb_in)
+        # size_seq = context.shape[0]
+        # size_batch = context.shape[1]
+        # cnt_classes = pred.shape[-1]
+        # pred = pred.expand(size_seq, size_batch, cnt_classes).reshape(-1, cnt_classes)
+        # loss = F.cross_entropy(pred, context.flatten(), ignore_index=0)
+        loss = F.cross_entropy(pred, context, ignore_index=0)
         return loss
 
 
