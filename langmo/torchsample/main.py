@@ -242,16 +242,19 @@ def generate(seed, model, vocab):
         seed_ids = seed_ids.to("cuda")
         pred = model(seed_ids)
         # print(seed_ids.shape, pred.shape)
-        pred = pred.cpu().detach().numpy()[-1]
-        # print(pred.shape)
-        id_max = np.argmax(pred)
+        # pred = pred.cpu().detach().numpy()[-1]
+        temperature = 1.0
+        word_weights = pred.squeeze().div(temperature).exp().cpu()
+        word_idx = torch.multinomial(word_weights, 1)[0]
+        # id_max = np.argmax(pred)
         # print(id_max, vocab.cnt_words)
-        next_token = vocab.get_word_by_id(id_max)
+        next_token = vocab.get_word_by_id(word_idx)
         generated.append(next_token)
-        seed_ids = torch.tensor([[id_max]])
+        seed_ids = torch.tensor([[word_idx]])
     res = (" ".join(generated))
     print(res)
     return res
+
 
 try:
     make_snapshot(model, vocab, params, 0)

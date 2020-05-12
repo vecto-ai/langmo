@@ -1,5 +1,5 @@
 ###############################################################################
-# Language Modeling on Wikitext-2
+# Language Modeling
 #
 # This file generates new sentences sampled from the language model
 #
@@ -10,11 +10,12 @@ import argparse
 import torch
 
 import data
+import numpy as np
 
 parser = argparse.ArgumentParser(description='PyTorch Wikitext-2 Language Model')
 
 # Model parameters.
-parser.add_argument('--data', type=str, default='./data/wikitext-2',
+parser.add_argument('--data', type=str, default='../../data/wikitext-2',
                     help='location of the data corpus')
 parser.add_argument('--checkpoint', type=str, default='./model.pt',
                     help='model checkpoint to use')
@@ -51,23 +52,27 @@ corpus = data.Corpus(args.data)
 ntokens = len(corpus.dictionary)
 
 is_transformer_model = hasattr(model, 'model_type') and model.model_type == 'Transformer'
-if not is_transformer_model:
-    hidden = model.init_hidden(1)
+#if not is_transformer_model:
+#    hidden = model.init_hidden(1)
 input = torch.randint(ntokens, (1, 1), dtype=torch.long).to(device)
 
 with open(args.outf, 'w') as outf:
     with torch.no_grad():  # no tracking history
         for i in range(args.words):
             if is_transformer_model:
-                output = model(input, False)
+                output = model(input)
                 word_weights = output[-1].squeeze().div(args.temperature).exp().cpu()
                 word_idx = torch.multinomial(word_weights, 1)[0]
                 word_tensor = torch.Tensor([[word_idx]]).long().to(device)
                 input = torch.cat([input, word_tensor], 0)
             else:
-                output, hidden = model(input, hidden)
+                output = model(input)
+                # WHY not just continue
+                # word_weights = output.cpu().detach().numpy()[-1]
+                print(output[:10])
                 word_weights = output.squeeze().div(args.temperature).exp().cpu()
                 word_idx = torch.multinomial(word_weights, 1)[0]
+                # word_idx = np.argmax(word_weights)
                 input.fill_(word_idx)
 
             word = corpus.dictionary.idx2word[word_idx]

@@ -10,8 +10,8 @@ from vecto.embeddings.dense import WordEmbeddingsDense
 from protonn.utils import save_data_json
 from timeit import default_timer as timer
 from langmo.utils import get_unique_results_path
-from .model import Net
-from .data import LousyRingBuffer, DirWindowIterator
+from .model import Net, W2V_NS
+from .data import DirWindowIterator
 from langmo.evaluate import report_neigbours
 
 
@@ -40,38 +40,27 @@ def make_snapshot(net, id_epoch, vocab, params):
         net.to("cuda")
 
 
-def train_batch(net, optimizer, batch, buf_old_context):
+def train_batch(net, optimizer, batch):
     center, context = batch
+    print(center)
     context = np.rollaxis(context, 1, start=0)
-    buf_old_context.push(context)
     center = torch.from_numpy(center)
     context = torch.from_numpy(context)
     center = center.to("cuda")
     context = context.to("cuda")
-    # print(center)
     net.zero_grad()
     loss = net(center, context)
-    # print(res.shape)
-    # print(res)
-    # loss_positive = - torch.sigmoid(res).mean()
-    # loss_positive = -res.mean()
-    # context_negative = buf_old_context.pop()
-    # context = torch.from_numpy(context_negative)
-    # context = context.to("cuda")
-    # res = net(center, context)
-    # loss_negative = res.mean()
-    # loss = loss_positive #+ loss_negative
     loss.backward()
     optimizer.step()
     return float(loss)
 
 
-def train_epoch(id_epoch, net, optimizer, it, buf_old_context, vocab, params):
+def train_epoch(id_epoch, net, optimizer, it, vocab, params):
     time_start = timer()
     losses_epoch = []
     while True:
         batch = next(it)
-        loss = train_batch(net, optimizer, batch, buf_old_context)
+        loss = train_batch(net, optimizer, batch)
         losses_epoch.append(loss)
         if it.is_new_epoch:
             break
@@ -82,7 +71,8 @@ def train_epoch(id_epoch, net, optimizer, it, buf_old_context, vocab, params):
     loss_ep = np.mean(losses_epoch)
     mean_emb = float(net.emb_in.weight.data.mean())
     std_emb = float(net.emb_in.weight.data.mean())
-    print(f"loss: {loss_ep:.3}, mean: {mean_emb:.3}, std: {std_emb:.3}", elapsed_str)
+    print(f"{id_epoch} loss: {loss_ep:.3}, mean: {mean_emb:.3}, std: {std_emb:.3}", elapsed_str)
+    # print(net.emb_in.weight.data[:3])
 
 
 def main():
@@ -98,10 +88,12 @@ def main():
     # center = torch.zeros((batch_size), dtype=torch.int64)
     # context = torch.ones((window * 2, batch_size), dtype=torch.int64)
     vocab = vecto.vocabulary.load(params["path_vocab"])
-    net = Net(vocab.cnt_words, 128)
+    assert vocab.cnt_words > 1
+    # net = Net(vocab.cnt_words, 128)
+    net = W2V_NS(vocab.cnt_words, params["embedding_size"], params)
     net.cuda()
     optimizer = optim.SGD([param for param in net.parameters() if param.requires_grad is True],
-                           lr=0.001)
+                          lr=0.01)
 
     print(vocab.cnt_words)
     it = DirWindowIterator(params["path_corpus"],
@@ -110,12 +102,8 @@ def main():
                            params["batch_size"],
                            language='eng',
                            repeat=True)
-    size_old_context = 2000
-    buf_old_context = LousyRingBuffer((params["window_size"] * 2, params["batch_size"]),
-                                 size_old_context,
-                                 vocab.cnt_words)
     for i in range(params["cnt_epochs"]):
-        train_epoch(i, net, optimizer, it, buf_old_context, vocab, params)
+        train_epoch(i, net, optimizer, it, vocab, params)
 
 
 if __name__ == "__main__":

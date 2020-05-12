@@ -4,7 +4,7 @@ from vecto.corpus.tokenization import DEFAULT_TOKENIZER, DEFAULT_JAP_TOKENIZER
 
 
 class LousyRingBuffer():
-    def __init__(self, shape_batch, cnt_items, max_id=100):
+    def __init__(self, shape_batch, cnt_items, max_id=1000):
         # self.buf = np.zeros((cnt_items, *shape_batch), dtype=np.int64)
         self.buf = np.random.randint(0,
                                      high=max_id,
