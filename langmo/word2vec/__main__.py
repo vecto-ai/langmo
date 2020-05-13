@@ -118,8 +118,8 @@ def main():
     #                        params["batch_size"],
     #                        language='eng',
     #                        repeat=True)
-    # it = FilePairIter(params["path_corpus"], vocab, params)
-    it = FilePairIter("/mnt/storage/data/NLP/corpora/brown/brown.txt", vocab, params)
+    it = FilePairIter(params["path_corpus"], vocab, params)
+    # it = FilePairIter("/mnt/storage/data/NLP/corpora/brown/brown.txt", vocab, params)
     for i in range(params["cnt_epochs"]):
         train_epoch(i, net, optimizer, it, vocab, params)
 
