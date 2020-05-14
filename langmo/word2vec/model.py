@@ -14,21 +14,18 @@ class W2V_SM(nn.Module):
         self.emb_out.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, center, context):
-        # print("center:", center.shape)
-        # print("context:", context.shape)
+        #---- vecto-like  ------------
         emb_context = self.emb_in(context)
         shape = emb_context.shape
-        # size_seq = context.shape[0]
         center.unsqueeze_(1)
         center = center.expand(shape[0], shape[1])
-        # print("center bcast:", center.shape)
-        emb_context = emb_context.reshape((shape[0] * shape[1], shape[2]))
-        center = center.reshape((shape[0] * shape[1],))
-        #print(emb_context.shape, center.shape)
-        # exit(1)
-        #loss = self.loss_func(emb_context, center)
+        emb_context = emb_context.flatten(end_dim=1)
+        center = center.flatten()
+        # softmax loss, replace with NS or HSM
         pred = self.emb_out(emb_context)
         loss = F.cross_entropy(pred, center)
+        
+        # size_seq = context.shape[0]
         #emb_in = self.emb_in(center)
         #pred = self.emb_out(emb_in)
         #size_seq = context.shape[0]

@@ -5,7 +5,7 @@ path_vocab: "/mnt/storage/data/NLP/vocabs/brown/m3"
 path_results: "./out/w2v"
 batch_size: 256
 embedding_size: 128
-window_size: 2
+window_size: 1
 cnt_epochs: 10
 test: false
     
