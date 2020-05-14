@@ -56,7 +56,7 @@ def make_snapshot(net, id_epoch, vocab, params):
 def train_batch(net, optimizer, batch):
     center, context = batch
     # print(center.dtype)
-    context = np.rollaxis(context, 1, start=0)
+    # context = np.rollaxis(context, 1, start=0)
     center = torch.from_numpy(center)
     context = torch.from_numpy(context)
     center = center.to("cuda")
@@ -113,8 +113,9 @@ def main():
     # net = W2V_NS(vocab.cnt_words, params["embedding_size"], params)
     net = W2V_SM(vocab.cnt_words, params["embedding_size"], params)
     net.cuda()
-    optimizer = optim.SGD([param for param in net.parameters() if param.requires_grad is True],
-                          lr=0.1)
+    # optimizer = optim.SGD([param for param in net.parameters() if param.requires_grad is True],
+    #                       lr=0.1)
+    optimizer = optim.Adam([param for param in net.parameters() if param.requires_grad is True])
 
     print(vocab.cnt_words)
     it = DirWindowIterator(params["path_corpus"],
