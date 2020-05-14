@@ -16,12 +16,13 @@ class W2V_SM(nn.Module):
     def forward(self, center, context):
         emb_in = self.emb_in(center)
         pred = self.emb_out(emb_in)
-        # size_seq = context.shape[0]
-        # size_batch = context.shape[1]
-        # cnt_classes = pred.shape[-1]
-        # pred = pred.expand(size_seq, size_batch, cnt_classes).reshape(-1, cnt_classes)
-        # loss = F.cross_entropy(pred, context.flatten(), ignore_index=0)
-        loss = F.cross_entropy(pred, context, ignore_index=0)
+        # print(pred.shape, context.shape)
+        size_seq = context.shape[0]
+        loss = 0
+        for i in range(context.shape[0]):
+            loss += F.cross_entropy(pred, context[i])
+        loss /= context.shape[0]
+
         return loss
 
 

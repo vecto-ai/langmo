@@ -56,11 +56,12 @@ def make_snapshot(net, id_epoch, vocab, params):
 def train_batch(net, optimizer, batch):
     center, context = batch
     # print(center.dtype)
-    # context = np.rollaxis(context, 1, start=0)
+    context = np.rollaxis(context, 1, start=0)
     center = torch.from_numpy(center)
     context = torch.from_numpy(context)
     center = center.to("cuda")
     context = context.to("cuda")
+    # print(context.shape)
     net.zero_grad()
     loss = net(center, context)
     loss.backward()
@@ -72,21 +73,25 @@ def train_batch(net, optimizer, batch):
 def train_epoch(id_epoch, net, optimizer, it, vocab, params):
     time_start = timer()
     losses_epoch = []
-    for batch in it.gen_batch():
-    # while True:
-    #     batch = next(it)
+    # for batch in it.gen_batch():
+    while True:
+        batch = next(it)
         loss = train_batch(net, optimizer, batch)
         losses_epoch.append(loss)
-    #     if it.is_new_epoch:
-    #         break
+        # break
+        if it.is_new_epoch:
+            break
     make_snapshot(net, id_epoch, vocab, params)
     time_end = timer()
     elapsed_sec = time_end - time_start
     elapsed_str = datetime.timedelta(seconds=elapsed_sec)
     loss_ep = np.mean(losses_epoch)
-    mean_emb = float(net.emb_in.weight.data.mean())
-    std_emb = float(net.emb_in.weight.data.mean())
-    print(f"{id_epoch} loss: {loss_ep:.3}, mean: {mean_emb:.3}, std: {std_emb:.3}", elapsed_str)
+    mean_in = float(net.emb_in.weight.data.mean())
+    std_in = float(net.emb_in.weight.data.mean())
+    print(f"{id_epoch} loss: {loss_ep:.3}, mean: {mean_in:.3}, std: {std_in:.3}", elapsed_str)
+    mean_out = float(net.emb_out.weight.data.mean())
+    std_out = float(net.emb_out.weight.data.mean())
+    print(f"mean_out: {mean_in:.3}, std_out: {std_in:.3}", elapsed_str)
     # print(net.emb_in.weight.data[:3])
 
 
@@ -112,13 +117,13 @@ def main():
                           lr=0.1)
 
     print(vocab.cnt_words)
-    # it = DirWindowIterator(params["path_corpus"],
-    #                        vocab,
-    #                        params["window_size"],
-    #                        params["batch_size"],
-    #                        language='eng',
-    #                        repeat=True)
-    it = FilePairIter(params["path_corpus"], vocab, params)
+    it = DirWindowIterator(params["path_corpus"],
+                           vocab,
+                           params["window_size"],
+                           params["batch_size"],
+                           language='eng',
+                           repeat=True)
+    # it = FilePairIter(params["path_corpus"], vocab, params)
     # it = FilePairIter("/mnt/storage/data/NLP/corpora/brown/brown.txt", vocab, params)
     for i in range(params["cnt_epochs"]):
         train_epoch(i, net, optimizer, it, vocab, params)

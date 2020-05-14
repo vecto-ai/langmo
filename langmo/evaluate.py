@@ -30,7 +30,7 @@ def run(path_emb, path_dest):
 
     # --- run analogy --------------
     # TODO: iterate over supported benchmarks
-    return
+    # return
     ds = get_dataset_by_name(name_dataset)
     bench_analogy = Analogy(method="LRCos")
     results = bench_analogy.run(embeddings, ds)
