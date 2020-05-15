@@ -42,7 +42,7 @@ def make_snapshot(net, id_epoch, vocab, params):
                              id_epoch,
                              params,
                              "in")
-    save_and_eval_embeddings(net.emb_out.weight.data.cpu().numpy(),
+    save_and_eval_embeddings(net.decoder.emb_out.weight.data.cpu().numpy(),
                              vocab,
                              id_epoch,
                              params,
@@ -89,8 +89,8 @@ def train_epoch(id_epoch, net, optimizer, it, vocab, params):
     mean_in = float(net.emb_in.weight.data.mean())
     std_in = float(net.emb_in.weight.data.mean())
     print(f"{id_epoch} loss: {loss_ep:.3}, mean: {mean_in:.3}, std: {std_in:.3}", elapsed_str)
-    mean_out = float(net.emb_out.weight.data.mean())
-    std_out = float(net.emb_out.weight.data.mean())
+    mean_out = float(net.decoder.emb_out.weight.data.mean())
+    std_out = float(net.decoder.emb_out.weight.data.mean())
     print(f"mean_out: {mean_in:.3}, std_out: {std_in:.3}", elapsed_str)
     # print(net.emb_in.weight.data[:3])
 
