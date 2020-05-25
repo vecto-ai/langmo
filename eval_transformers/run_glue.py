@@ -20,6 +20,7 @@ import dataclasses
 import logging
 import os
 import sys
+import datetime
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 from timeit import default_timer as timer
@@ -163,6 +164,7 @@ def main():
         )
         time_end = timer()
         metadata["time_train"] = time_end - time_strart
+        metadata["time_train_str"] = f"{datetime.timedelta(seconds=time_end - time_strart)}",
         trainer.save_model()
         # For convenience, we also re-save the tokenizer to the same directory,
         # so that you can share your model easily on huggingface.co/models =)
