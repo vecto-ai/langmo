@@ -2,10 +2,10 @@
 #export GLUE_DIR=/mnt/storage/data/NLP/datasets/glue_data/
 export GLUE_DIR=/work.fs/data/NLP/datasets/glue_data
 export TASK_NAME=MNLI
-MODEL_NAME=albert-base-v1
-# model_name=bert-base-cased
+#MODEL_NAME=albert-base-v1
+#bert_base_cased
+MODEL_NAME=distilbert-base-cased
 
-# TODO: add timestamp
 DATE_WITH_TIME=`date "+%Y%m%d-%H%M%S"` 
   
 echo $DATE_WITH_TIME
@@ -21,7 +21,7 @@ python3 run_glue.py \
   --per_gpu_train_batch_size 64 \
   --learning_rate 3e-5 \
   --num_train_epochs 3.0 \
-  --output_dir /work.fs/alex/DL_outs/NLP/$TASK_NAME/$DATE_WITH_TIME \
+  --output_dir /work.fs/alex/DL_outs/NLP/$TASK_NAME/$MODEL_NAME/$DATE_WITH_TIME \
   --overwrite_output_dir \
   --logging_steps 200 \
   --save_steps -1 \
