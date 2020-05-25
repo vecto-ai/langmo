@@ -22,8 +22,9 @@ import os
 import sys
 from dataclasses import dataclass, field
 from typing import Dict, Optional
-
+from timeit import default_timer as timer
 import numpy as np
+from protonn.utils import save_data_json as save_json
 
 from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer, EvalPrediction, GlueDataset
 from transformers import GlueDataTrainingArguments as DataTrainingArguments
@@ -66,6 +67,7 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
+    metadata = {}
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
 
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
@@ -155,9 +157,12 @@ def main():
 
     # Training
     if training_args.do_train:
+        time_strart = timer()
         trainer.train(
             model_path=model_args.model_name_or_path if os.path.isdir(model_args.model_name_or_path) else None
         )
+        time_end = timer()
+        metadata["time_train"] = time_end - time_strart
         trainer.save_model()
         # For convenience, we also re-save the tokenizer to the same directory,
         # so that you can share your model easily on huggingface.co/models =)
@@ -189,6 +194,8 @@ def main():
 
             results.update(result)
 
+    path_metadata = os.path.join(training_args.output_dir, f"metadata.json")
+    save_json(metadata, path_metadata)
     return results
 
 

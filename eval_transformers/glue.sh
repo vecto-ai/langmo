@@ -2,7 +2,8 @@
 #export GLUE_DIR=/mnt/storage/data/NLP/datasets/glue_data/
 export GLUE_DIR=/work.fs/data/NLP/datasets/glue_data
 export TASK_NAME=MNLI
-
+MODEL_NAME=albert-base-v1
+# model_name=bert-base-cased
 
 # TODO: add timestamp
 DATE_WITH_TIME=`date "+%Y%m%d-%H%M%S"` 
@@ -11,7 +12,7 @@ echo $DATE_WITH_TIME
 
 python3 run_glue.py \
   --model_type bert \
-  --model_name_or_path bert-base-cased \
+  --model_name_or_path $MODEL_NAME \
   --task_name $TASK_NAME \
   --do_train \
   --do_eval \
