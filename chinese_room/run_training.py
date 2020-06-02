@@ -29,5 +29,6 @@ for dir_seed in (path_data / subsample_type).iterdir():
 
         # TODO: instead of running locally, submit to a job scheduler
         # if the platform supports
-        proc = subprocess.Popen(command, shell=False)
-        proc.communicate()
+        # proc = subprocess.Popen(command, shell=False)
+        # proc.communicate()
+        print(command)
