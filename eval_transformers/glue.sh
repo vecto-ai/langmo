@@ -21,9 +21,9 @@ python3 run_glue.py \
   --max_seq_length 128 \
   --per_gpu_train_batch_size 64 \
   --learning_rate 3e-5 \
-  --num_train_epochs 3.0 \
+  --num_train_epochs 4.0 \
   --output_dir /work.fs/alex/DL_outs/NLP/$TASK_NAME/$MODEL_NAME/$DATE_WITH_TIME \
-  --logging_dir /work.fs/alex/DL_outs/NLP/$TASK_NAME/$MODEL_NAME/$DATE_WITH_TIME\log \
+  --logging_dir /work.fs/alex/DL_outs/NLP/$TASK_NAME/$MODEL_NAME/$DATE_WITH_TIME/log \
   --overwrite_output_dir \
   --logging_steps 200 \
   --save_steps -1 \
