@@ -1,7 +1,10 @@
 import subprocess
 from pathlib import Path
+from config import get_config
 
-path_data = Path("/mnt/storage/Data/NLP/datasets/importance_sampling/")
+
+config = get_config()
+path_data = Path(config["path_data"])
 model_name = "albert-base-v2"
 subsample_type = "subsample_rand"
 for dir_seed in (path_data / subsample_type).iterdir():
