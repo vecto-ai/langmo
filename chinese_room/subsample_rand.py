@@ -1,10 +1,11 @@
 import pandas
 import shutil
 from pathlib import Path
+from config import get_config
 
-# TODO: set data path specific to the node user
-# read from ~/.config/something or at least hard-code by host-name
-path_data = Path("/mnt/storage/Data/NLP/datasets/importance_sampling/")
+
+config = get_config()
+path_data = Path(config["path_data"])
 df = pandas.read_csv(path_data / "reference/MNLI/train.tsv",
                      sep="\t",
                      header=0,
