@@ -148,7 +148,7 @@ def main():
         eval_datasets = [eval_dataset]
         if data_args.task_name == "mnli":
             mnli_mm_data_args = dataclasses.replace(data_args, task_name="mnli-mm")
-            eval_datasets.append(GlueDataset(mnli_mm_data_args, tokenizer=tokenizer, evaluate=True))
+            eval_datasets.append(GlueDataset(mnli_mm_data_args, tokenizer=tokenizer))
 
         for eval_dataset in eval_datasets:
             result = trainer.evaluate(eval_dataset=eval_dataset)
