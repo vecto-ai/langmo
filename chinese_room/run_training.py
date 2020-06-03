@@ -32,6 +32,6 @@ for dir_seed in (path_data / subsample_type).iterdir():
         # if the platform supports
         # proc = subprocess.Popen(command, shell=False)
         # proc.communicate()
-        schedule_job(command)
+        schedule_job(command, job_name="chineseroom")
         break
     break
