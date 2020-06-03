@@ -32,3 +32,7 @@ for dir_seed in (path_data / subsample_type).iterdir():
         # proc = subprocess.Popen(command, shell=False)
         # proc.communicate()
         print(command)
+        with open("run.sh", "w") as f:
+            f.write("hi")
+        break
+    break
