@@ -1,6 +1,7 @@
 import subprocess
 from pathlib import Path
 from config import get_config
+from protonn.scheduling import schedule_job
 
 
 config = get_config()
@@ -31,8 +32,6 @@ for dir_seed in (path_data / subsample_type).iterdir():
         # if the platform supports
         # proc = subprocess.Popen(command, shell=False)
         # proc.communicate()
-        print(command)
-        with open("run.sh", "w") as f:
-            f.write("hi")
+        schedule_job(command)
         break
     break
