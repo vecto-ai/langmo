@@ -110,7 +110,7 @@ def main():
 
     # Get datasets
     train_dataset = GlueDataset(data_args, tokenizer=tokenizer) if training_args.do_train else None
-    eval_dataset = GlueDataset(data_args, tokenizer=tokenizer, evaluate=True) if training_args.do_eval else None
+    eval_dataset = GlueDataset(data_args, tokenizer=tokenizer) if training_args.do_eval else None
 
     def compute_metrics(p: EvalPrediction) -> Dict:
         if output_mode == "classification":
