@@ -21,14 +21,9 @@ import logging
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 
 import numpy as np
-import datetime
-from timeit import default_timer as timer
-from protonn.utils import save_data_json as save_json
-
-
 
 from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer, EvalPrediction, GlueDataset
 from transformers import GlueDataTrainingArguments as DataTrainingArguments
@@ -71,7 +66,6 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
-    metadata = {}
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
 
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
@@ -140,16 +134,29 @@ def main():
     )
 
     # Get datasets
-    train_dataset = GlueDataset(data_args, tokenizer=tokenizer) if training_args.do_train else None
-    eval_dataset = GlueDataset(data_args, tokenizer=tokenizer, mode="dev") if training_args.do_eval else None
-    test_dataset = GlueDataset(data_args, tokenizer=tokenizer, mode="test") if training_args.do_predict else None
+    train_dataset = (
+        GlueDataset(data_args, tokenizer=tokenizer, cache_dir=model_args.cache_dir) if training_args.do_train else None
+    )
+    eval_dataset = (
+        GlueDataset(data_args, tokenizer=tokenizer, mode="dev", cache_dir=model_args.cache_dir)
+        if training_args.do_eval
+        else None
+    )
+    test_dataset = (
+        GlueDataset(data_args, tokenizer=tokenizer, mode="test", cache_dir=model_args.cache_dir)
+        if training_args.do_predict
+        else None
+    )
 
-    def compute_metrics(p: EvalPrediction) -> Dict:
-        if output_mode == "classification":
-            preds = np.argmax(p.predictions, axis=1)
-        elif output_mode == "regression":
-            preds = np.squeeze(p.predictions)
-        return glue_compute_metrics(data_args.task_name, preds, p.label_ids)
+    def build_compute_metrics_fn(task_name: str) -> Callable[[EvalPrediction], Dict]:
+        def compute_metrics_fn(p: EvalPrediction):
+            if output_mode == "classification":
+                preds = np.argmax(p.predictions, axis=1)
+            elif output_mode == "regression":
+                preds = np.squeeze(p.predictions)
+            return glue_compute_metrics(task_name, preds, p.label_ids)
+
+        return compute_metrics_fn
 
     # Initialize our Trainer
     trainer = Trainer(
@@ -157,21 +164,14 @@ def main():
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        compute_metrics=compute_metrics,
+        compute_metrics=build_compute_metrics_fn(data_args.task_name),
     )
 
     # Training
     if training_args.do_train:
-        time_strart = timer()
         trainer.train(
             model_path=model_args.model_name_or_path if os.path.isdir(model_args.model_name_or_path) else None
         )
-        time_end = timer()
-        elapsed_sec = time_end - time_strart
-        metadata["time_train_total"] = elapsed_sec
-        metadata["time_train_total_h"] = f"{datetime.timedelta(seconds=elapsed_sec)}"
-        metadata["time_train_epoch"] = elapsed_sec / training_args.num_train_epochs
-        metadata["time_train_epoch_h"] = f"{datetime.timedelta(seconds=metadata['time_train_epoch'])}"
         trainer.save_model()
         # For convenience, we also re-save the tokenizer to the same directory,
         # so that you can share your model easily on huggingface.co/models =)
@@ -187,9 +187,12 @@ def main():
         eval_datasets = [eval_dataset]
         if data_args.task_name == "mnli":
             mnli_mm_data_args = dataclasses.replace(data_args, task_name="mnli-mm")
-            eval_datasets.append(GlueDataset(mnli_mm_data_args, tokenizer=tokenizer, mode="dev"))
+            eval_datasets.append(
+                GlueDataset(mnli_mm_data_args, tokenizer=tokenizer, mode="dev", cache_dir=model_args.cache_dir)
+            )
 
         for eval_dataset in eval_datasets:
+            trainer.compute_metrics = build_compute_metrics_fn(eval_dataset.args.task_name)
             eval_result = trainer.evaluate(eval_dataset=eval_dataset)
 
             output_eval_file = os.path.join(
@@ -209,7 +212,9 @@ def main():
         test_datasets = [test_dataset]
         if data_args.task_name == "mnli":
             mnli_mm_data_args = dataclasses.replace(data_args, task_name="mnli-mm")
-            test_datasets.append(GlueDataset(mnli_mm_data_args, tokenizer=tokenizer, mode="test"))
+            test_datasets.append(
+                GlueDataset(mnli_mm_data_args, tokenizer=tokenizer, mode="test", cache_dir=model_args.cache_dir)
+            )
 
         for test_dataset in test_datasets:
             predictions = trainer.predict(test_dataset=test_dataset).predictions
@@ -229,8 +234,6 @@ def main():
                         else:
                             item = test_dataset.get_labels()[item]
                             writer.write("%d\t%s\n" % (index, item))
-    path_metadata = os.path.join(training_args.output_dir, f"metadata.json")
-    save_json(metadata, path_metadata)
     return eval_results
 
 
