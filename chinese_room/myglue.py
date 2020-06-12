@@ -28,7 +28,7 @@ def read_ds(path, tokenizer):
 
 params = {}
 params["cnt_epochs"] = 2
-params["path_train"] = "/mnt/storage/Data/NLP/importance_sampling/subsample_rand/seed_46/12288/train.tsv"
+params["path_train"] = "/groups2/gcb50300/chinese_room/subsample_rand/seed_46/12288/train.tsv"
 train_tuples = read_ds(params["path_train"], tokenizer)
 train_tuples=list(train_tuples)
 sentpairs, labels  = zip(*train_tuples)
