@@ -21,6 +21,8 @@ def read_ds(path, tokenizer):
     #df["sentence1"] = df["sentence1"].apply(lambda s: s.lower())
     #df["sentence2"] = df["sentence2"].apply(lambda s: s.lower())
 #    print(df["sentence1"][:10])
+    sent1 = map(lambda x: x[:128], df["sentence1"])
+    sent2 = map(lambda x: x[:128], df["sentence2"])
     sent1 = map(tokenizer.encode, df["sentence1"])
     sent2 = map(tokenizer.encode, df["sentence2"])
     labels = map(lambda x: dic_labels[x], df["gold_label"])
