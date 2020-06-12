@@ -84,7 +84,7 @@ class Iterator:
         labels = np.array(list_labels)
         return (block_sent, block_masks, block_segments),  labels
 
-it_train = Iterator(tuples_merged, size_batch=64)
+it_train = Iterator(tuples_merged, size_batch=32)
 
 config = AutoConfig.from_pretrained(
     "albert-base-v2",
