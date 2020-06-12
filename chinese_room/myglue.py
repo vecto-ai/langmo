@@ -15,7 +15,8 @@ def read_ds(path, tokenizer):
     df = pandas.read_csv(path,
                          sep="\t",
                          header=0,
-                         quoting=3)
+                         quoting=3,
+                         keep_default_na=False)
     dic_labels = {l: i for i, l in enumerate(sorted(df["gold_label"].unique()))}
     #df["sentence1"] = df["sentence1"].apply(lambda s: s.lower())
     #df["sentence2"] = df["sentence2"].apply(lambda s: s.lower())
