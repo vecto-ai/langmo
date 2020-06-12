@@ -30,7 +30,7 @@ def read_ds(path, tokenizer):
     return tuples
 
 params = {}
-params["cnt_epochs"] = 2
+params["cnt_epochs"] = 20
 params["path_train"] = "/groups2/gcb50300/chinese_room/subsample_rand/seed_46/12288/train.tsv"
 train_tuples = read_ds(params["path_train"], tokenizer)
 train_tuples=list(train_tuples)
