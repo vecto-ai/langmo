@@ -30,13 +30,13 @@ def read_ds(path, tokenizer):
     return tuples
 
 params = {}
-params["cnt_epochs"] = 20
+params["cnt_epochs"] = 100
 params["path_train"] = "/groups2/gcb50300/chinese_room/subsample_rand/seed_46/12288/train.tsv"
 train_tuples = read_ds(params["path_train"], tokenizer)
 train_tuples=list(train_tuples)
 sentpairs, labels  = zip(*train_tuples)
 sent_merged = [a + b[1:] for a,b in sentpairs]
-segment_ids = [[0] * len(a) + [1] * (len(b) - 1) for a,b in sentpairs]
+segment_ids = [[0] * len(a) + [1] * (len(b) - 1) for a, b in sentpairs]
 inputs = list(zip(sent_merged, segment_ids))
 tuples_merged = list(zip(inputs, labels))
 
@@ -82,7 +82,7 @@ class Iterator:
         block_segments = np.vstack(list_segments)
         # block_s1 = np.rollaxis(block_s1, 1, start=0)  # make it sequence-first
         labels = np.array(list_labels)
-        return (block_sent, block_masks, block_segments),  labels
+        return (block_sent, block_masks, block_segments), labels
 
 it_train = Iterator(tuples_merged, size_batch=32)
 
