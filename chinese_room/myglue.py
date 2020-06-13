@@ -29,18 +29,19 @@ def read_ds(path, tokenizer):
     tuples = zip(zip(sent1, sent2), labels)
     return tuples
 
+
 params = {}
 params["cnt_epochs"] = 100
 params["path_train"] = "/groups2/gcb50300/chinese_room/subsample_rand/seed_46/12288/train.tsv"
 train_tuples = read_ds(params["path_train"], tokenizer)
-train_tuples=list(train_tuples)
-sentpairs, labels  = zip(*train_tuples)
-sent_merged = [a + b[1:] for a,b in sentpairs]
+train_tuples = list(train_tuples)
+sentpairs, labels = zip(*train_tuples)
+sent_merged = [a + b[1:] for a, b in sentpairs]
 segment_ids = [[0] * len(a) + [1] * (len(b) - 1) for a, b in sentpairs]
 inputs = list(zip(sent_merged, segment_ids))
 tuples_merged = list(zip(inputs, labels))
 
-# iterator
+
 # TODO: make it actually an iterator
 class Iterator:
     def __init__(self, tuples_train, size_batch):
@@ -125,6 +126,7 @@ def train_batch(net, batch, train):
 
 def train_epoch(iterator):
     losses = []
+    model_classifier.train()
     cnt_correct = 0
     for batch in iterator.batches:
         loss, correct_batch = train_batch(model_classifier, batch, train=True)
