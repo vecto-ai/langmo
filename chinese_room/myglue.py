@@ -3,11 +3,12 @@ import pandas
 import numpy as np
 import torch
 import torch.optim as optim
-
+import yaml
+import os
+import sys
 from transformers import AlbertModel, AlbertTokenizer, AlbertForSequenceClassification
 from transformers import AutoModelForSequenceClassification, AutoConfig
 
-tokenizer = AlbertTokenizer.from_pretrained("albert-base-v2")
 
 def read_ds(path, tokenizer):
     train = []
@@ -21,6 +22,7 @@ def read_ds(path, tokenizer):
     #df["sentence1"] = df["sentence1"].apply(lambda s: s.lower())
     #df["sentence2"] = df["sentence2"].apply(lambda s: s.lower())
 #    print(df["sentence1"][:10])
+    print(dic_labels)
     sent1 = map(lambda x: x[:128], df["sentence1"])
     sent2 = map(lambda x: x[:128], df["sentence2"])
     sent1 = map(tokenizer.encode, df["sentence1"])
@@ -28,19 +30,6 @@ def read_ds(path, tokenizer):
     labels = map(lambda x: dic_labels[x], df["gold_label"])
     tuples = zip(zip(sent1, sent2), labels)
     return tuples
-
-
-params = {}
-params["cnt_epochs"] = 10
-# params["path_train"] = "/groups2/gcb50300/chinese_room/subsample_rand/seed_46/12288/train.tsv"
-params["path_train"] = "/groups2/gcb50300/chinese_room/subsample_rand/seed_46/24/train.tsv"
-train_tuples = read_ds(params["path_train"], tokenizer)
-train_tuples = list(train_tuples)
-sentpairs, labels = zip(*train_tuples)
-sent_merged = [a + b[1:] for a, b in sentpairs]
-segment_ids = [[0] * len(a) + [1] * (len(b) - 1) for a, b in sentpairs]
-inputs = list(zip(sent_merged, segment_ids))
-tuples_merged = list(zip(inputs, labels))
 
 
 # TODO: make it actually an iterator
@@ -86,24 +75,14 @@ class Iterator:
         labels = np.array(list_labels)
         return (block_sent, block_masks, block_segments), labels
 
-it_train = Iterator(tuples_merged, size_batch=32)
 
-config = AutoConfig.from_pretrained(
-    "albert-base-v2",
-    num_labels=3)#,
-    #finetuning_task=data_args.task_name,
-    #cache_dir=model_args.cache_dir)
-
-model_classifier = AutoModelForSequenceClassification.from_pretrained("albert-base-v2", config=config)
-model_classifier.to("cuda")
-optimizer = optim.Adam([param for param in model_classifier.parameters() if param.requires_grad == True], lr=0.01)
-def train_batch(net, batch, train):
+def train_batch(net, optimizer, batch, train):
     (ids, mask, segments), labels = batch
     ids = torch.from_numpy(ids)
     mask = torch.from_numpy(mask)
     segments = torch.from_numpy(segments)
     labels = torch.from_numpy(labels)
-    print(labels)
+    # print(labels)
     ids = ids.to("cuda")
     mask = mask.to("cuda")
     segments = segments.to("cuda")
@@ -112,7 +91,7 @@ def train_batch(net, batch, train):
                        attention_mask=mask,
                        token_type_ids=segments,
                        labels=labels)
-    print(logits)
+    # print(logits)
     if train:
         net.zero_grad()
         loss.backward()
@@ -127,16 +106,54 @@ def train_batch(net, batch, train):
     return float(loss), int(cnt_correct)
 
 
-def train_epoch(iterator):
+def train_epoch(net, optimizer, iterator, params):
     losses = []
-    model_classifier.train()
+    net.train()
     cnt_correct = 0
     for batch in iterator.batches:
-        loss, correct_batch = train_batch(model_classifier, batch, train=True)
+        loss, correct_batch = train_batch(net, optimizer, batch, train=True)
         losses.append(loss)
         cnt_correct += correct_batch
-    return np.mean(losses), cnt_correct /  iterator.cnt_samples
+    return np.mean(losses), cnt_correct / iterator.cnt_samples
 
-for id_epoch in range(params["cnt_epochs"]):
-    loss, acc = train_epoch(it_train)
-    print(id_epoch, loss, acc)
+
+def main():
+    path_config = sys.argv[1]
+    with open(path_config, "r") as cfg:
+        params = yaml.load(cfg, Loader=yaml.SafeLoader)
+    params["cnt_epochs"] = 20
+    params["path_train"] = os.path.join(params["path_data"], "train.tsv")
+
+    tokenizer = AlbertTokenizer.from_pretrained("albert-base-v2")
+    train_tuples = read_ds(params["path_train"], tokenizer)
+    train_tuples = list(train_tuples)
+    sentpairs, labels = zip(*train_tuples)
+    sent_merged = [a + b[1:] for a, b in sentpairs]
+    segment_ids = [[0] * len(a) + [1] * (len(b) - 1) for a, b in sentpairs]
+    inputs = list(zip(sent_merged, segment_ids))
+    tuples_merged = list(zip(inputs, labels))
+
+    it_train = Iterator(tuples_merged, size_batch=32)
+    for i in range(6):
+        ids = it_train.batches[0][0][0][i][:10]
+        s = tokenizer.decode(ids)
+        print(it_train.batches[0][1][i], s)
+    # print()
+    # return
+    config = AutoConfig.from_pretrained(
+        "albert-base-v2",
+        num_labels=3)#,
+        #finetuning_task=data_args.task_name,
+        #cache_dir=model_args.cache_dir)
+
+    model_classifier = AutoModelForSequenceClassification.from_pretrained("albert-base-v2", config=config)
+    model_classifier.to("cuda")
+    optimizer = optim.Adam([param for param in model_classifier.parameters() if param.requires_grad == True], lr=0.00001)
+
+    for id_epoch in range(params["cnt_epochs"]):
+        loss, acc = train_epoch(model_classifier, optimizer, it_train, params)
+        print(id_epoch, loss, acc)
+
+
+if __name__ == '__main__':
+    main()
