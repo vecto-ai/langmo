@@ -9,6 +9,7 @@ path_data = Path(config["path_data"])
 df = pandas.read_csv(path_data / "reference/MNLI/train.tsv",
                      sep="\t",
                      header=0,
+                     index_col=0,
                      quoting=3)
 
 print("loaded", df.shape)
