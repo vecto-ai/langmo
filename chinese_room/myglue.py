@@ -32,7 +32,8 @@ def read_ds(path, tokenizer):
 
 params = {}
 params["cnt_epochs"] = 10
-params["path_train"] = "/groups2/gcb50300/chinese_room/subsample_rand/seed_46/12288/train.tsv"
+# params["path_train"] = "/groups2/gcb50300/chinese_room/subsample_rand/seed_46/12288/train.tsv"
+params["path_train"] = "/groups2/gcb50300/chinese_room/subsample_rand/seed_46/24/train.tsv"
 train_tuples = read_ds(params["path_train"], tokenizer)
 train_tuples = list(train_tuples)
 sentpairs, labels = zip(*train_tuples)
@@ -97,12 +98,12 @@ model_classifier = AutoModelForSequenceClassification.from_pretrained("albert-ba
 model_classifier.to("cuda")
 optimizer = optim.Adam([param for param in model_classifier.parameters() if param.requires_grad == True], lr=0.01)
 def train_batch(net, batch, train):
-    net.zero_grad()
     (ids, mask, segments), labels = batch
     ids = torch.from_numpy(ids)
     mask = torch.from_numpy(mask)
     segments = torch.from_numpy(segments)
     labels = torch.from_numpy(labels)
+    print(labels)
     ids = ids.to("cuda")
     mask = mask.to("cuda")
     segments = segments.to("cuda")
@@ -111,7 +112,9 @@ def train_batch(net, batch, train):
                        attention_mask=mask,
                        token_type_ids=segments,
                        labels=labels)
+    print(logits)
     if train:
+        net.zero_grad()
         loss.backward()
         optimizer.step()
     #print(logits.shape)

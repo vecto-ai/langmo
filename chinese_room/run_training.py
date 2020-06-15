@@ -18,6 +18,7 @@ for dir_seed in (path_data / subsample_type).iterdir():
                    "--task_name", "MNLI",
                    "--do_train",
                    "--do_eval",
+                   "--evaluate_during_training",
                    "--data_dir", cnt_samples,
                    "--max_seq_length", "128",
                    "--per_gpu_train_batch_size", "256",
