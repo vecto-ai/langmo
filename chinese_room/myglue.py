@@ -108,16 +108,29 @@ def train_batch(net, optimizer, batch, train):
     return float(loss), int(cnt_correct)
 
 
-def train_epoch(net, optimizer, scheduler, iterator, params):
+def train_epoch(net, optimizer, scheduler, iterator, params, train):
     losses = []
     net.train()
     cnt_correct = 0
     for batch in iterator.batches:
-        loss, correct_batch = train_batch(net, optimizer, batch, train=True)
+        loss, correct_batch = train_batch(net, optimizer, batch, train)
         losses.append(loss)
         cnt_correct += correct_batch
-    scheduler.step()
+    if train:
+        scheduler.step()
     return np.mean(losses), cnt_correct / iterator.cnt_samples
+
+
+def make_iter(path, tokenizer):
+    train_tuples = read_ds(path, tokenizer)
+    train_tuples = list(train_tuples)
+    sentpairs, labels = zip(*train_tuples)
+    sent_merged = [a + b[1:] for a, b in sentpairs]
+    segment_ids = [[0] * len(a) + [1] * (len(b) - 1) for a, b in sentpairs]
+    inputs = list(zip(sent_merged, segment_ids))
+    tuples_merged = list(zip(inputs, labels))
+    it = Iterator(tuples_merged, size_batch=32)
+    return it
 
 
 def main():
@@ -126,17 +139,10 @@ def main():
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
     params["cnt_epochs"] = 20
     params["path_train"] = os.path.join(params["path_data"], "train.tsv")
-
+    params["path_val"] = os.path.join(params["path_data"], "dev_matched.tsv")
     tokenizer = AlbertTokenizer.from_pretrained("albert-base-v2")
-    train_tuples = read_ds(params["path_train"], tokenizer)
-    train_tuples = list(train_tuples)
-    sentpairs, labels = zip(*train_tuples)
-    sent_merged = [a + b[1:] for a, b in sentpairs]
-    segment_ids = [[0] * len(a) + [1] * (len(b) - 1) for a, b in sentpairs]
-    inputs = list(zip(sent_merged, segment_ids))
-    tuples_merged = list(zip(inputs, labels))
-
-    it_train = Iterator(tuples_merged, size_batch=32)
+    it_train = make_iter(params["path_train"], tokenizer)
+    it_val = make_iter(params["path_val"], tokenizer)
     for i in range(6):
         ids = it_train.batches[0][0][0][i][:10]
         s = tokenizer.decode(ids)
@@ -155,17 +161,21 @@ def main():
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
     params["train_log"] = []
     for id_epoch in range(params["cnt_epochs"]):
-        loss, acc = train_epoch(model_classifier, optimizer, scheduler, it_train, params)
+        loss, acc = train_epoch(model_classifier, optimizer, scheduler, it_train, params, True)
         epoch_stats = {}
         epoch_stats["id"] = id_epoch
         epoch_stats["loss"] = loss
         epoch_stats["acc"] = acc
         epoch_stats["lr"] = optimizer.param_groups[0]['lr']
         params["train_log"].append(epoch_stats)
-        print(id_epoch, loss, acc)
+        val_loss, val_acc = train_epoch(model_classifier, optimizer, scheduler, it_val, params, False)
+        epoch_stats["val_loss"] = val_loss
+        epoch_stats["val_acc"] = val_acc
         print(id_epoch,
               f"loss: {params['train_log'][-1]['loss']:.4f}",
               f"acc: {params['train_log'][-1]['acc']:.4f}",
+              f"val_loss: {params['train_log'][-1]['loss']:.4f}",
+              f"val_acc: {params['train_log'][-1]['acc']:.4f}",
               f"lr: {params['train_log'][-1]['lr']}",
               # f"time ep: {time_end - time_start:.3f}s",
               # f"time total: {datetime.timedelta(seconds=time_total)}",
