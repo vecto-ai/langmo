@@ -137,7 +137,7 @@ def main():
     path_config = sys.argv[1]
     with open(path_config, "r") as cfg:
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
-    params["cnt_epochs"] = 20
+    params["cnt_epochs"] = 30
     params["path_train"] = os.path.join(params["path_data"], "train.tsv")
     params["path_val"] = os.path.join(params["path_data"], "dev_matched.tsv")
     tokenizer = AlbertTokenizer.from_pretrained("albert-base-v2")
