@@ -153,13 +153,20 @@ def main():
     model_classifier.to("cuda")
     optimizer = optim.Adam([param for param in model_classifier.parameters() if param.requires_grad == True], lr=0.00001)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.99)
-
+    params["train_log"] = []
     for id_epoch in range(params["cnt_epochs"]):
         loss, acc = train_epoch(model_classifier, optimizer, scheduler, it_train, params)
+        epoch_stats = {}
+        epoch_stats["id"] = id_epoch
+        epoch_stats["loss"] = loss
+        epoch_stats["acc"] = acc
+        epoch_stats["lr"] = optimizer.param_groups[0]['lr']
+        params["train_log"].append(epoch_stats)
         print(id_epoch, loss, acc)
         print(id_epoch,
-              f"loss: {params['loss_history'][-1]:.4f}",
-              f"lr: {optimizer.param_groups[0]['lr']:.5f}",
+              f"loss: {params['train_log'][-1]["loss"]:.4f}",
+              f"acc: {params['train_log'][-1]["acc"]:.4f}",
+              f"lr: {params['train_log'][-1]["lr"]:.5f}",
               # f"time ep: {time_end - time_start:.3f}s",
               # f"time total: {datetime.timedelta(seconds=time_total)}",
               )
