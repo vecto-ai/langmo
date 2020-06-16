@@ -164,9 +164,9 @@ def main():
         params["train_log"].append(epoch_stats)
         print(id_epoch, loss, acc)
         print(id_epoch,
-              f"loss: {params['train_log'][-1]["loss"]:.4f}",
-              f"acc: {params['train_log'][-1]["acc"]:.4f}",
-              f"lr: {params['train_log'][-1]["lr"]:.5f}",
+              f"loss: {params['train_log'][-1]['loss']:.4f}",
+              f"acc: {params['train_log'][-1]['acc']:.4f}",
+              f"lr: {params['train_log'][-1]['lr']:.5f}",
               # f"time ep: {time_end - time_start:.3f}s",
               # f"time total: {datetime.timedelta(seconds=time_total)}",
               )
