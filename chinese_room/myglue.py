@@ -152,7 +152,7 @@ def main():
     model_classifier = AutoModelForSequenceClassification.from_pretrained("albert-base-v2", config=config)
     model_classifier.to("cuda")
     optimizer = optim.Adam([param for param in model_classifier.parameters() if param.requires_grad == True], lr=0.00001)
-    scheduler = StepLR(optimizer, step_size=1, gamma=0.99)
+    scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
     params["train_log"] = []
     for id_epoch in range(params["cnt_epochs"]):
         loss, acc = train_epoch(model_classifier, optimizer, scheduler, it_train, params)
@@ -166,7 +166,7 @@ def main():
         print(id_epoch,
               f"loss: {params['train_log'][-1]['loss']:.4f}",
               f"acc: {params['train_log'][-1]['acc']:.4f}",
-              f"lr: {params['train_log'][-1]['lr']:.5f}",
+              f"lr: {params['train_log'][-1]['lr']}",
               # f"time ep: {time_end - time_start:.3f}s",
               # f"time total: {datetime.timedelta(seconds=time_total)}",
               )
