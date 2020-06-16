@@ -3,6 +3,8 @@ import pandas
 import numpy as np
 import torch
 import torch.optim as optim
+from torch.optim.lr_scheduler import StepLR
+
 import yaml
 import os
 import sys
@@ -106,7 +108,7 @@ def train_batch(net, optimizer, batch, train):
     return float(loss), int(cnt_correct)
 
 
-def train_epoch(net, optimizer, iterator, params):
+def train_epoch(net, optimizer, scheduler, iterator, params):
     losses = []
     net.train()
     cnt_correct = 0
@@ -114,6 +116,7 @@ def train_epoch(net, optimizer, iterator, params):
         loss, correct_batch = train_batch(net, optimizer, batch, train=True)
         losses.append(loss)
         cnt_correct += correct_batch
+    scheduler.step()
     return np.mean(losses), cnt_correct / iterator.cnt_samples
 
 
@@ -149,10 +152,17 @@ def main():
     model_classifier = AutoModelForSequenceClassification.from_pretrained("albert-base-v2", config=config)
     model_classifier.to("cuda")
     optimizer = optim.Adam([param for param in model_classifier.parameters() if param.requires_grad == True], lr=0.00001)
+    scheduler = StepLR(optimizer, step_size=1, gamma=0.99)
 
     for id_epoch in range(params["cnt_epochs"]):
-        loss, acc = train_epoch(model_classifier, optimizer, it_train, params)
+        loss, acc = train_epoch(model_classifier, optimizer, scheduler, it_train, params)
         print(id_epoch, loss, acc)
+        print(id_epoch,
+              f"loss: {params['loss_history'][-1]:.4f}",
+              f"lr: {optimizer.param_groups[0]['lr']:.5f}",
+              # f"time ep: {time_end - time_start:.3f}s",
+              # f"time total: {datetime.timedelta(seconds=time_total)}",
+              )
 
 
 if __name__ == '__main__':
