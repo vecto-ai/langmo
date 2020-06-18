@@ -1,9 +1,9 @@
-import json
-import pandas
-import numpy as np
 import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
+import json
+import pandas
+import numpy as np
 
 import yaml
 import os
@@ -181,6 +181,7 @@ def main():
         epoch_stats["acc"] = acc
         epoch_stats["lr"] = optimizer.param_groups[0]['lr']
         params["train_log"].append(epoch_stats)
+        print("validate hans")
         val_loss, val_acc = train_epoch(model_classifier, optimizer, scheduler, it_val, params, False)
         epoch_stats["val_loss"] = val_loss
         epoch_stats["val_acc"] = val_acc
