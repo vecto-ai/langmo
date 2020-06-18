@@ -75,6 +75,20 @@ class Iterator:
         return (block_sent, block_masks, block_segments), labels
 
 
+class ModelHans(torch.nn.Module):
+    def __init__(self, net):
+        super().__init__()
+        self.net = net()
+
+    def __call__(self, **kwargs):
+        loss, logits = self.net(kwargs)
+        entail = logits[:, 1:2]
+        non_entail = torch.cat((logits[:, 0:1], logits[:, 2:3]), 1)
+        non_entail = non_entail.max(axis=1)
+        new_logits = torch.cat((entail, non_entail.values.unsqueeze(1)), 1)
+        return 0, new_logits
+
+
 def train_batch(net, optimizer, batch, train):
     (ids, mask, segments), labels = batch
     ids = torch.from_numpy(ids)
@@ -104,7 +118,10 @@ def train_batch(net, optimizer, batch, train):
 
 def train_epoch(net, optimizer, scheduler, iterator, params, train):
     losses = []
-    net.train()
+    if train:
+        net.train()
+    else:
+        net.eval()
     cnt_correct = 0
     for batch in iterator.batches:
         loss, correct_batch = train_batch(net, optimizer, batch, train)
@@ -151,6 +168,7 @@ def main():
 
     model_classifier = AutoModelForSequenceClassification.from_pretrained("albert-base-v2", config=config)
     model_classifier.to("cuda")
+    model_hans = ModelHans(model_classifier)
     optimizer = optim.Adam([param for param in model_classifier.parameters() if param.requires_grad == True], lr=0.00001)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
     params["train_log"] = []
@@ -165,7 +183,7 @@ def main():
         val_loss, val_acc = train_epoch(model_classifier, optimizer, scheduler, it_val, params, False)
         epoch_stats["val_loss"] = val_loss
         epoch_stats["val_acc"] = val_acc
-        val_loss, val_acc = train_epoch(model_classifier, optimizer, scheduler, it_hans, params, False)
+        val_loss, val_acc = train_epoch(model_hans, optimizer, scheduler, it_hans, params, False)
         epoch_stats["val_loss_hans"] = val_loss
         epoch_stats["val_acc_hans"] = val_acc
         print(id_epoch,
