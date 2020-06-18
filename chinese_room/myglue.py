@@ -81,7 +81,7 @@ class ModelHans(torch.nn.Module):
         self.net = net
 
     def __call__(self, **kwargs):
-        loss, logits = self.net(kwargs)
+        loss, logits = self.net(**kwargs)
         entail = logits[:, 1:2]
         non_entail = torch.cat((logits[:, 0:1], logits[:, 2:3]), 1)
         non_entail = non_entail.max(axis=1)
