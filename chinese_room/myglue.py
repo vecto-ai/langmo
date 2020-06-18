@@ -173,6 +173,7 @@ def main():
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
     params["train_log"] = []
     for id_epoch in range(params["cnt_epochs"]):
+        print("train mnli")
         loss, acc = train_epoch(model_classifier, optimizer, scheduler, it_train, params, True)
         epoch_stats = {}
         epoch_stats["id"] = id_epoch
@@ -183,6 +184,7 @@ def main():
         val_loss, val_acc = train_epoch(model_classifier, optimizer, scheduler, it_val, params, False)
         epoch_stats["val_loss"] = val_loss
         epoch_stats["val_acc"] = val_acc
+        print("validate hans")
         val_loss, val_acc = train_epoch(model_hans, optimizer, scheduler, it_hans, params, False)
         epoch_stats["val_loss_hans"] = val_loss
         epoch_stats["val_acc_hans"] = val_acc
