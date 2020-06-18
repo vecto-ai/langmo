@@ -191,7 +191,6 @@ def main():
               f"acc: {params['train_log'][-1]['acc']:.4f}",
               f"val_loss: {params['train_log'][-1]['val_loss']:.4f}",
               f"val_acc: {params['train_log'][-1]['val_acc']:.4f}",
-              f"hans_loss: {params['train_log'][-1]['val_loss_hans']:.4f}",
               f"hans_acc: {params['train_log'][-1]['val_acc_hans']:.4f}",
               f"lr: {params['train_log'][-1]['lr']}",
               # f"time ep: {time_end - time_start:.3f}s",
