@@ -78,7 +78,7 @@ class Iterator:
 class ModelHans(torch.nn.Module):
     def __init__(self, net):
         super().__init__()
-        self.net = net()
+        self.net = net
 
     def __call__(self, **kwargs):
         loss, logits = self.net(kwargs)
