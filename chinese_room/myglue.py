@@ -38,8 +38,6 @@ def read_ds(path, tokenizer):
 class Iterator:
     def __init__(self, tuples_train, size_batch):
         self.size_batch = size_batch
-        # print(tuples_train[0][0])
-        # return
         train = sorted(tuples_train, key=lambda x: len(x[0][0]))
         self.cnt_samples = len(train)
         self.batches = []
@@ -54,7 +52,6 @@ class Iterator:
         return res
 
     def zero_pad_batch(self, batch):
-        #print(batch)
         max_len = max([len(i[0][0]) for i in batch])
         list_sents = []
         list_masks = []
@@ -98,9 +95,6 @@ def train_batch(net, optimizer, batch, train):
         net.zero_grad()
         loss.backward()
         optimizer.step()
-    #print(logits.shape)
-    #print(logits)
-    #print(labels)
     max_index = logits.max(dim=1)[1]
     #print(max_index)
     mask_correct = max_index == labels
@@ -121,7 +115,7 @@ def train_epoch(net, optimizer, scheduler, iterator, params, train):
     return np.mean(losses), cnt_correct / iterator.cnt_samples
 
 
-def make_iter(path, tokenizer):
+def make_iter(path, tokenizer, size_batch=32):
     train_tuples = read_ds(path, tokenizer)
     train_tuples = list(train_tuples)
     sentpairs, labels = zip(*train_tuples)
@@ -129,7 +123,7 @@ def make_iter(path, tokenizer):
     segment_ids = [[0] * len(a) + [1] * (len(b) - 1) for a, b in sentpairs]
     inputs = list(zip(sent_merged, segment_ids))
     tuples_merged = list(zip(inputs, labels))
-    it = Iterator(tuples_merged, size_batch=32)
+    it = Iterator(tuples_merged, size_batch)
     return it
 
 
@@ -137,18 +131,18 @@ def main():
     path_config = sys.argv[1]
     with open(path_config, "r") as cfg:
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
-    params["cnt_epochs"] = 30
-    params["path_train"] = os.path.join(params["path_data"], "train.tsv")
-    params["path_val"] = os.path.join(params["path_data"], "dev_matched.tsv")
+    params["path_train"] = os.path.join(params["path_mnli"], "train.tsv")
+    params["path_val"] = os.path.join(params["path_mnli"], "dev_matched.tsv")
     tokenizer = AlbertTokenizer.from_pretrained("albert-base-v2")
-    it_train = make_iter(params["path_train"], tokenizer)
-    it_val = make_iter(params["path_val"], tokenizer)
+    it_train = make_iter(params["path_train"], tokenizer, params["size_batch"])
+    it_val = make_iter(params["path_val"], tokenizer, params["size_batch"])
+    it_hans = make_iter(os.path.join(params["path_hans"], "heuristics_evaluation_set.txt"),
+                        tokenizer,
+                        params["size_batch"])
     for i in range(6):
-        ids = it_train.batches[0][0][0][i][:10]
+        ids = it_hans.batches[0][0][0][i][:10]
         s = tokenizer.decode(ids)
-        print(it_train.batches[0][1][i], s)
-    # print()
-    # return
+        print(it_hans.batches[0][1][i], s)
     config = AutoConfig.from_pretrained(
         "albert-base-v2",
         num_labels=3)#,
@@ -171,11 +165,16 @@ def main():
         val_loss, val_acc = train_epoch(model_classifier, optimizer, scheduler, it_val, params, False)
         epoch_stats["val_loss"] = val_loss
         epoch_stats["val_acc"] = val_acc
+        val_loss, val_acc = train_epoch(model_classifier, optimizer, scheduler, it_hans, params, False)
+        epoch_stats["val_loss_hans"] = val_loss
+        epoch_stats["val_acc_hans"] = val_acc
         print(id_epoch,
               f"loss: {params['train_log'][-1]['loss']:.4f}",
               f"acc: {params['train_log'][-1]['acc']:.4f}",
               f"val_loss: {params['train_log'][-1]['val_loss']:.4f}",
               f"val_acc: {params['train_log'][-1]['val_acc']:.4f}",
+              f"hans_loss: {params['train_log'][-1]['val_loss_hans']:.4f}",
+              f"hans_acc: {params['train_log'][-1]['val_acc_hans']:.4f}",
               f"lr: {params['train_log'][-1]['lr']}",
               # f"time ep: {time_end - time_start:.3f}s",
               # f"time total: {datetime.timedelta(seconds=time_total)}",
