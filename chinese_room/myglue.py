@@ -104,11 +104,12 @@ def train_batch(net, optimizer, batch, train):
                        attention_mask=mask,
                        token_type_ids=segments,
                        labels=labels)
-    # print(logits)
+    print("done fwd"")
     if train:
         net.zero_grad()
         loss.backward()
         optimizer.step()
+    print("dobe bwd")
     max_index = logits.max(dim=1)[1]
     #print(max_index)
     mask_correct = max_index == labels
