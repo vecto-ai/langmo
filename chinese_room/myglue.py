@@ -104,7 +104,7 @@ def train_batch(net, optimizer, batch, train):
                        attention_mask=mask,
                        token_type_ids=segments,
                        labels=labels)
-    print("done fwd"")
+    print("done fwd")
     if train:
         net.zero_grad()
         loss.backward()
