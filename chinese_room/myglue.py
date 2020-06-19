@@ -27,8 +27,8 @@ def read_ds(path, tokenizer):
     print(dic_labels)
     sent1 = map(lambda x: x[:64], df["sentence1"])
     sent2 = map(lambda x: x[:64], df["sentence2"])
-    sent1 = map(tokenizer.encode, df["sentence1"])
-    sent2 = map(tokenizer.encode, df["sentence2"])
+    sent1 = map(tokenizer.encode, sent1)
+    sent2 = map(tokenizer.encode, sent1)
     labels = map(lambda x: dic_labels[x], df["gold_label"])
     tuples = zip(zip(sent1, sent2), labels)
     return tuples
