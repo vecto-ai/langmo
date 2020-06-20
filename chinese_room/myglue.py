@@ -126,8 +126,8 @@ def train_epoch(net, optimizer, scheduler, iterator, params, train):
         loss, correct_batch = train_batch(net, optimizer, batch, train)
         losses.append(loss)
         cnt_correct += correct_batch
-    if train:
-        scheduler.step()
+    #if train:
+    #    scheduler.step()
     return np.mean(losses), cnt_correct / iterator.cnt_samples
 
 
