@@ -194,7 +194,7 @@ def main():
               # f"time ep: {time_end - time_start:.3f}s",
               # f"time total: {datetime.timedelta(seconds=time_total)}",
               )
-        save_data_json(os.path.join(params["path_out"], "metadata.json"), params)
+        save_data_json(params, os.path.join(params["path_out"], "metadata.json"))
 
 
 if __name__ == '__main__':
