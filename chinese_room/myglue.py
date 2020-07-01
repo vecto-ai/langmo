@@ -1,10 +1,9 @@
 import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
-import json
-import pandas
 import numpy as np
-
+import pandas
+from protonn.utils import save_data_json
 import yaml
 import os
 import sys
@@ -161,7 +160,7 @@ def main():
         print(it_hans.batches[0][1][i], s)
     config = AutoConfig.from_pretrained(
         "albert-base-v2",
-        num_labels=3)#,
+        num_labels=3) #,
         #finetuning_task=data_args.task_name,
         #cache_dir=model_args.cache_dir)
 
@@ -195,6 +194,7 @@ def main():
               # f"time ep: {time_end - time_start:.3f}s",
               # f"time total: {datetime.timedelta(seconds=time_total)}",
               )
+        save_data_json(os.path.join(params["path_out"], "metadata.json"), params)
 
 
 if __name__ == '__main__':
