@@ -51,7 +51,7 @@ class Iterator:
         return res
 
     def zero_pad_batch(self, batch):
-        max_len = max([len(i[0][0]) for i in batch])
+        max_len = 128  # max([len(i[0][0]) for i in batch])
         list_sents = []
         list_masks = []
         list_segments = []
@@ -167,7 +167,7 @@ def main():
     model_classifier = AutoModelForSequenceClassification.from_pretrained("albert-base-v2", config=config)
     model_classifier.to("cuda")
     model_hans = ModelHans(model_classifier)
-    optimizer = optim.Adam([param for param in model_classifier.parameters() if param.requires_grad == True], lr=0.0001)
+    optimizer = optim.AdamW([param for param in model_classifier.parameters() if param.requires_grad == True], lr=0.000001)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
     params["train_log"] = []
     for id_epoch in range(params["cnt_epochs"]):
