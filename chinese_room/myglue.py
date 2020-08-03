@@ -7,6 +7,11 @@ from protonn.utils import save_data_json
 import yaml
 import os
 import sys
+import logging
+import platform
+from protonn.utils import get_time_str
+import wandb
+
 from transformers import AlbertModel, AlbertTokenizer, AlbertForSequenceClassification
 from transformers import AutoModelForSequenceClassification, AutoConfig
 
@@ -144,6 +149,7 @@ def make_iter(path, tokenizer, size_batch=32):
 
 def main():
     print("starting CR")
+    wandb.init(project='my_mnli', name=f"{platform.node()}_{get_time_str()}")
     path_config = sys.argv[1]
     with open(path_config, "r") as cfg:
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
@@ -187,6 +193,8 @@ def main():
         #val_loss, val_acc = train_epoch(model_hans, optimizer, scheduler, it_hans, params, False)
         #epoch_stats["val_loss_hans"] = val_loss
         #epoch_stats["val_acc_hans"] = val_acc
+        wandb.log("loss", loss)
+        wandb.log("acc", acc)
         print(id_epoch,
               f"loss: {params['train_log'][-1]['loss']:.4f}",
               f"acc: {params['train_log'][-1]['acc']:.4f}",
