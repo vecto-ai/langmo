@@ -143,13 +143,16 @@ def make_iter(path, tokenizer, size_batch=32):
 
 
 def main():
+    print("starting CR")
     path_config = sys.argv[1]
     with open(path_config, "r") as cfg:
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
     params["path_train"] = os.path.join(params["path_mnli"], "train.tsv")
     params["path_val"] = os.path.join(params["path_mnli"], "dev_matched.tsv")
     tokenizer = AlbertTokenizer.from_pretrained("albert-base-v2")
+    print("created tokenizer")
     it_train = make_iter(params["path_train"], tokenizer, params["size_batch"])
+    print("loaded train")
     it_val = make_iter(params["path_val"], tokenizer, params["size_batch"])
     it_hans = make_iter(os.path.join(params["path_hans"], "heuristics_evaluation_set.txt"),
                         tokenizer,
