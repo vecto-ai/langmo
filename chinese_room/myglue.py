@@ -194,7 +194,7 @@ def main():
         #epoch_stats["val_loss_hans"] = val_loss
         #epoch_stats["val_acc_hans"] = val_acc
         wandb.log("loss", loss)
-        wandb.log("acc", acc)
+        wandb.log({"accuracy": acc, "loss:",loss, "epoch": 5})
         print(id_epoch,
               f"loss: {params['train_log'][-1]['loss']:.4f}",
               f"acc: {params['train_log'][-1]['acc']:.4f}",
