@@ -167,7 +167,7 @@ def main():
     model_classifier = AutoModelForSequenceClassification.from_pretrained("albert-base-v2", config=config)
     model_classifier.to("cuda")
     model_hans = ModelHans(model_classifier)
-    optimizer = optim.AdamW([param for param in model_classifier.parameters() if param.requires_grad == True], lr=0.000001)
+    optimizer = optim.AdamW([param for param in model_classifier.parameters() if param.requires_grad == True], lr=0.00001)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
     params["train_log"] = []
     for id_epoch in range(params["cnt_epochs"]):
@@ -181,15 +181,15 @@ def main():
         val_loss, val_acc = train_epoch(model_classifier, optimizer, scheduler, it_val, params, False)
         epoch_stats["val_loss"] = val_loss
         epoch_stats["val_acc"] = val_acc
-        val_loss, val_acc = train_epoch(model_hans, optimizer, scheduler, it_hans, params, False)
-        epoch_stats["val_loss_hans"] = val_loss
-        epoch_stats["val_acc_hans"] = val_acc
+        #val_loss, val_acc = train_epoch(model_hans, optimizer, scheduler, it_hans, params, False)
+        #epoch_stats["val_loss_hans"] = val_loss
+        #epoch_stats["val_acc_hans"] = val_acc
         print(id_epoch,
               f"loss: {params['train_log'][-1]['loss']:.4f}",
               f"acc: {params['train_log'][-1]['acc']:.4f}",
               f"val_loss: {params['train_log'][-1]['val_loss']:.4f}",
               f"val_acc: {params['train_log'][-1]['val_acc']:.4f}",
-              f"hans_acc: {params['train_log'][-1]['val_acc_hans']:.4f}",
+              #f"hans_acc: {params['train_log'][-1]['val_acc_hans']:.4f}",
               f"lr: {params['train_log'][-1]['lr']}",
               # f"time ep: {time_end - time_start:.3f}s",
               # f"time total: {datetime.timedelta(seconds=time_total)}",
