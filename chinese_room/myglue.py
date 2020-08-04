@@ -185,7 +185,7 @@ def main():
     logger.info("created model")
     model_classifier.to("cuda")
     model_hans = ModelHans(model_classifier)
-    optimizer = optim.AdamW([param for param in model_classifier.parameters() if param.requires_grad == True], lr=0.00001)
+    optimizer = optim.AdamW([param for param in model_classifier.parameters() if param.requires_grad == True], lr=2e-5)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
     params["train_log"] = []
     logger.info(f"start training loop, {len(it_train.batches)} batches per epoch")
