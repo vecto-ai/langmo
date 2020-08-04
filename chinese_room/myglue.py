@@ -6,8 +6,9 @@ import pandas
 from protonn.utils import save_data_json
 import yaml
 import os
-import sys
 import logging
+import sys
+from log_helper import set_root_logger
 import platform
 from protonn.utils import get_time_str
 import wandb
@@ -149,36 +150,45 @@ def make_iter(path, tokenizer, size_batch=32):
 
 def main():
     print("starting CR")
-    wandb.init(project='my_mnli', name=f"{platform.node()}_{get_time_str()}")
+    timestamp = get_time_str()
+    wandb.init(project='my_mnli', name=f"{platform.node()}_{timestamp}")
     path_config = sys.argv[1]
     with open(path_config, "r") as cfg:
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
     params["path_train"] = os.path.join(params["path_mnli"], "train.tsv")
     params["path_val"] = os.path.join(params["path_mnli"], "dev_matched.tsv")
+    params["results_full_path"] = f"./logs/{timestamp}"
+    params["debug_level"] = 2
+    set_root_logger(params)
+    logger = logging.getLogger(__name__)
+    logger.info("logger created")
     tokenizer = AlbertTokenizer.from_pretrained("albert-base-v2")
-    print("created tokenizer")
+    logger.info("created tokenizer")
     it_train = make_iter(params["path_train"], tokenizer, params["size_batch"])
-    print("loaded train")
+    logger.info("loaded train")
     it_val = make_iter(params["path_val"], tokenizer, params["size_batch"])
-    it_hans = make_iter(os.path.join(params["path_hans"], "heuristics_evaluation_set.txt"),
-                        tokenizer,
-                        params["size_batch"])
-    for i in range(6):
-        ids = it_hans.batches[0][0][0][i][:10]
-        s = tokenizer.decode(ids)
-        print(it_hans.batches[0][1][i], s)
+    #it_hans = make_iter(os.path.join(params["path_hans"], "heuristics_evaluation_set.txt"),
+    #                    tokenizer,
+    #                    params["size_batch"])
+    #for i in range(6):
+    #    ids = it_hans.batches[0][0][0][i][:10]
+    #    s = tokenizer.decode(ids)
+    #    print(it_hans.batches[0][1][i], s)
     config = AutoConfig.from_pretrained(
         "albert-base-v2",
         num_labels=3) #,
         #finetuning_task=data_args.task_name,
         #cache_dir=model_args.cache_dir)
+    logger.info("created HF config")
 
     model_classifier = AutoModelForSequenceClassification.from_pretrained("albert-base-v2", config=config)
+    logger.info("created model")
     model_classifier.to("cuda")
     model_hans = ModelHans(model_classifier)
     optimizer = optim.AdamW([param for param in model_classifier.parameters() if param.requires_grad == True], lr=0.00001)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
     params["train_log"] = []
+    logger.info(f"start training loop, {len(it_train.batches)} batches per epoch")
     for id_epoch in range(params["cnt_epochs"]):
         loss, acc = train_epoch(model_classifier, optimizer, scheduler, it_train, params, True)
         epoch_stats = {}
@@ -188,18 +198,21 @@ def main():
         epoch_stats["lr"] = optimizer.param_groups[0]['lr']
         params["train_log"].append(epoch_stats)
         val_loss, val_acc = train_epoch(model_classifier, optimizer, scheduler, it_val, params, False)
-        epoch_stats["val_loss"] = val_loss
-        epoch_stats["val_acc"] = val_acc
-        #val_loss, val_acc = train_epoch(model_hans, optimizer, scheduler, it_hans, params, False)
-        #epoch_stats["val_loss_hans"] = val_loss
-        #epoch_stats["val_acc_hans"] = val_acc
-        wandb.log("loss", loss)
-        wandb.log({"accuracy": acc, "loss:",loss, "epoch": 5})
+        # epoch_stats["val_loss"] = val_loss
+        # epoch_stats["val_acc"] = val_acc
+        # val_loss, val_acc = train_epoch(model_hans, optimizer, scheduler, it_hans, params, False)
+        # epoch_stats["val_loss_hans"] = val_loss
+        # epoch_stats["val_acc_hans"] = val_acc
+        wandb.log({"accuracy": acc,
+                   "loss": loss,
+                   "val_acc": val_acc,
+                   "val_loss": val_loss,
+                   "epoch": id_epoch})
         print(id_epoch,
               f"loss: {params['train_log'][-1]['loss']:.4f}",
               f"acc: {params['train_log'][-1]['acc']:.4f}",
-              f"val_loss: {params['train_log'][-1]['val_loss']:.4f}",
-              f"val_acc: {params['train_log'][-1]['val_acc']:.4f}",
+              #f"val_loss: {params['train_log'][-1]['val_loss']:.4f}",
+              #f"val_acc: {params['train_log'][-1]['val_acc']:.4f}",
               #f"hans_acc: {params['train_log'][-1]['val_acc_hans']:.4f}",
               f"lr: {params['train_log'][-1]['lr']}",
               # f"time ep: {time_end - time_start:.3f}s",
