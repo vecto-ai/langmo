@@ -32,8 +32,9 @@ def read_ds(path, tokenizer):
     print(dic_labels)
     sent1 = map(lambda x: x[:64], df["sentence1"])
     sent2 = map(lambda x: x[:64], df["sentence2"])
-    sent1 = map(tokenizer.encode, sent1)
-    sent2 = map(tokenizer.encode, sent1)
+    sent1 = list(map(tokenizer.encode, sent1))
+    sent2 = list(map(tokenizer.encode, sent2))
+    # print(sent1[0], sent2[0])
     labels = map(lambda x: dic_labels[x], df["gold_label"])
     tuples = zip(zip(sent1, sent2), labels)
     return tuples
@@ -43,11 +44,13 @@ def read_ds(path, tokenizer):
 class Iterator:
     def __init__(self, tuples_train, size_batch):
         self.size_batch = size_batch
-        train = sorted(tuples_train, key=lambda x: len(x[0][0]))
+        train = tuples_train
+        # train = sorted(tuples_train, key=lambda x: len(x[0][0]))
         self.cnt_samples = len(train)
         self.batches = []
         for i in range(0, len(train), size_batch):
-            batch = train[i:i + size_batch]
+            batch = train[i: i + size_batch]
+            # self.batches.append(batch)
             self.batches.append(self.zero_pad_batch(batch))
 
     def zero_pad_item(self, sample, max_len):
@@ -131,8 +134,8 @@ def train_epoch(net, optimizer, scheduler, iterator, params, train):
         loss, correct_batch = train_batch(net, optimizer, batch, train)
         losses.append(loss)
         cnt_correct += correct_batch
-    #if train:
-    #    scheduler.step()
+    if train:
+        scheduler.step()
     return np.mean(losses), cnt_correct / iterator.cnt_samples
 
 
@@ -140,7 +143,11 @@ def make_iter(path, tokenizer, size_batch=32):
     train_tuples = read_ds(path, tokenizer)
     train_tuples = list(train_tuples)
     sentpairs, labels = zip(*train_tuples)
+    # print(sentpairs[0])
     sent_merged = [a + b[1:] for a, b in sentpairs]
+    #s = tokenizer.decode(sent_merged[0])
+    # print(s)
+     # exit(0)
     segment_ids = [[0] * len(a) + [1] * (len(b) - 1) for a, b in sentpairs]
     inputs = list(zip(sent_merged, segment_ids))
     tuples_merged = list(zip(inputs, labels))
@@ -151,7 +158,6 @@ def make_iter(path, tokenizer, size_batch=32):
 def main():
     print("starting CR")
     timestamp = get_time_str()
-    wandb.init(project='my_mnli', name=f"{platform.node()}_{timestamp}")
     path_config = sys.argv[1]
     with open(path_config, "r") as cfg:
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
@@ -170,17 +176,26 @@ def main():
     #it_hans = make_iter(os.path.join(params["path_hans"], "heuristics_evaluation_set.txt"),
     #                    tokenizer,
     #                    params["size_batch"])
-    #for i in range(6):
-    #    ids = it_hans.batches[0][0][0][i][:10]
-    #    s = tokenizer.decode(ids)
-    #    print(it_hans.batches[0][1][i], s)
+    print("train")
+    print(it_train.batches[0])
+    #
+    for i in range(6):
+        ids = it_train.batches[0][0][0][i][:14]
+        s = tokenizer.decode(ids)
+        print(it_train.batches[0][1][i], s)
+    # print("val")
+    # for i in range(6):
+    #     ids = it_val.batches[0][0][0][i][:12]
+    #     s = tokenizer.decode(ids)
+    #     print(it_val.batches[0][1][i], s)
+    # return 
     config = AutoConfig.from_pretrained(
         "albert-base-v2",
         num_labels=3) #,
         #finetuning_task=data_args.task_name,
         #cache_dir=model_args.cache_dir)
     logger.info("created HF config")
-
+    wandb.init(project='my_mnli', name=f"{platform.node()}_{timestamp}")
     model_classifier = AutoModelForSequenceClassification.from_pretrained("albert-base-v2", config=config)
     logger.info("created model")
     model_classifier.to("cuda")
@@ -197,22 +212,23 @@ def main():
         epoch_stats["acc"] = acc
         epoch_stats["lr"] = optimizer.param_groups[0]['lr']
         params["train_log"].append(epoch_stats)
-        val_loss, val_acc = train_epoch(model_classifier, optimizer, scheduler, it_val, params, False)
-        # epoch_stats["val_loss"] = val_loss
-        # epoch_stats["val_acc"] = val_acc
+        val_loss, val_acc = train_epoch(model_classifier, None, None, it_val, params, False)
+        epoch_stats["val_loss"] = val_loss
+        epoch_stats["val_acc"] = val_acc
         # val_loss, val_acc = train_epoch(model_hans, optimizer, scheduler, it_hans, params, False)
         # epoch_stats["val_loss_hans"] = val_loss
         # epoch_stats["val_acc_hans"] = val_acc
-        wandb.log({"accuracy": acc,
+        wandb.log({"acc": acc,
                    "loss": loss,
                    "val_acc": val_acc,
                    "val_loss": val_loss,
+                   "lr": optimizer.param_groups[0]['lr'],
                    "epoch": id_epoch})
         print(id_epoch,
               f"loss: {params['train_log'][-1]['loss']:.4f}",
               f"acc: {params['train_log'][-1]['acc']:.4f}",
-              #f"val_loss: {params['train_log'][-1]['val_loss']:.4f}",
-              #f"val_acc: {params['train_log'][-1]['val_acc']:.4f}",
+              f"val_loss: {params['train_log'][-1]['val_loss']:.4f}",
+              f"val_acc: {params['train_log'][-1]['val_acc']:.4f}",
               #f"hans_acc: {params['train_log'][-1]['val_acc_hans']:.4f}",
               f"lr: {params['train_log'][-1]['lr']}",
               # f"time ep: {time_end - time_start:.3f}s",
