@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 import numpy as np
@@ -12,6 +13,7 @@ from log_helper import set_root_logger
 import platform
 from protonn.utils import get_time_str
 import wandb
+from timeit import default_timer as timer
 
 from transformers import AlbertModel, AlbertTokenizer, AlbertForSequenceClassification
 from transformers import AutoModelForSequenceClassification, AutoConfig
@@ -197,6 +199,7 @@ def main():
     logger.info("created HF config")
     wandb.init(project='my_mnli', name=f"{platform.node()}_{timestamp}")
     model_classifier = AutoModelForSequenceClassification.from_pretrained("albert-base-v2", config=config)
+    model_classifier = nn.DataParallel(model_classifier)
     logger.info("created model")
     model_classifier.to("cuda")
     model_hans = ModelHans(model_classifier)
@@ -205,6 +208,7 @@ def main():
     params["train_log"] = []
     logger.info(f"start training loop, {len(it_train.batches)} batches per epoch")
     for id_epoch in range(params["cnt_epochs"]):
+        time_start = timer()
         loss, acc = train_epoch(model_classifier, optimizer, scheduler, it_train, params, True)
         epoch_stats = {}
         epoch_stats["id"] = id_epoch
@@ -224,6 +228,7 @@ def main():
                    "val_loss": val_loss,
                    "lr": optimizer.param_groups[0]['lr'],
                    "epoch": id_epoch})
+        time_end = timer()
         print(id_epoch,
               f"loss: {params['train_log'][-1]['loss']:.4f}",
               f"acc: {params['train_log'][-1]['acc']:.4f}",
@@ -231,6 +236,7 @@ def main():
               f"val_acc: {params['train_log'][-1]['val_acc']:.4f}",
               #f"hans_acc: {params['train_log'][-1]['val_acc_hans']:.4f}",
               f"lr: {params['train_log'][-1]['lr']}",
+              f"epoch_time: {time_end - time_start}",
               # f"time ep: {time_end - time_start:.3f}s",
               # f"time total: {datetime.timedelta(seconds=time_total)}",
               )
