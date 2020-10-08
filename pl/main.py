@@ -4,14 +4,14 @@ import torch.nn.functional as F
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 
-from model import build_model
+from model import net
 from data import CFDataModule
 
 
 class Cosmoflow(pl.LightningModule):
     def __init__(self):
         super().__init__()
-        self.net = build_model((128, 128, 128, 4), 4, 0)
+        self.net = net
         self.net.train()
         self.example_input_array = torch.zeros((1, 4, 128, 128, 128))
 
@@ -28,12 +28,13 @@ class Cosmoflow(pl.LightningModule):
         return result
 
     def validation_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self(x)
-        loss = F.l1_loss(y_hat, y)
-        result = pl.EvalResult(early_stop_on=loss, checkpoint_on=loss)
-        result.log("val_loss", loss, sync_dist=True)
-        return result
+        pass
+        # x, y = batch
+        # y_hat = self(x)
+        # loss = F.l1_loss(y_hat, y)
+        # result = pl.EvalResult(early_stop_on=loss, checkpoint_on=loss)
+        # result.log("val_loss", loss, sync_dist=True)
+        # return result
 
     def configure_optimizers(self):
         # return torch.optim.Adam(self.parameters(), lr=0.0002)
