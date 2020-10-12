@@ -1,16 +1,13 @@
 import sys
-import os
 import yaml
-import datetime
 import torch
 import torch.optim as optim
 import vecto
 import vecto.embeddings
-import numpy as np
 import torch.nn.functional as F
 from protonn.utils import save_data_json
 from langmo.utils import get_unique_results_path
-from .data import Iterator, read_ds, NLIDataModule
+from .data import NLIDataModule
 from .model import Net
 # from timeit import default_timer as timer
 import pytorch_lightning as pl
@@ -21,15 +18,16 @@ class PLModel(pl.LightningModule):
     def __init__(self, net):
         super().__init__()
         self.net = net
-        self.example_input_array = torch.zeros((1, 4, 128, 128, 128))
+        # self.example_input_array = torch.zeros((1, 4, 128, 128, 128))
 
-    def forward(self, x):
-        return self.net(x)
+    def forward(self, s1, s2):
+        print(s1.shape)
+        exit(9)
+        return self.net(s1, s2)
 
     def training_step(self, batch, batch_idx):
-        print(batch)
-        x, target = batch
-        logits = self(x)
+        s1, s2, target = batch
+        logits = self(s1, s2)
         loss = F.cross_entropy(logits, target)
         acc = self.accuracy(output, target)
         # result.log("train_loss", loss, on_epoch=True, sync_dist=True)
@@ -40,7 +38,8 @@ class PLModel(pl.LightningModule):
         return result
 
     def validation_step(self, batch, batch_idx):
-        x, y = batch
+        s1, s2, y = batch
+
         logits = self(x)
         acc = self.accuracy(logits, y)
         result = pl.EvalResult(early_stop_on=loss, checkpoint_on=loss)
@@ -64,7 +63,6 @@ def main():
     path_results_base = "./out/NLI"
     params["path_results"] = get_unique_results_path(path_results_base)
     params["batch_size"] = 32
-    data_module = NLIDataModule(params["path_train"], batch_size=params["batch_size"])
     wandb_logger = WandbLogger(project="NLI")
     # wandb_logger.log_hyperparams(config)
     # early_stop_callback = EarlyStopping(
@@ -78,18 +76,19 @@ def main():
     trainer = pl.Trainer(
         gpus=1,
         num_sanity_val_steps=0,
-        max_epochs=100,
-        distributed_backend="horovod",
+        max_epochs=2,
+        # distributed_backend="horovod",
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
-        logger=wandb_logger,
+        # logger=wandb_logger,
         progress_bar_refresh_rate=0,
     )
     # print("tainer created")
 
     embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
+    data_module = NLIDataModule(params["path_mnli"], embs.vocabulary, batch_size=params["batch_size"])
     model = PLModel(Net(embs))
-    # print("fit")
+    print("fit")
     trainer.fit(model, data_module)
 
 # def make_snapshot(net, optimizer, scheduler, id_epoch, params):
