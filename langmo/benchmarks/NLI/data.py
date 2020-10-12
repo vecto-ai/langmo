@@ -1,6 +1,7 @@
 import numpy as np
 import pandas
 import json
+import pytorch_lightning as pl
 
 
 def read_ds(path, embs, test=False):
@@ -60,3 +61,21 @@ class Iterator:
         block_s2 = np.rollaxis(block_s2, 1, start=0)  # make it sequence-first
         labels = np.array(list_labels)
         return (block_s1, block_s2), labels
+
+
+class NLIDataModule(pl.LightningDataModule):
+    def __init__(self, path, batch_size):
+        super().__init__()
+        self.path = path
+        self.batch_size = batch_size
+
+    def setup(self, stage=None):
+        # print("doing setup")
+        # TODO: probably need to scatter indices here by hvd explicitly
+        pass
+
+    def train_dataloader(self):
+        return load_ds_from_dir(os.path.join(self.path, "train"), self.batch_size)
+
+    def val_dataloader(self):
+        return load_ds_from_dir(os.path.join(self.path, "validation"), self.batch_size)
