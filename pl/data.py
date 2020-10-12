@@ -14,7 +14,8 @@ class CFDataModule(pl.LightningDataModule):
         pass
 
     def train_dataloader(self):
-        # create identical tensors
+        # load csv
+        # tokenize
         cnt_samples = 4
         tensor_x = torch.rand((cnt_samples, 4, 128, 128, 128),
                               out=None,
