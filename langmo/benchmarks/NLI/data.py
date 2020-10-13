@@ -5,23 +5,8 @@ import torch
 import pytorch_lightning as pl
 import os
 import numpy as np
-from torch.utils.data import TensorDataset, DataLoader, Dataset
+from torch.utils.data import DataLoader
 
-
-class ListDataset(Dataset):
-    def __init__(self, s1, s2, l):
-        self.s1 = s1
-        self.s2 = s2
-        self.l = l
-
-#   def __len__(self): return len(self.y) - self.seq_l + 1
-
-#   def __getitem__(self, idx):
-#     return [
-#       (torch.from_numpy(self.cats[idx:idx+self.seq_l]),
-#       torch.from_numpy(self.conts[idx:idx+self.seq_l])),
-#       self.y[idx+self.seq_l-1]
-#     ]
 
 def zero_pad_item(sample, max_len):
     if sample.shape[0] > max_len:
@@ -87,7 +72,6 @@ def read_ds(path, vocab, test=False):
     # TODO: read only local chunk in each worker
     # TODO: use subsample dataset for random submsamplin
     # dataset = TensorDataset(sent1, sent2, labels)
-    # so collate should go to dataloader and then original data should be lists, to not have to pad em
     return DataLoader(dataset, collate_fn=my_collate, batch_size=32, num_workers=1)
     # tuples = zip(zip(sent1, sent2), labels)
     # return tuples
@@ -110,7 +94,7 @@ class NLIDataModule(pl.LightningDataModule):
         return read_ds(path, self.vocab, self.batch_size)
 
     def val_dataloader(self):
-        path = os.path.join(self.path, "multinli_1.0_train.jsonl")
+        path = os.path.join(self.path, "multinli_1.0_dev_matched.jsonl")
         return read_ds(path, self.vocab, self.batch_size)
 
 

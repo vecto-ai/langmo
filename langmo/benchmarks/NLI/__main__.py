@@ -1,15 +1,12 @@
 import sys
 import yaml
 import torch
-# import torch.optim as optim
 import vecto
 import vecto.embeddings
 import torch.nn.functional as F
-# from protonn.utils import save_data_json
 from langmo.utils import get_unique_results_path
 from .data import NLIDataModule
 from .model import Net
-# from timeit import default_timer as timer
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from collections import OrderedDict
@@ -47,9 +44,9 @@ class PLModel(pl.LightningModule):
 
         logits = self(s1, s2)
         loss = F.cross_entropy(logits, target)
-        # acc = self.accuracy(logits, y)
-        #result = pl.EvalResult(early_stop_on=loss, checkpoint_on=loss)
-        #result.log("val_accuracy", loss, sync_dist=True)
+        acc = accuracy(logits, target)
+        self.log('val_loss', loss)
+        self.log('val_acc', acc)
         result = OrderedDict({
             'loss': loss,
             # 'accuracy': acc,
@@ -86,7 +83,7 @@ def main():
     trainer = pl.Trainer(
         gpus=1,
         num_sanity_val_steps=0,
-        max_epochs=3,
+        max_epochs=4,
         # distributed_backend="horovod",
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
