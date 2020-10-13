@@ -84,7 +84,7 @@ def main():
         gpus=1,
         num_sanity_val_steps=0,
         max_epochs=4,
-        # distributed_backend="horovod",
+        distributed_backend="horovod",
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
         logger=wandb_logger,

@@ -6,6 +6,7 @@ import pytorch_lightning as pl
 import os
 import numpy as np
 from torch.utils.data import DataLoader
+import horovod.torch as hvd
 
 
 def zero_pad_item(sample, max_len):
@@ -60,6 +61,8 @@ def read_ds(path, vocab, batch_size, test=False):
                 break
     print(f"{len(train)} samples loaded")
     df = pandas.DataFrame(train)
+    chunks = np.array_split(df, hvd.size())
+    df = chunks[hvd.rank()]
     dic_labels = {l: i for i, l in enumerate(sorted(df["gold_label"].unique()))}
     df["sentence1"] = df["sentence1"].apply(lambda s: s.lower())
     df["sentence2"] = df["sentence2"].apply(lambda s: s.lower())
