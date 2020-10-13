@@ -13,6 +13,7 @@ from .model import Net
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from collections import OrderedDict
+from pytorch_lightning.metrics.functional import accuracy
 
 
 class PLModel(pl.LightningModule):
@@ -31,9 +32,10 @@ class PLModel(pl.LightningModule):
         # exit(9)
         logits = self(s1, s2)
         loss = F.cross_entropy(logits, target)
-        # acc = self.accuracy(output, target)
+        acc = accuracy(logits, target)
         # result.log("train_loss", loss, on_epoch=True, sync_dist=True)
         self.log('train_loss', loss)
+        self.log('train_acc', acc)
         result = OrderedDict({
             'loss': loss,
             # 'accuracy': acc,
