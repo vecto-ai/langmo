@@ -5,8 +5,23 @@ import torch
 import pytorch_lightning as pl
 import os
 import numpy as np
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import TensorDataset, DataLoader, Dataset
 
+
+class ListDataset(Dataset):
+    def __init__(self, s1, s2, l):
+        self.s1 = s1
+        self.s2 = s2
+        self.l = l
+
+#   def __len__(self): return len(self.y) - self.seq_l + 1
+
+#   def __getitem__(self, idx):
+#     return [
+#       (torch.from_numpy(self.cats[idx:idx+self.seq_l]),
+#       torch.from_numpy(self.conts[idx:idx+self.seq_l])),
+#       self.y[idx+self.seq_l-1]
+#     ]
 
 def zero_pad_item(sample, max_len):
     if sample.shape[0] > max_len:
@@ -22,14 +37,31 @@ def zero_pad_item(sample, max_len):
 def sequences_to_padded_tensor(seqs):
     seqs = list(seqs)
     max_len = max([len(s) for s in seqs])
-    print(max_len)
+    # print(max_len)
     if max_len > 128:
         max_len = 128
     # print(seqs)
     padded = [zero_pad_item(s, max_len) for s in seqs]
-    padded = np.array(padded)
+    padded = np.array(padded, dtype=np.int64)
+    padded = np.rollaxis(padded, 1, 0)
     padded = torch.from_numpy(padded)
     return padded
+
+
+def my_collate(x):
+    # TODO: make sure it is not called repeatedly
+    # TODO: collate called too few time
+    # print("########## collate ##########")
+    # print(type(x), len(x))
+    # print(type(x[0]), len(x[0]))
+    # print(x[0][0])
+    sent1, sent2, labels = zip(* x)
+    # TODO: get max len from both parts
+    sent1 = sequences_to_padded_tensor(sent1)
+    sent2 = sequences_to_padded_tensor(sent2)
+    labels = torch.LongTensor(labels)
+    # TODO: rollaxis
+    return (sent1, sent2, labels)
 
 
 def read_ds(path, vocab, test=False):
@@ -47,21 +79,16 @@ def read_ds(path, vocab, test=False):
     df["sentence1"] = df["sentence1"].apply(lambda s: s.lower())
     df["sentence2"] = df["sentence2"].apply(lambda s: s.lower())
 #    print(df["sentence1"][:10])
+    # TODO: abstract tokenization away
     sent1 = map(vocab.tokens_to_ids, df["sentence1"])
     sent2 = map(vocab.tokens_to_ids, df["sentence2"])
     labels = map(lambda x: dic_labels[x], df["gold_label"])
-    sent1 = sequences_to_padded_tensor(sent1)
-    sent2 = sequences_to_padded_tensor(sent2)
-    labels = np.array(list(labels))
-    labels = torch.from_numpy(labels)
-    # tensor_y = torch.stack(tensor_y)
-    # TODO:
-    # padding to the same length now
-    # in future have to omplement own dataset calss in which each batch is padded independently
-    # > You can stack them in the batch with your own _collate_fn function and pass it to the DataLoader class (_collate_fn is a callable which takes a list of samples and returns a batch, usually, for example, padding is done there). 
+    dataset = list(zip(sent1, sent2, labels))
     # TODO: read only local chunk in each worker
-    dataset = TensorDataset(sent1, sent2, labels)
-    return DataLoader(dataset, batch_size=32, num_workers=2)
+    # TODO: use subsample dataset for random submsamplin
+    # dataset = TensorDataset(sent1, sent2, labels)
+    # so collate should go to dataloader and then original data should be lists, to not have to pad em
+    return DataLoader(dataset, collate_fn=my_collate, batch_size=32, num_workers=1)
     # tuples = zip(zip(sent1, sent2), labels)
     # return tuples
 

@@ -1,17 +1,18 @@
 import sys
 import yaml
 import torch
-import torch.optim as optim
+# import torch.optim as optim
 import vecto
 import vecto.embeddings
 import torch.nn.functional as F
-from protonn.utils import save_data_json
+# from protonn.utils import save_data_json
 from langmo.utils import get_unique_results_path
 from .data import NLIDataModule
 from .model import Net
 # from timeit import default_timer as timer
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
+from collections import OrderedDict
 
 
 class PLModel(pl.LightningModule):
@@ -21,29 +22,36 @@ class PLModel(pl.LightningModule):
         # self.example_input_array = torch.zeros((1, 4, 128, 128, 128))
 
     def forward(self, s1, s2):
-        print(s1.shape)
-        exit(9)
+        # print(s1.shape)
         return self.net(s1, s2)
 
     def training_step(self, batch, batch_idx):
         s1, s2, target = batch
+        # print(type(target))
+        # exit(9)
         logits = self(s1, s2)
         loss = F.cross_entropy(logits, target)
-        acc = self.accuracy(output, target)
+        # acc = self.accuracy(output, target)
         # result.log("train_loss", loss, on_epoch=True, sync_dist=True)
+        self.log('train_loss', loss)
         result = OrderedDict({
             'loss': loss,
-            'accuracy': acc,
+            # 'accuracy': acc,
         })
         return result
 
     def validation_step(self, batch, batch_idx):
-        s1, s2, y = batch
+        s1, s2, target = batch
 
-        logits = self(x)
-        acc = self.accuracy(logits, y)
-        result = pl.EvalResult(early_stop_on=loss, checkpoint_on=loss)
-        result.log("val_accuracy", loss, sync_dist=True)
+        logits = self(s1, s2)
+        loss = F.cross_entropy(logits, target)
+        # acc = self.accuracy(logits, y)
+        #result = pl.EvalResult(early_stop_on=loss, checkpoint_on=loss)
+        #result.log("val_accuracy", loss, sync_dist=True)
+        result = OrderedDict({
+            'loss': loss,
+            # 'accuracy': acc,
+        })
         return result
 
     def configure_optimizers(self):
@@ -76,11 +84,11 @@ def main():
     trainer = pl.Trainer(
         gpus=1,
         num_sanity_val_steps=0,
-        max_epochs=2,
+        max_epochs=3,
         # distributed_backend="horovod",
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
-        # logger=wandb_logger,
+        logger=wandb_logger,
         progress_bar_refresh_rate=0,
     )
     # print("tainer created")
