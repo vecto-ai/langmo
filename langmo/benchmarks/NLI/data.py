@@ -49,7 +49,7 @@ def my_collate(x):
     return (sent1, sent2, labels)
 
 
-def read_ds(path, vocab, test=False):
+def read_ds(path, vocab, batch_size, test=False):
     train = []
     cnt = 0
     with open(path) as f:
@@ -65,14 +65,14 @@ def read_ds(path, vocab, test=False):
     df["sentence2"] = df["sentence2"].apply(lambda s: s.lower())
 #    print(df["sentence1"][:10])
     # TODO: abstract tokenization away
-    sent1 = map(vocab.tokens_to_ids, df["sentence1"])
+    sent1 = list(map(vocab.tokens_to_ids, df["sentence1"]))
     sent2 = map(vocab.tokens_to_ids, df["sentence2"])
     labels = map(lambda x: dic_labels[x], df["gold_label"])
     dataset = list(zip(sent1, sent2, labels))
     # TODO: read only local chunk in each worker
     # TODO: use subsample dataset for random submsamplin
     # dataset = TensorDataset(sent1, sent2, labels)
-    return DataLoader(dataset, collate_fn=my_collate, batch_size=32, num_workers=1)
+    return DataLoader(dataset, collate_fn=my_collate, batch_size=batch_size, num_workers=1)
     # tuples = zip(zip(sent1, sent2), labels)
     # return tuples
 
