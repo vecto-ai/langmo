@@ -20,12 +20,12 @@ def zero_pad_item(sample, max_len):
         return res
 
 
-def sequences_to_padded_tensor(seqs):
+def sequences_to_padded_tensor(seqs, max_len):
     seqs = list(seqs)
-    max_len = max([len(s) for s in seqs])
+    #max_len = max([len(s) for s in seqs])
     # print(max_len)
-    if max_len > 128:
-        max_len = 128
+    #if max_len > 128:
+    #    max_len = 128
     # print(seqs)
     padded = [zero_pad_item(s, max_len) for s in seqs]
     padded = np.array(padded, dtype=np.int64)
@@ -35,12 +35,6 @@ def sequences_to_padded_tensor(seqs):
 
 
 def my_collate(x):
-    # TODO: make sure it is not called repeatedly
-    # TODO: collate called too few time
-    # print("########## collate ##########")
-    # print(type(x), len(x))
-    # print(type(x[0]), len(x[0]))
-    # print(x[0][0])
     sent1, sent2, labels = zip(* x)
     # TODO: get max len from both parts
     sent1 = sequences_to_padded_tensor(sent1)
@@ -48,6 +42,32 @@ def my_collate(x):
     labels = torch.LongTensor(labels)
     # TODO: rollaxis
     return (sent1, sent2, labels)
+
+
+class MyDataLoader():
+    def __init__(self, sent1, sent2, labels):
+        # optinally sort
+        batch_size = 32
+        tuples = list(zip(sent1, sent2, labels))
+        cnt_batches = len(tuples) / batch_size
+        batches = np.array_split(tuples, cnt_batches)
+        self.batches = [self.zero_pad_batch(b) for b in batches]
+
+    def zero_pad_batch(self, batch):
+        sent1, sent2, labels = zip(* batch)
+        max_len_sent1 = max(len(s) for s in sent1)
+        max_len_sent2 = max(len(s) for s in sent2)
+        max_len = max(max_len_sent1, max_len_sent2)
+        sent1 = sequences_to_padded_tensor(sent1, max_len)
+        sent2 = sequences_to_padded_tensor(sent2, max_len)
+        labels = torch.LongTensor(labels)
+        return (sent1, sent2, labels)
+
+    def __len__(self):
+        return len(self.batches)
+
+    def __getitem__(self, idx):
+        return self.batches[idx]
 
 
 def read_ds(path, vocab, batch_size, test=False):
@@ -71,13 +91,11 @@ def read_ds(path, vocab, batch_size, test=False):
     sent1 = list(map(vocab.tokens_to_ids, df["sentence1"]))
     sent2 = map(vocab.tokens_to_ids, df["sentence2"])
     labels = map(lambda x: dic_labels[x], df["gold_label"])
-    dataset = list(zip(sent1, sent2, labels))
-    # TODO: read only local chunk in each worker
-    # TODO: use subsample dataset for random submsamplin
-    # dataset = TensorDataset(sent1, sent2, labels)
-    return DataLoader(dataset, collate_fn=my_collate, batch_size=batch_size, num_workers=1)
-    # tuples = zip(zip(sent1, sent2), labels)
-    # return tuples
+    # dataset = list(zip(sent1, sent2, labels))
+    # apply padding here
+    return MyDataLoader(sent1, sent2, labels)
+    #return DataLoader(dataset, collatellate_fn=my_collate, batch_size=batch_size, num_workers=1)
+    # # tuples = zip(zip(sent1, sent2), labels)
 
 
 class NLIDataModule(pl.LightningDataModule):

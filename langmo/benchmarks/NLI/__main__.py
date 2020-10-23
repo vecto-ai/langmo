@@ -31,13 +31,13 @@ class PLModel(pl.LightningModule):
         loss = F.cross_entropy(logits, target)
         acc = accuracy(logits, target)
         # result.log("train_loss", loss, on_epoch=True, sync_dist=True)
-        self.log('train_loss', loss)
-        self.log('train_acc', acc)
-        result = OrderedDict({
-            'loss': loss,
-            # 'accuracy': acc,
-        })
-        return result
+        self.log('train_loss', loss, on_step=True, on_epoch=False, sync_dist=True)
+        self.log('train_acc', acc, on_step=True, on_epoch=False, sync_dist=True)
+        #result = OrderedDict({
+        #    'loss': loss,
+        #    # 'accuracy': acc,
+        #})
+        return loss
 
     def validation_step(self, batch, batch_idx):
         s1, s2, target = batch
@@ -45,13 +45,13 @@ class PLModel(pl.LightningModule):
         logits = self(s1, s2)
         loss = F.cross_entropy(logits, target)
         acc = accuracy(logits, target)
-        self.log('val_loss', loss)
-        self.log('val_acc', acc)
-        result = OrderedDict({
-            'loss': loss,
-            # 'accuracy': acc,
-        })
-        return result
+        self.log('val_loss', loss, on_step=True, on_epoch=False, sync_dist=True)
+        self.log('val_acc', acc, on_step=True, on_epoch=False, sync_dist=True)
+        #result = OrderedDict({
+        #    'loss': loss,
+        #    # 'accuracy': acc,
+        #})
+        #return result
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=0.0002)
@@ -83,7 +83,7 @@ def main():
     trainer = pl.Trainer(
         gpus=1,
         num_sanity_val_steps=0,
-        max_epochs=4,
+        max_epochs=5,
         distributed_backend="horovod",
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
