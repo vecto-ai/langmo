@@ -21,10 +21,10 @@ class Siamese(nn.Module):
 
 
 class Top(nn.Module):
-    def __init__(self, in_size=512):
+    def __init__(self, in_size=512, cnt_classes=3):
         super().__init__()
         self.l1 = nn.Linear(in_size, 256)
-        self.l2 = nn.Linear(256, 4)
+        self.l2 = nn.Linear(256, cnt_classes)
 
     def forward(self, x):
         h = self.l1(x)
@@ -48,7 +48,7 @@ class LSTM_Encoder(nn.Module):
         self.embs.weight.requires_grad = False
 
     def init_weights(self, embs):
-        initrange = 0.1
+        # initrange = 0.1
         self.embs.weight.data = torch.from_numpy(embs.matrix)
         # self.decoder.bias.data.zero_()
         # self.decoder.weight.data.uniform_(-initrange, initrange)
