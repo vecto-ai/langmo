@@ -1,13 +1,14 @@
 # import numpy as np
-import pandas
-import json
+# import pandas
+# import json
 import torch
 import pytorch_lightning as pl
-import os
+# import os
 import numpy as np
-from torch.utils.data import DataLoader
+# from torch.utils.data import DataLoader
 import horovod.torch as hvd
-import datasets    
+import datasets
+
 
 def zero_pad_item(sample, max_len):
     if sample.shape[0] > max_len:
@@ -87,7 +88,8 @@ class NLIDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.vocab = vocab
         self.test = test
-        self.dataset = datasets.load_dataset('multi_nli')
+        self.percent_start = float(hvd.rank()) / float(hvd.size()) * 100
+        self.percent_end = float(hvd.rank() + 1) / float(hvd.size()) * 100
 
     def setup(self, stage=None):
         # print("doing setup")
@@ -95,11 +97,20 @@ class NLIDataModule(pl.LightningDataModule):
         pass
 
     def train_dataloader(self):
-        # path = os.path.join(self.path, "multinli_1.0_train.jsonl")
-        return read_ds(self.dataset["train"], self.vocab, self.batch_size, self.test)
+        ri = datasets.ReadInstruction('train',
+                                      from_=self.percent_start,
+                                      to=self.percent_end, unit='%')
+
+        ds = datasets.load_dataset('multi_nli', split=ri)
+        return read_ds(ds, self.vocab, self.batch_size, self.test)
 
     def val_dataloader(self):
-        return read_ds(self.dataset["validation_matched"], self.vocab, self.batch_size, self.test)
+        ri = datasets.ReadInstruction('validation_matched',
+                                      from_=self.percent_start,
+                                      to=self.percent_end, unit='%')
+
+        ds = datasets.load_dataset('multi_nli', split=ri)
+        return read_ds(ds, self.vocab, self.batch_size, self.test)
 
 
 # TODO: make it actually an iterator
