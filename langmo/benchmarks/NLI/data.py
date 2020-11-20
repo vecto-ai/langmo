@@ -100,7 +100,6 @@ class NLIDataModule(pl.LightningDataModule):
         ri = datasets.ReadInstruction('train',
                                       from_=self.percent_start,
                                       to=self.percent_end, unit='%')
-
         ds = datasets.load_dataset('multi_nli', split=ri)
         return read_ds(ds, self.vocab, self.batch_size, self.test)
 
@@ -108,7 +107,6 @@ class NLIDataModule(pl.LightningDataModule):
         ri = datasets.ReadInstruction('validation_matched',
                                       from_=self.percent_start,
                                       to=self.percent_end, unit='%')
-
         ds = datasets.load_dataset('multi_nli', split=ri)
         return read_ds(ds, self.vocab, self.batch_size, self.test)
 
