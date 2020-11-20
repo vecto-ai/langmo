@@ -7,7 +7,7 @@ import os
 import numpy as np
 from torch.utils.data import DataLoader
 import horovod.torch as hvd
-
+import datasets    
 
 def zero_pad_item(sample, max_len):
     if sample.shape[0] > max_len:
@@ -70,40 +70,24 @@ class MyDataLoader():
         return self.batches[idx]
 
 
-def read_ds(path, vocab, batch_size, test=False):
-    train = []
-    cnt = 0
-    with open(path) as f:
-        for line in f:
-            train.append(json.loads(line))
-            cnt += 1
-            if test and cnt > 2048:
-                break
-    print(f"{len(train)} samples loaded")
-    df = pandas.DataFrame(train)
-    chunks = np.array_split(df, hvd.size())
-    df = chunks[hvd.rank()]
-    dic_labels = {l: i for i, l in enumerate(sorted(df["gold_label"].unique()))}
-    df["sentence1"] = df["sentence1"].apply(lambda s: s.lower())
-    df["sentence2"] = df["sentence2"].apply(lambda s: s.lower())
-#    print(df["sentence1"][:10])
-    # TODO: abstract tokenization away
-    sent1 = list(map(vocab.tokens_to_ids, df["sentence1"]))
-    sent2 = map(vocab.tokens_to_ids, df["sentence2"])
-    labels = map(lambda x: dic_labels[x], df["gold_label"])
-    # dataset = list(zip(sent1, sent2, labels))
-    # apply padding here
+def read_ds(dataset, vocab, batch_size, test):
+    sent1 = [i["premise"].lower() for i in dataset]
+    sent2 = [i["hypothesis"].lower() for i in dataset]
+    labels = [i["label"] for i in dataset]
+    sent1 = list(map(vocab.tokens_to_ids, sent1))
+    sent2 = list(map(vocab.tokens_to_ids, sent2))
+    # labels = map(lambda x: dic_labels[x], df["gold_label"])
     return MyDataLoader(sent1, sent2, labels)
-    #return DataLoader(dataset, collatellate_fn=my_collate, batch_size=batch_size, num_workers=1)
-    # # tuples = zip(zip(sent1, sent2), labels)
 
 
 class NLIDataModule(pl.LightningDataModule):
-    def __init__(self, path, vocab, batch_size):
+    def __init__(self, path, vocab, batch_size, test):
         super().__init__()
         self.path = path
         self.batch_size = batch_size
         self.vocab = vocab
+        self.test = test
+        self.dataset = datasets.load_dataset('multi_nli')
 
     def setup(self, stage=None):
         # print("doing setup")
@@ -111,12 +95,11 @@ class NLIDataModule(pl.LightningDataModule):
         pass
 
     def train_dataloader(self):
-        path = os.path.join(self.path, "multinli_1.0_train.jsonl")
-        return read_ds(path, self.vocab, self.batch_size)
+        # path = os.path.join(self.path, "multinli_1.0_train.jsonl")
+        return read_ds(self.dataset["train"], self.vocab, self.batch_size, self.test)
 
     def val_dataloader(self):
-        path = os.path.join(self.path, "multinli_1.0_dev_matched.jsonl")
-        return read_ds(path, self.vocab, self.batch_size)
+        return read_ds(self.dataset["validation_matched"], self.vocab, self.batch_size, self.test)
 
 
 # TODO: make it actually an iterator

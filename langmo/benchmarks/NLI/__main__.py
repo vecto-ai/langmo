@@ -11,13 +11,14 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from collections import OrderedDict
 from pytorch_lightning.metrics.functional import accuracy
+from transformers import BertModel
 
 
 class PLModel(pl.LightningModule):
     def __init__(self, net):
         super().__init__()
         self.net = net
-        # self.example_input_array = torch.zeros((1, 4, 128, 128, 128))
+        self.example_input_array = (torch.zeros((128, 32), dtype=torch.int64), torch.zeros((128, 32), dtype=torch.int64))
 
     def forward(self, s1, s2):
         # print(s1.shape)
@@ -50,7 +51,7 @@ class PLModel(pl.LightningModule):
         self.log_dict(metrics)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=0.0001)
+        return torch.optim.Adam([param for param in self.net.parameters() if param.requires_grad], lr=0.0001)
         # return torch.optim.SGD(self.net.parameters(), lr=0.001, momentum=0.9)
 
 
@@ -79,7 +80,7 @@ def main():
     trainer = pl.Trainer(
         gpus=1,
         num_sanity_val_steps=0,
-        max_epochs=30,
+        max_epochs=10,
         distributed_backend="horovod",
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
@@ -89,8 +90,10 @@ def main():
     # print("tainer created")
 
     embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
-    data_module = NLIDataModule(params["path_mnli"], embs.vocabulary, batch_size=params["batch_size"])
-    model = PLModel(Net(embs))
+    data_module = NLIDataModule(params["path_mnli"], embs.vocabulary, batch_size=params["batch_size"], test=params["test"])
+    # net = BertModel.from_pretrained("prajjwal1/bert-mini")
+    net = Net(embs)
+    model = PLModel(net)
     print("fit")
     trainer.fit(model, data_module)
 
