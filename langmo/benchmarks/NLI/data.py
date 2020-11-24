@@ -75,6 +75,10 @@ def read_ds(dataset, vocab, batch_size, test):
     sent1 = [i["premise"].lower() for i in dataset]
     sent2 = [i["hypothesis"].lower() for i in dataset]
     labels = [i["label"] for i in dataset]
+    if test:
+        sent1 = sent1[:32]
+        sent2 = sent2[:32]
+        labels = labels[:32]
     sent1 = list(map(vocab.tokens_to_ids, sent1))
     sent2 = list(map(vocab.tokens_to_ids, sent2))
     # labels = map(lambda x: dic_labels[x], df["gold_label"])
