@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -cwd
-#$ -l rt_F=4
+#$ -l rt_F=1
 #$ -l h_rt=02:00:00
 #$ -N NLI
 #$ -j y
