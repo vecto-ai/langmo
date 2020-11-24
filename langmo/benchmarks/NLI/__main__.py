@@ -11,6 +11,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.metrics.functional import accuracy
 from transformers import BertModel
+import horovod.torch as hvd
 
 
 class PLModel(pl.LightningModule):
@@ -44,9 +45,10 @@ class PLModel(pl.LightningModule):
             pref = "matched"
         if dataloader_idx == 1:
             pref = "mismatched"
+        print(f"worker {hvd.rank()} of {hvd.size()} doing batch {batch_idx} of dataloader {dataloader_idx}")
         metrics = {
-            f'val_{pref}_loss': loss,
-            f'val_{pref}_acc': acc,
+            f'val_loss_{pref}': loss,
+            f'val_acc_{pref}': acc,
         }
         self.log_dict(metrics)
 
