@@ -108,7 +108,13 @@ class NLIDataModule(pl.LightningDataModule):
                                       from_=self.percent_start,
                                       to=self.percent_end, unit='%')
         ds = datasets.load_dataset('multi_nli', split=ri)
-        return read_ds(ds, self.vocab, self.batch_size, self.test)
+        dataloader_matched = read_ds(ds, self.vocab, self.batch_size, self.test)
+        ri = datasets.ReadInstruction('validation_mismatched',
+                                      from_=self.percent_start,
+                                      to=self.percent_end, unit='%')
+        ds = datasets.load_dataset('multi_nli', split=ri)
+        dataloader_mismatched = read_ds(ds, self.vocab, self.batch_size, self.test)
+        return [dataloader_matched, dataloader_mismatched]
 
 
 # TODO: make it actually an iterator

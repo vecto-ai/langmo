@@ -35,14 +35,18 @@ class PLModel(pl.LightningModule):
         self.log_dict(metrics)
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx, dataloader_idx):
         s1, s2, target = batch
         logits = self(s1, s2)
         loss = F.cross_entropy(logits, target)
         acc = accuracy(logits, target)
+        if dataloader_idx == 0:
+            pref = "matched"
+        if dataloader_idx == 1:
+            pref = "mismatched"
         metrics = {
-            'val_loss': loss,
-            'val_acc': acc,
+            f'val_{pref}_loss': loss,
+            f'val_{pref}_acc': acc,
         }
         self.log_dict(metrics)
 
