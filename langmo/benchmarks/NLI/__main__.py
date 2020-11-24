@@ -50,7 +50,14 @@ class PLModel(pl.LightningModule):
             f'val_loss_{pref}': loss,
             f'val_acc_{pref}': acc,
         }
-        self.log_dict(metrics)
+        #self.log_dict(metrics)
+        return metrics
+
+    def validation_epoch_end(self, outputs):
+        if not self.trainer.running_sanity_check:
+            for metrics_dict in outputs:
+                print(f"worker {hvd.rank()}", metrics_dict)
+                # self.logger.agg_and_log_metrics(metrics_dict, step=self.current_epoch)
 
     def configure_optimizers(self):
         return torch.optim.Adam([param for param in self.net.parameters() if param.requires_grad], lr=0.0001)
