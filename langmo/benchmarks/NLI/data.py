@@ -35,14 +35,14 @@ def sequences_to_padded_tensor(seqs, max_len):
     return padded
 
 
-def my_collate(x):
-    sent1, sent2, labels = zip(* x)
-    # TODO: get max len from both parts
-    sent1 = sequences_to_padded_tensor(sent1)
-    sent2 = sequences_to_padded_tensor(sent2)
-    labels = torch.LongTensor(labels)
-    # TODO: rollaxis
-    return (sent1, sent2, labels)
+# def my_collate(x):
+#     sent1, sent2, labels = zip(* x)
+#     # TODO: get max len from both parts
+#     sent1 = sequences_to_padded_tensor(sent1)
+#     sent2 = sequences_to_padded_tensor(sent2)
+#     labels = torch.LongTensor(labels)
+#     # TODO: rollaxis
+#     return (sent1, sent2, labels)
 
 
 class MyDataLoader():
