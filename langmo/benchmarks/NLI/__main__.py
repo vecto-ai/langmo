@@ -15,12 +15,12 @@ import horovod.torch as hvd
 
 
 class PLModel(pl.LightningModule):
-    def __init__(self, net):
+    def __init__(self, net, params):
         super().__init__()
         self.net = net
         self.example_input_array = (
-            torch.zeros((128, 32), dtype=torch.int64),
-            torch.zeros((128, 32), dtype=torch.int64),
+            torch.zeros((128, params["batch_size"]), dtype=torch.int64),
+            torch.zeros((128, params["batch_size"]), dtype=torch.int64),
         )
 
     def forward(self, s1, s2):
@@ -37,7 +37,7 @@ class PLModel(pl.LightningModule):
             "train_acc": acc,
         }
         self.log_dict(metrics, on_step=True, on_epoch=True)
-        print(f"worker {hvd.rank()} of {hvd.size()} doing train batch {batch_idx} of size {s1.size()}")
+        # print(f"worker {hvd.rank()} of {hvd.size()} doing train batch {batch_idx} of size {s1.size()}")
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
@@ -49,9 +49,9 @@ class PLModel(pl.LightningModule):
             pref = "matched"
         if dataloader_idx == 1:
             pref = "mismatched"
-        print(
-            f"worker {hvd.rank()} of {hvd.size()} doing val batch {batch_idx} of dataloader {dataloader_idx}"
-        )
+        # print(
+        #     f"worker {hvd.rank()} of {hvd.size()} doing val batch {batch_idx} of dataloader {dataloader_idx}"
+        # )
         metrics = {
             f"val_loss_{pref}": loss,
             f"val_acc_{pref}": acc,
@@ -62,7 +62,7 @@ class PLModel(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         if not self.trainer.running_sanity_check:
             for metrics_dict in outputs:
-                print(f"worker {hvd.rank()}", metrics_dict)
+                # print(f"worker {hvd.rank()}", metrics_dict)
                 # self.logger.agg_and_log_metrics(metrics_dict, step=self.current_epoch)
                 for md in metrics_dict:
                     self.log_dict(md)
@@ -115,7 +115,7 @@ def main():
     )
     # net = BertModel.from_pretrained("prajjwal1/bert-mini")
     net = Net(embs)
-    model = PLModel(net)
+    model = PLModel(net, params)
     print("fit")
     trainer.fit(model, data_module)
 
