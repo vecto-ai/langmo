@@ -37,6 +37,7 @@ class PLModel(pl.LightningModule):
             "train_acc": acc,
         }
         self.log_dict(metrics)
+        f"worker {hvd.rank()} of {hvd.size()} doing train batch {batch_idx}"
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
@@ -49,7 +50,7 @@ class PLModel(pl.LightningModule):
         if dataloader_idx == 1:
             pref = "mismatched"
         print(
-            f"worker {hvd.rank()} of {hvd.size()} doing batch {batch_idx} of dataloader {dataloader_idx}"
+            f"worker {hvd.rank()} of {hvd.size()} doing val batch {batch_idx} of dataloader {dataloader_idx}"
         )
         metrics = {
             f"val_loss_{pref}": loss,
