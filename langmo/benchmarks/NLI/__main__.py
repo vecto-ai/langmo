@@ -36,7 +36,7 @@ class PLModel(pl.LightningModule):
             "train_loss": loss,
             "train_acc": acc,
         }
-        self.log_dict(metrics)
+        self.log_dict(metrics, on_step=True, on_epoch=True)
         print(f"worker {hvd.rank()} of {hvd.size()} doing train batch {batch_idx} of size {s1.size()}")
         return loss
 
@@ -85,7 +85,6 @@ def main():
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
     path_results_base = "./out/NLI"
     params["path_results"] = get_unique_results_path(path_results_base)
-    params["batch_size"] = 32
     wandb_logger = WandbLogger(project="NLI")
     # wandb_logger.log_hyperparams(config)
     # early_stop_callback = EarlyStopping(
