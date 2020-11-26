@@ -46,9 +46,8 @@ def sequences_to_padded_tensor(seqs, max_len):
 
 
 class MyDataLoader():
-    def __init__(self, sent1, sent2, labels):
+    def __init__(self, sent1, sent2, labels, batch_size):
         # optinally sort
-        batch_size = 32
         tuples = list(zip(sent1, sent2, labels))
         cnt_batches = len(tuples) / batch_size
         batches = np.array_split(tuples, cnt_batches)
@@ -82,7 +81,7 @@ def read_ds(dataset, vocab, batch_size, test):
     sent1 = list(map(vocab.tokens_to_ids, sent1))
     sent2 = list(map(vocab.tokens_to_ids, sent2))
     # labels = map(lambda x: dic_labels[x], df["gold_label"])
-    return MyDataLoader(sent1, sent2, labels)
+    return MyDataLoader(sent1, sent2, labels, batch_size)
 
 
 class NLIDataModule(pl.LightningDataModule):
