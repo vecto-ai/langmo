@@ -37,7 +37,7 @@ class PLModel(pl.LightningModule):
             "train_acc": acc,
         }
         self.log_dict(metrics)
-        f"worker {hvd.rank()} of {hvd.size()} doing train batch {batch_idx}"
+        print(f"worker {hvd.rank()} of {hvd.size()} doing train batch {batch_idx}")
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
