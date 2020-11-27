@@ -46,9 +46,8 @@ def sequences_to_padded_tensor(seqs, max_len):
 
 
 class MyDataLoader():
-    def __init__(self, sent1, sent2, labels):
+    def __init__(self, sent1, sent2, labels, batch_size):
         # optinally sort
-        batch_size = 32
         tuples = list(zip(sent1, sent2, labels))
         cnt_batches = len(tuples) / batch_size
         batches = np.array_split(tuples, cnt_batches)
@@ -71,7 +70,7 @@ class MyDataLoader():
         return self.batches[idx]
 
 
-def read_ds(dataset, vocab, batch_size, test):
+def ds_to_tensors(dataset, vocab, batch_size, test):
     sent1 = [i["premise"].lower() for i in dataset]
     sent2 = [i["hypothesis"].lower() for i in dataset]
     labels = [i["label"] for i in dataset]
@@ -82,7 +81,7 @@ def read_ds(dataset, vocab, batch_size, test):
     sent1 = list(map(vocab.tokens_to_ids, sent1))
     sent2 = list(map(vocab.tokens_to_ids, sent2))
     # labels = map(lambda x: dic_labels[x], df["gold_label"])
-    return MyDataLoader(sent1, sent2, labels)
+    return MyDataLoader(sent1, sent2, labels, batch_size)
 
 
 class NLIDataModule(pl.LightningDataModule):
@@ -105,48 +104,17 @@ class NLIDataModule(pl.LightningDataModule):
                                       from_=self.percent_start,
                                       to=self.percent_end, unit='%')
         ds = datasets.load_dataset('multi_nli', split=ri)
-        return read_ds(ds, self.vocab, self.batch_size, self.test)
+        return ds_to_tensors(ds, self.vocab, self.batch_size, self.test)
 
     def val_dataloader(self):
         ri = datasets.ReadInstruction('validation_matched',
                                       from_=self.percent_start,
                                       to=self.percent_end, unit='%')
         ds = datasets.load_dataset('multi_nli', split=ri)
-        return read_ds(ds, self.vocab, self.batch_size, self.test)
-
-
-# TODO: make it actually an iterator
-# class Iterator:
-#     def __init__(self, tuples_train, size_batch):
-#         self.size_batch = size_batch
-#         train = sorted(tuples_train, key=lambda x: max(x[0][0].shape[0], x[0][1].shape[0]))
-#         self.cnt_samples = len(train)
-#         self.batches = []
-#         for i in range(0, len(train), size_batch):
-#             batch = train[i:i + size_batch]
-#             self.batches.append(self.zero_pad_batch(batch))
-
-#     def zero_pad_item(self, sample, max_len):
-#         size_pad = max_len - sample.shape[0]
-#         assert size_pad >= 0
-#         res = np.hstack([np.zeros(size_pad, dtype=np.int64), sample])
-#         return res
-
-#     def zero_pad_batch(self, batch):
-#         max_len = max([max(len(i[0][0]), len(i[0][1])) for i in batch])
-#         list_s1 = []
-#         list_s2 = []
-#         list_labels = []
-#         for sample in batch:
-#             (s1, s2), label = sample
-#             s1 = self.zero_pad_item(s1, max_len)
-#             s2 = self.zero_pad_item(s2, max_len)
-#             list_s1.append(s1)
-#             list_s2.append(s2)
-#             list_labels.append(label)
-#         block_s1 = np.vstack(list_s1)
-#         block_s2 = np.vstack(list_s2)
-#         block_s1 = np.rollaxis(block_s1, 1, start=0)  # make it sequence-first
-#         block_s2 = np.rollaxis(block_s2, 1, start=0)  # make it sequence-first
-#         labels = np.array(list_labels)
-#         return (block_s1, block_s2), labels
+        dataloader_matched = ds_to_tensors(ds, self.vocab, self.batch_size, self.test)
+        ri = datasets.ReadInstruction('validation_mismatched',
+                                      from_=self.percent_start,
+                                      to=self.percent_end, unit='%')
+        ds = datasets.load_dataset('multi_nli', split=ri)
+        dataloader_mismatched = ds_to_tensors(ds, self.vocab, self.batch_size, self.test)
+        return [dataloader_matched, dataloader_mismatched]

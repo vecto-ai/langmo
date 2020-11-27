@@ -11,13 +11,17 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.metrics.functional import accuracy
 from transformers import BertModel
+import horovod.torch as hvd
 
 
 class PLModel(pl.LightningModule):
-    def __init__(self, net):
+    def __init__(self, net, params):
         super().__init__()
         self.net = net
-        self.example_input_array = (torch.zeros((128, 32), dtype=torch.int64), torch.zeros((128, 32), dtype=torch.int64))
+        self.example_input_array = (
+            torch.zeros((128, params["batch_size"]), dtype=torch.int64),
+            torch.zeros((128, params["batch_size"]), dtype=torch.int64),
+        )
 
     def forward(self, s1, s2):
         # print(s1.shape)
@@ -29,31 +33,50 @@ class PLModel(pl.LightningModule):
         loss = F.cross_entropy(logits, target)
         acc = accuracy(logits, target)
         metrics = {
-            'train_loss': loss,
-            'train_acc': acc,
+            "train_loss": loss,
+            "train_acc": acc,
         }
-        self.log_dict(metrics)
+        self.log_dict(metrics, on_step=True, on_epoch=True)
+        # print(f"worker {hvd.rank()} of {hvd.size()} doing train batch {batch_idx} of size {s1.size()}")
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx, dataloader_idx):
         s1, s2, target = batch
         logits = self(s1, s2)
         loss = F.cross_entropy(logits, target)
         acc = accuracy(logits, target)
+        if dataloader_idx == 0:
+            pref = "matched"
+        if dataloader_idx == 1:
+            pref = "mismatched"
+        # print(
+        #     f"worker {hvd.rank()} of {hvd.size()} doing val batch {batch_idx} of dataloader {dataloader_idx}"
+        # )
         metrics = {
-            'val_loss': loss,
-            'val_acc': acc,
+            f"val_loss_{pref}": loss,
+            f"val_acc_{pref}": acc,
         }
-        self.log_dict(metrics)
+        # self.log_dict(metrics)
+        return metrics
+
+    def validation_epoch_end(self, outputs):
+        if not self.trainer.running_sanity_check:
+            for metrics_dict in outputs:
+                # print(f"worker {hvd.rank()}", metrics_dict)
+                # self.logger.agg_and_log_metrics(metrics_dict, step=self.current_epoch)
+                for md in metrics_dict:
+                    self.log_dict(md)
 
     def configure_optimizers(self):
-        return torch.optim.Adam([param for param in self.net.parameters() if param.requires_grad], lr=0.0001)
+        return torch.optim.Adam(
+            [param for param in self.net.parameters() if param.requires_grad], lr=0.0001
+        )
         # return torch.optim.SGD(self.net.parameters(), lr=0.001, momentum=0.9)
 
 
 def main():
-    #path_data = "/groups1/gac50489/datasets/cosmoflow/cosmoUniverse_2019_05_4parE_tf_small"
-    #path_data = "/groups1/gac50489/datasets/cosmoflow_full/cosmoUniverse_2019_05_4parE_tf"
+    # path_data = "/groups1/gac50489/datasets/cosmoflow/cosmoUniverse_2019_05_4parE_tf_small"
+    # path_data = "/groups1/gac50489/datasets/cosmoflow_full/cosmoUniverse_2019_05_4parE_tf"
     if len(sys.argv) < 2:
         print("run main.py config.yaml")
         return
@@ -62,7 +85,6 @@ def main():
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
     path_results_base = "./out/NLI"
     params["path_results"] = get_unique_results_path(path_results_base)
-    params["batch_size"] = 32
     wandb_logger = WandbLogger(project="NLI")
     # wandb_logger.log_hyperparams(config)
     # early_stop_callback = EarlyStopping(
@@ -85,10 +107,15 @@ def main():
     )
 
     embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
-    data_module = NLIDataModule(params["path_mnli"], embs.vocabulary, batch_size=params["batch_size"], test=params["test"])
+    data_module = NLIDataModule(
+        params["path_mnli"],
+        embs.vocabulary,
+        batch_size=params["batch_size"],
+        test=params["test"],
+    )
     # net = BertModel.from_pretrained("prajjwal1/bert-mini")
     net = Net(embs)
-    model = PLModel(net)
+    model = PLModel(net, params)
     print("fit")
     trainer.fit(model, data_module)
 
