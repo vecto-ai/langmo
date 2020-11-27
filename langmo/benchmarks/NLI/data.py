@@ -70,7 +70,7 @@ class MyDataLoader():
         return self.batches[idx]
 
 
-def read_ds(dataset, vocab, batch_size, test):
+def ds_to_tensors(dataset, vocab, batch_size, test):
     sent1 = [i["premise"].lower() for i in dataset]
     sent2 = [i["hypothesis"].lower() for i in dataset]
     labels = [i["label"] for i in dataset]
@@ -104,18 +104,17 @@ class NLIDataModule(pl.LightningDataModule):
                                       from_=self.percent_start,
                                       to=self.percent_end, unit='%')
         ds = datasets.load_dataset('multi_nli', split=ri)
-        return read_ds(ds, self.vocab, self.batch_size, self.test)
+        return ds_to_tensors(ds, self.vocab, self.batch_size, self.test)
 
     def val_dataloader(self):
         ri = datasets.ReadInstruction('validation_matched',
                                       from_=self.percent_start,
                                       to=self.percent_end, unit='%')
         ds = datasets.load_dataset('multi_nli', split=ri)
-        dataloader_matched = read_ds(ds, self.vocab, self.batch_size, self.test)
+        dataloader_matched = ds_to_tensors(ds, self.vocab, self.batch_size, self.test)
         ri = datasets.ReadInstruction('validation_mismatched',
                                       from_=self.percent_start,
                                       to=self.percent_end, unit='%')
         ds = datasets.load_dataset('multi_nli', split=ri)
-        dataloader_mismatched = read_ds(ds, self.vocab, self.batch_size, self.test)
+        dataloader_mismatched = ds_to_tensors(ds, self.vocab, self.batch_size, self.test)
         return [dataloader_matched, dataloader_mismatched]
-
