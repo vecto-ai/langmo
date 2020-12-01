@@ -10,6 +10,7 @@ from .model import Net
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.metrics.functional import accuracy
+import transformers
 from transformers import BertModel
 import horovod.torch as hvd
 
@@ -107,14 +108,15 @@ def main():
         distributed_backend="horovod",
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
-        logger=wandb_logger,
+        # logger=wandb_logger,
         progress_bar_refresh_rate=0,
     )
 
-    embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
+    # embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
     data_module = NLIDataModule(
         params["path_mnli"],
-        embs.vocabulary,
+        # embs.vocabulary,
+        transformers.BertTokenizerFast.from_pretrained("bert-base-uncased"),
         batch_size=params["batch_size"],
         test=params["test"],
     )

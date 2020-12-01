@@ -9,6 +9,7 @@ import numpy as np
 import horovod.torch as hvd
 import datasets
 import transformers
+from protonn.utils import describe_var
 
 
 def zero_pad_item(sample, max_len):
@@ -89,16 +90,24 @@ class MyDataLoader():
 def ds_to_tensors(dataset, tokenizer, batch_size, test):
     sent1 = [i["premise"].lower() for i in dataset]
     sent2 = [i["hypothesis"].lower() for i in dataset]
+    labels = [i["label"] for i in dataset]
     texts_or_text_pairs = list(zip(sent1, sent2))
-    features = tokenizer.batch_encode_plus(
+    features = tokenizer(
         texts_or_text_pairs,
         max_length=128,
-        pad_to_max_length=True,
+        padding='max_length',
         truncation=True
     )
-    print(features)
-    exit(1)
-    return features
+    cnt_batches = len(labels) / batch_size
+    print(type(features[0]))
+    # TODO: just figure out how to get list of list of ids and this should be done
+    ids = np.array_split(list(features[0]), cnt_batches)
+    masks = np.array_split((features[1]), cnt_batches)
+    segments = np.array_split((features[2]), cnt_batches)
+    labels = np.array_split(labels, cnt_batches)
+    # print(describe_var(features))
+    # TODO: split in batches
+    return zip(ids, masks, segments), labels
 
 
 class NLIDataModule(pl.LightningDataModule):
@@ -116,7 +125,6 @@ class NLIDataModule(pl.LightningDataModule):
         # TODO: do donwload here
         # TODO: probably need to scatter indices here by hvd explicitly
 
-        self.vocab = transformers.BertTokenizerFast.from_pretrained("bert-base-uncased")
         pass
 
     def train_dataloader(self):
