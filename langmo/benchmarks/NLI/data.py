@@ -8,6 +8,7 @@ import numpy as np
 # from torch.utils.data import DataLoader
 import horovod.torch as hvd
 import datasets
+import transformers
 
 
 def zero_pad_item(sample, max_len):
@@ -30,7 +31,8 @@ def sequences_to_padded_tensor(seqs, max_len):
     # print(seqs)
     padded = [zero_pad_item(s, max_len) for s in seqs]
     padded = np.array(padded, dtype=np.int64)
-    padded = np.rollaxis(padded, 1, 0)
+    # LSTM-specific
+    # padded = np.rollaxis(padded, 1, 0)
     padded = torch.from_numpy(padded)
     return padded
 
@@ -69,19 +71,34 @@ class MyDataLoader():
     def __getitem__(self, idx):
         return self.batches[idx]
 
+# SIAMESE WAY
+# def ds_to_tensors(dataset, vocab, batch_size, test):
+#     sent1 = [i["premise"].lower() for i in dataset]
+#     sent2 = [i["hypothesis"].lower() for i in dataset]
+#     labels = [i["label"] for i in dataset]
+#     if test:
+#         sent1 = sent1[:32]
+#         sent2 = sent2[:32]
+#         labels = labels[:32]
+#     sent1 = list(map(vocab.tokens_to_ids, sent1))
+#     sent2 = list(map(vocab.tokens_to_ids, sent2))
+#     # labels = map(lambda x: dic_labels[x], df["gold_label"])
+#     return MyDataLoader(sent1, sent2, labels, batch_size)
 
-def ds_to_tensors(dataset, vocab, batch_size, test):
+
+def ds_to_tensors(dataset, tokenizer, batch_size, test):
     sent1 = [i["premise"].lower() for i in dataset]
     sent2 = [i["hypothesis"].lower() for i in dataset]
-    labels = [i["label"] for i in dataset]
-    if test:
-        sent1 = sent1[:32]
-        sent2 = sent2[:32]
-        labels = labels[:32]
-    sent1 = list(map(vocab.tokens_to_ids, sent1))
-    sent2 = list(map(vocab.tokens_to_ids, sent2))
-    # labels = map(lambda x: dic_labels[x], df["gold_label"])
-    return MyDataLoader(sent1, sent2, labels, batch_size)
+    texts_or_text_pairs = list(zip(sent1, sent2))
+    features = tokenizer.batch_encode_plus(
+        texts_or_text_pairs,
+        max_length=128,
+        pad_to_max_length=True,
+        truncation=True
+    )
+    print(features)
+    exit(1)
+    return features
 
 
 class NLIDataModule(pl.LightningDataModule):
@@ -98,6 +115,8 @@ class NLIDataModule(pl.LightningDataModule):
         # print("doing setup")
         # TODO: do donwload here
         # TODO: probably need to scatter indices here by hvd explicitly
+
+        self.vocab = transformers.BertTokenizerFast().from_pretrained("bert-base-uncased")
         pass
 
     def train_dataloader(self):

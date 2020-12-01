@@ -118,8 +118,8 @@ def main():
         batch_size=params["batch_size"],
         test=params["test"],
     )
-    # net = BertModel.from_pretrained("prajjwal1/bert-mini")
-    net = Net(embs)
+    net = BertModel.from_pretrained("prajjwal1/bert-mini")
+    # net = Net(embs)
     model = PLModel(net, params)
     if params["test"]:
         print("fit")
