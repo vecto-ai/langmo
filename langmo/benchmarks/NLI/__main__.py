@@ -1,5 +1,4 @@
-import sys
-import yaml
+# import yaml
 import torch
 import vecto
 import vecto.embeddings
