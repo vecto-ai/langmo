@@ -96,6 +96,7 @@ class NLIDataModule(pl.LightningDataModule):
 
     def setup(self, stage=None):
         # print("doing setup")
+        # TODO: do donwload here
         # TODO: probably need to scatter indices here by hvd explicitly
         pass
 
@@ -112,9 +113,17 @@ class NLIDataModule(pl.LightningDataModule):
                                       to=self.percent_end, unit='%')
         ds = datasets.load_dataset('multi_nli', split=ri)
         dataloader_matched = ds_to_tensors(ds, self.vocab, self.batch_size, self.test)
+
         ri = datasets.ReadInstruction('validation_mismatched',
                                       from_=self.percent_start,
                                       to=self.percent_end, unit='%')
         ds = datasets.load_dataset('multi_nli', split=ri)
         dataloader_mismatched = ds_to_tensors(ds, self.vocab, self.batch_size, self.test)
+
+        ri = datasets.ReadInstruction('validation',
+                                      from_=self.percent_start,
+                                      to=self.percent_end, unit='%')
+        ds = datasets.load_dataset('hans', split=ri)
+        dataloader_mismatched = ds_to_tensors(ds, self.vocab, self.batch_size, self.test)
+
         return [dataloader_matched, dataloader_mismatched]

@@ -43,6 +43,8 @@ class PLModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx, dataloader_idx):
         s1, s2, target = batch
         logits = self(s1, s2)
+        if dataloader_idx == 2:
+            return dict()
         loss = F.cross_entropy(logits, target)
         acc = accuracy(logits, target)
         if dataloader_idx == 0:
