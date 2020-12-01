@@ -124,6 +124,6 @@ class NLIDataModule(pl.LightningDataModule):
                                       from_=self.percent_start,
                                       to=self.percent_end, unit='%')
         ds = datasets.load_dataset('hans', split=ri)
-        dataloader_mismatched = ds_to_tensors(ds, self.vocab, self.batch_size, self.test)
+        dataloader_hans = ds_to_tensors(ds, self.vocab, self.batch_size, self.test)
 
-        return [dataloader_matched, dataloader_mismatched]
+        return [dataloader_matched, dataloader_mismatched, dataloader_hans]

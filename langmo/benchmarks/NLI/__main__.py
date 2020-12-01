@@ -41,19 +41,23 @@ class PLModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
+        ds_prefixes = {0: "matched", 1: "mismatched", 2: "hans"}
+        pref = ds_prefixes[dataloader_idx]
         s1, s2, target = batch
+        print(
+            f"worker {hvd.rank()} of {hvd.size()} doing val batch {batch_idx} of dataloader {dataloader_idx}, {pref}"
+        )
         logits = self(s1, s2)
         if dataloader_idx == 2:
-            return dict()
+            print("logits ", logits.size())
+            entail = logits[:, :1]
+            print("entail ", entail.size())
+            non_entail = logits[:, 1:]
+            non_entail = non_entail.max(axis=1).values
+            print("nonentail ", non_entail.size())
+            logits = torch.cat((entail, non_entail.unsqueeze(1)), 1)
         loss = F.cross_entropy(logits, target)
         acc = accuracy(logits, target)
-        if dataloader_idx == 0:
-            pref = "matched"
-        if dataloader_idx == 1:
-            pref = "mismatched"
-        # print(
-        #     f"worker {hvd.rank()} of {hvd.size()} doing val batch {batch_idx} of dataloader {dataloader_idx}"
-        # )
         metrics = {
             f"val_loss_{pref}": loss,
             f"val_acc_{pref}": acc,
