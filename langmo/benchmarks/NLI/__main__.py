@@ -1,4 +1,5 @@
-# import yaml
+import yaml
+import sys
 import torch
 import vecto
 import vecto.embeddings
@@ -28,7 +29,7 @@ class PLModel(pl.LightningModule):
         return self.net(s1, s2)
 
     def training_step(self, batch, batch_idx):
-        s1, s2, target = batch
+        (s1, s2), target = batch
         logits = self(s1, s2)
         loss = F.cross_entropy(logits, target)
         acc = accuracy(logits, target)
@@ -43,7 +44,7 @@ class PLModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx, dataloader_idx):
         ds_prefixes = {0: "matched", 1: "mismatched", 2: "hans"}
         pref = ds_prefixes[dataloader_idx]
-        s1, s2, target = batch
+        (s1, s2), target = batch
         if self.params["test"]:
             print(
                 f"worker {hvd.rank()} of {hvd.size()} doing val batch {batch_idx} of dataloader {dataloader_idx}, {pref}"
@@ -89,7 +90,7 @@ def main():
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
     path_results_base = "./out/NLI"
     params["path_results"] = get_unique_results_path(path_results_base)
-    wandb_logger = WandbLogger(project=f"NLI{'_test' if params['test']}")
+    wandb_logger = WandbLogger(project=f"NLI{'_test' if params['test'] else ''}")
     # wandb_logger.log_hyperparams(config)
     # early_stop_callback = EarlyStopping(
     #     monitor='val_loss',

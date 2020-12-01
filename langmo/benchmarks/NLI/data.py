@@ -61,7 +61,7 @@ class MyDataLoader():
         sent1 = sequences_to_padded_tensor(sent1, max_len)
         sent2 = sequences_to_padded_tensor(sent2, max_len)
         labels = torch.LongTensor(labels)
-        return (sent1, sent2, labels)
+        return ((sent1, sent2), labels)
 
     def __len__(self):
         return len(self.batches)
