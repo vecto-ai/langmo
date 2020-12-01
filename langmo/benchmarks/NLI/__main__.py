@@ -18,6 +18,7 @@ class PLModel(pl.LightningModule):
     def __init__(self, net, params):
         super().__init__()
         self.net = net
+        self.params = params
         self.example_input_array = (
             torch.zeros((128, params["batch_size"]), dtype=torch.int64),
             torch.zeros((128, params["batch_size"]), dtype=torch.int64),
@@ -44,17 +45,15 @@ class PLModel(pl.LightningModule):
         ds_prefixes = {0: "matched", 1: "mismatched", 2: "hans"}
         pref = ds_prefixes[dataloader_idx]
         s1, s2, target = batch
-        print(
-            f"worker {hvd.rank()} of {hvd.size()} doing val batch {batch_idx} of dataloader {dataloader_idx}, {pref}"
-        )
+        if self.params["test"]:
+            print(
+                f"worker {hvd.rank()} of {hvd.size()} doing val batch {batch_idx} of dataloader {dataloader_idx}, {pref}"
+            )
         logits = self(s1, s2)
         if dataloader_idx == 2:
-            print("logits ", logits.size())
             entail = logits[:, :1]
-            print("entail ", entail.size())
             non_entail = logits[:, 1:]
             non_entail = non_entail.max(axis=1).values
-            print("nonentail ", non_entail.size())
             logits = torch.cat((entail, non_entail.unsqueeze(1)), 1)
         loss = F.cross_entropy(logits, target)
         acc = accuracy(logits, target)
@@ -91,7 +90,7 @@ def main():
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
     path_results_base = "./out/NLI"
     params["path_results"] = get_unique_results_path(path_results_base)
-    wandb_logger = WandbLogger(project="NLI")
+    wandb_logger = WandbLogger(project=f"NLI{'_test' if params['test']}")
     # wandb_logger.log_hyperparams(config)
     # early_stop_callback = EarlyStopping(
     #     monitor='val_loss',
@@ -122,7 +121,8 @@ def main():
     # net = BertModel.from_pretrained("prajjwal1/bert-mini")
     net = Net(embs)
     model = PLModel(net, params)
-    print("fit")
+    if params["test"]:
+        print("fit")
     trainer.fit(model, data_module)
 
 
