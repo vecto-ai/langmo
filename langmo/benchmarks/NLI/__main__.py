@@ -19,20 +19,20 @@ class PLModel(pl.LightningModule):
         super().__init__()
         self.net = net
         self.params = params
-        self.example_input_array = (
-            torch.zeros((128, params["batch_size"]), dtype=torch.int64),
-            torch.zeros((128, params["batch_size"]), dtype=torch.int64),
-        )
+        # self.example_input_array = ((
+        #     torch.zeros((128, params["batch_size"]), dtype=torch.int64),
+        #     torch.zeros((128, params["batch_size"]), dtype=torch.int64),
+        # ))
 
-    def forward(self, s1, s2):
+    def forward(self, inputs):
         # print(s1.shape)
-        return self.net(s1, s2)
+        return self.net(inputs)
 
     def training_step(self, batch, batch_idx):
-        (s1, s2), target = batch
-        logits = self(s1, s2)
-        loss = F.cross_entropy(logits, target)
-        acc = accuracy(logits, target)
+        inputs, targets = batch
+        logits = self(inputs)
+        loss = F.cross_entropy(logits, targets)
+        acc = accuracy(logits, targets)
         metrics = {
             "train_loss": loss,
             "train_acc": acc,
@@ -44,19 +44,19 @@ class PLModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx, dataloader_idx):
         ds_prefixes = {0: "matched", 1: "mismatched", 2: "hans"}
         pref = ds_prefixes[dataloader_idx]
-        (s1, s2), target = batch
+        inputs, targets = batch
         if self.params["test"]:
             print(
                 f"worker {hvd.rank()} of {hvd.size()} doing val batch {batch_idx} of dataloader {dataloader_idx}, {pref}"
             )
-        logits = self(s1, s2)
+        logits = self(inputs)
         if dataloader_idx == 2:
             entail = logits[:, :1]
             non_entail = logits[:, 1:]
             non_entail = non_entail.max(axis=1).values
             logits = torch.cat((entail, non_entail.unsqueeze(1)), 1)
-        loss = F.cross_entropy(logits, target)
-        acc = accuracy(logits, target)
+        loss = F.cross_entropy(logits, targets)
+        acc = accuracy(logits, targets)
         metrics = {
             f"val_loss_{pref}": loss,
             f"val_acc_{pref}": acc,
