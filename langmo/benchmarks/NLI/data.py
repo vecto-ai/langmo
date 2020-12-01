@@ -116,7 +116,7 @@ class NLIDataModule(pl.LightningDataModule):
         # TODO: do donwload here
         # TODO: probably need to scatter indices here by hvd explicitly
 
-        self.vocab = transformers.BertTokenizerFast().from_pretrained("bert-base-uncased")
+        self.vocab = transformers.BertTokenizerFast.from_pretrained("bert-base-uncased")
         pass
 
     def train_dataloader(self):
