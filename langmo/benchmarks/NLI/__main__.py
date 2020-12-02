@@ -12,7 +12,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.metrics.functional import accuracy
 import transformers
-from transformers import BertForSequenceClassification
+from transformers import AutoModelForSequenceClassification
 import horovod.torch as hvd
 from protonn.utils import describe_var
 from protonn.utils import get_time_str
@@ -123,7 +123,7 @@ def main():
     data_module = NLIDataModule(
         params["path_mnli"],
         # embs.vocabulary,
-        transformers.BertTokenizerFast.from_pretrained(model_name),
+        transformers.AutoTokenizer.from_pretrained(model_name),
         batch_size=params["batch_size"],
         test=params["test"],
     )
