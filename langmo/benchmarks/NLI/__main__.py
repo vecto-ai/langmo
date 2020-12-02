@@ -127,7 +127,7 @@ def main():
         batch_size=params["batch_size"],
         test=params["test"],
     )
-    net = BertForSequenceClassification.from_pretrained(model_name, num_labels=3)
+    net = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=3)
     # net = Net(embs)
     model = PLModel(net, params)
     if params["test"]:
