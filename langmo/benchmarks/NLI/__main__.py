@@ -94,9 +94,10 @@ def main():
     path_results_base = "./out/NLI"
     params["path_results"] = get_unique_results_path(path_results_base)
     timestamp = get_time_str()
-    model_name = "prajjwal1/bert-mini"
-    model_name = "bert-base-uncased"
-    model_name = "albert-base-v2"
+    #model_name = "prajjwal1/bert-mini"
+    #model_name = "bert-base-uncased"
+    #model_name = "albert-base-v2"
+    model_name = params["model_name"]
     wandb_logger = WandbLogger(project=f"NLI{'_test' if params['test'] else ''}",
                                name=f"{model_name}_{timestamp}")
     # wandb_logger.log_hyperparams(config)
