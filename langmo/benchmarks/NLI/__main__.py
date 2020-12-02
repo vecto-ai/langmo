@@ -11,7 +11,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.metrics.functional import accuracy
 import transformers
-from transformers import BertModel
+from transformers import BertForSequenceClassification
 import horovod.torch as hvd
 from protonn.utils import describe_var
 
@@ -28,7 +28,7 @@ class PLModel(pl.LightningModule):
 
     def forward(self, inputs):
         # print(describe_var(inputs))
-        return self.net(*inputs)
+        return self.net(*inputs)[0]
 
     def training_step(self, batch, batch_idx):
         inputs, targets = batch
@@ -109,19 +109,21 @@ def main():
         distributed_backend="horovod",
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
-        # logger=wandb_logger,
+        logger=wandb_logger,
         progress_bar_refresh_rate=0,
     )
 
     # embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
+    model_name = "prajjwal1/bert-mini"
+    model_name = "bert-base-uncased"
     data_module = NLIDataModule(
         params["path_mnli"],
         # embs.vocabulary,
-        transformers.BertTokenizerFast.from_pretrained("bert-base-uncased"),
+        transformers.BertTokenizerFast.from_pretrained(model_name),
         batch_size=params["batch_size"],
         test=params["test"],
     )
-    net = BertModel.from_pretrained("prajjwal1/bert-mini")
+    net = BertForSequenceClassification.from_pretrained(model_name, num_labels=3)
     # net = Net(embs)
     model = PLModel(net, params)
     if params["test"]:
