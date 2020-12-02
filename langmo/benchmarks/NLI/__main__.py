@@ -112,7 +112,6 @@ def main():
 
     net = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=3)
     # net = Net(embs)
-    wandb_logger.watch(net, log='gradients', log_freq=100)
     model = PLModel(net, params)
     trainer = pl.Trainer(
         gpus=1,
@@ -125,6 +124,7 @@ def main():
         progress_bar_refresh_rate=0)
     if params["test"]:
         print("fit")
+    # wandb_logger.watch(net, log='gradients', log_freq=100)
     data_module = NLIDataModule(
         params["path_mnli"],
         # embs.vocabulary,
