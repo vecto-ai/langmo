@@ -91,23 +91,25 @@ def ds_to_tensors(dataset, tokenizer, batch_size, test):
     sent1 = [i["premise"].lower() for i in dataset]
     sent2 = [i["hypothesis"].lower() for i in dataset]
     labels = [i["label"] for i in dataset]
+    labels = torch.LongTensor(labels)
     texts_or_text_pairs = list(zip(sent1, sent2))
     features = tokenizer(
         texts_or_text_pairs,
         max_length=128,
         padding='max_length',
-        truncation=True
+        truncation=True,
+        return_tensors="pt"
     )
-    cnt_batches = len(labels) / batch_size
-    print(type(features[0]))
+    # cnt_batches = len(labels) / batch_size
+    # print(type(features[0]))
     # TODO: just figure out how to get list of list of ids and this should be done
-    ids = np.array_split(list(features[0]), cnt_batches)
-    masks = np.array_split((features[1]), cnt_batches)
-    segments = np.array_split((features[2]), cnt_batches)
-    labels = np.array_split(labels, cnt_batches)
+    ids = torch.split(features["input_ids"], batch_size)
+    masks = torch.split(features["attention_mask"], batch_size)
+    segments = torch.split(features["token_type_ids"], batch_size)
+    labels = torch.split(labels, batch_size)
     # print(describe_var(features))
     # TODO: split in batches
-    return zip(ids, masks, segments), labels
+    return list(zip(zip(ids, masks, segments), labels))
 
 
 class NLIDataModule(pl.LightningDataModule):

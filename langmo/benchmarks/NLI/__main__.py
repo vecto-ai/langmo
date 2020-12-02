@@ -13,6 +13,7 @@ from pytorch_lightning.metrics.functional import accuracy
 import transformers
 from transformers import BertModel
 import horovod.torch as hvd
+from protonn.utils import describe_var
 
 
 class PLModel(pl.LightningModule):
@@ -26,8 +27,8 @@ class PLModel(pl.LightningModule):
         # ))
 
     def forward(self, inputs):
-        # print(s1.shape)
-        return self.net(inputs)
+        # print(describe_var(inputs))
+        return self.net(*inputs)
 
     def training_step(self, batch, batch_idx):
         inputs, targets = batch
