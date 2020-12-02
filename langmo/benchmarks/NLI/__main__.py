@@ -3,6 +3,7 @@ import sys
 import torch
 import vecto
 import vecto.embeddings
+import platform
 import torch.nn.functional as F
 from langmo.utils import get_unique_results_path
 from .data import NLIDataModule
@@ -14,7 +15,7 @@ import transformers
 from transformers import BertForSequenceClassification
 import horovod.torch as hvd
 from protonn.utils import describe_var
-
+from protonn.utils import get_time_str
 
 class PLModel(pl.LightningModule):
     def __init__(self, net, params):
@@ -75,8 +76,8 @@ class PLModel(pl.LightningModule):
                     self.log_dict(md)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(
-            [param for param in self.net.parameters() if param.requires_grad], lr=0.0001
+        return torch.optim.AdamW(
+            [param for param in self.net.parameters() if param.requires_grad], lr=0.00001
         )
         # return torch.optim.SGD(self.net.parameters(), lr=0.001, momentum=0.9)
 
@@ -92,7 +93,9 @@ def main():
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
     path_results_base = "./out/NLI"
     params["path_results"] = get_unique_results_path(path_results_base)
-    wandb_logger = WandbLogger(project=f"NLI{'_test' if params['test'] else ''}")
+    timestamp = get_time_str()
+    wandb_logger = WandbLogger(project=f"NLI{'_test' if params['test'] else ''}",
+                               name=f"{platform.node()}_{timestamp}")
     # wandb_logger.log_hyperparams(config)
     # early_stop_callback = EarlyStopping(
     #     monitor='val_loss',
@@ -116,6 +119,7 @@ def main():
     # embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
     model_name = "prajjwal1/bert-mini"
     model_name = "bert-base-uncased"
+    model_name = "albert-base-v2"
     data_module = NLIDataModule(
         params["path_mnli"],
         # embs.vocabulary,
