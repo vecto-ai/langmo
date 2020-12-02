@@ -21,7 +21,7 @@ class PLModel(pl.LightningModule):
     def __init__(self, net, params):
         super().__init__()
         self.net = net
-        self.params = params
+        self.hparams = params
         # self.example_input_array = ((
         #     torch.zeros((128, params["batch_size"]), dtype=torch.int64),
         #     torch.zeros((128, params["batch_size"]), dtype=torch.int64),
@@ -48,7 +48,7 @@ class PLModel(pl.LightningModule):
         ds_prefixes = {0: "matched", 1: "mismatched", 2: "hans"}
         pref = ds_prefixes[dataloader_idx]
         inputs, targets = batch
-        if self.params["test"]:
+        if self.hparams["test"]:
             print(
                 f"worker {hvd.rank()} of {hvd.size()} doing val batch {batch_idx} of dataloader {dataloader_idx}, {pref}"
             )
@@ -94,8 +94,11 @@ def main():
     path_results_base = "./out/NLI"
     params["path_results"] = get_unique_results_path(path_results_base)
     timestamp = get_time_str()
+    model_name = "prajjwal1/bert-mini"
+    model_name = "bert-base-uncased"
+    model_name = "albert-base-v2"
     wandb_logger = WandbLogger(project=f"NLI{'_test' if params['test'] else ''}",
-                               name=f"{platform.node()}_{timestamp}")
+                               name=f"{model_name}_{timestamp}")
     # wandb_logger.log_hyperparams(config)
     # early_stop_callback = EarlyStopping(
     #     monitor='val_loss',
@@ -105,33 +108,29 @@ def main():
     #     mode="min",
     # )
     # print("create tainer")
+    # embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
+
+    net = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=3)
+    # net = Net(embs)
+    wandb_logger.watch(net, log='gradients', log_freq=100)
+    model = PLModel(net, params)
     trainer = pl.Trainer(
         gpus=1,
         num_sanity_val_steps=0,
-        max_epochs=10,
+        max_epochs=12,
         distributed_backend="horovod",
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
         logger=wandb_logger,
-        progress_bar_refresh_rate=0,
-    )
-
-    # embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
-    model_name = "prajjwal1/bert-mini"
-    model_name = "bert-base-uncased"
-    model_name = "albert-base-v2"
+        progress_bar_refresh_rate=0)
+    if params["test"]:
+        print("fit")
     data_module = NLIDataModule(
         params["path_mnli"],
         # embs.vocabulary,
         transformers.AutoTokenizer.from_pretrained(model_name),
         batch_size=params["batch_size"],
-        test=params["test"],
-    )
-    net = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=3)
-    # net = Net(embs)
-    model = PLModel(net, params)
-    if params["test"]:
-        print("fit")
+        test=params["test"])
     trainer.fit(model, data_module)
 
 
