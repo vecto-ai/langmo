@@ -78,9 +78,10 @@ def ds_to_tensors(dataset, tokenizer, batch_size, test):
     sent2 = [i["hypothesis"].lower() for i in dataset]
     labels = [i["label"] for i in dataset]
     if test:
-        sent1 = sent1[:32]
-        sent2 = sent2[:32]
-        labels = labels[:32]
+        # TODO: use bs and hvd size
+        sent1 = sent1[:32 * 2]
+        sent2 = sent2[:32 * 2]
+        labels = labels[:32 * 2]
     labels = torch.LongTensor(labels)
     texts_or_text_pairs = list(zip(sent1, sent2))
     features = tokenizer(
