@@ -16,6 +16,9 @@ from transformers import AutoModelForSequenceClassification
 import horovod.torch as hvd
 from protonn.utils import describe_var
 from protonn.utils import get_time_str
+from transformers import logging as tr_logging
+# import logging
+
 
 class PLModel(pl.LightningModule):
     def __init__(self, net, params):
@@ -100,6 +103,9 @@ def main():
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
     path_results_base = "./out/NLI"
     params["path_results"] = get_unique_results_path(path_results_base)
+    hvd.init()
+    if hvd.rank() != 0:
+        tr_logging.set_verbosity_error()
     timestamp = get_time_str()
     #model_name = "prajjwal1/bert-mini"
     #model_name = "bert-base-uncased"
