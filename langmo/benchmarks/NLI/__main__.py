@@ -71,9 +71,9 @@ class PLModel(pl.LightningModule):
         if not self.trainer.running_sanity_check:
             for metrics_dict in outputs:
                 # print(f"worker {hvd.rank()}", metrics_dict)
-                # self.logger.agg_and_log_metrics(metrics_dict, step=self.current_epoch)
-                for md in metrics_dict:
-                    self.log_dict(md)
+                self.logger.agg_and_log_metrics(metrics_dict, step=self.current_epoch)
+                # for md in metrics_dict:
+                #     self.log_dict(md)
 
     def configure_optimizers(self):
         return torch.optim.AdamW(
@@ -97,7 +97,7 @@ def main():
     #model_name = "prajjwal1/bert-mini"
     #model_name = "bert-base-uncased"
     #model_name = "albert-base-v2"
-    model_name = params["model_name"]
+        model_name = params["model_name"]
     wandb_logger = WandbLogger(project=f"NLI{'_test' if params['test'] else ''}",
                                name=f"{model_name}_{timestamp}")
     # wandb_logger.log_hyperparams(config)
@@ -127,7 +127,6 @@ def main():
         print("fit")
     # wandb_logger.watch(net, log='gradients', log_freq=100)
     data_module = NLIDataModule(
-        params["path_mnli"],
         # embs.vocabulary,
         transformers.AutoTokenizer.from_pretrained(model_name),
         batch_size=params["batch_size"],

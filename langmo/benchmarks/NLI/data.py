@@ -103,9 +103,8 @@ def ds_to_tensors(dataset, tokenizer, batch_size, test):
 
 
 class NLIDataModule(pl.LightningDataModule):
-    def __init__(self, path, vocab, batch_size, test):
+    def __init__(self, vocab, batch_size, test):
         super().__init__()
-        self.path = path
         self.batch_size = batch_size
         self.vocab = vocab
         self.test = test
