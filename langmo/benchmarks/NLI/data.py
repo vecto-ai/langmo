@@ -10,6 +10,7 @@ import horovod.torch as hvd
 import datasets
 import transformers
 from protonn.utils import describe_var
+from datasets import logging as tr_logging
 
 
 def zero_pad_item(sample, max_len):
@@ -51,6 +52,8 @@ def sequences_to_padded_tensor(seqs, max_len):
 class MyDataLoader():
     def __init__(self, sent1, sent2, labels, batch_size):
         # optinally sort
+        if hvd.rank() != 0:
+            tr_logging.set_verbosity_error()
         tuples = list(zip(sent1, sent2, labels))
         cnt_batches = len(tuples) / batch_size
         batches = np.array_split(tuples, cnt_batches)
