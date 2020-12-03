@@ -72,25 +72,15 @@ class MyDataLoader():
     def __getitem__(self, idx):
         return self.batches[idx]
 
-# SIAMESE WAY
-# def ds_to_tensors(dataset, vocab, batch_size, test):
-#     sent1 = [i["premise"].lower() for i in dataset]
-#     sent2 = [i["hypothesis"].lower() for i in dataset]
-#     labels = [i["label"] for i in dataset]
-#     if test:
-#         sent1 = sent1[:32]
-#         sent2 = sent2[:32]
-#         labels = labels[:32]
-#     sent1 = list(map(vocab.tokens_to_ids, sent1))
-#     sent2 = list(map(vocab.tokens_to_ids, sent2))
-#     # labels = map(lambda x: dic_labels[x], df["gold_label"])
-#     return MyDataLoader(sent1, sent2, labels, batch_size)
-
 
 def ds_to_tensors(dataset, tokenizer, batch_size, test):
     sent1 = [i["premise"].lower() for i in dataset]
     sent2 = [i["hypothesis"].lower() for i in dataset]
     labels = [i["label"] for i in dataset]
+    if test:
+        sent1 = sent1[:32]
+        sent2 = sent2[:32]
+        labels = labels[:32]
     labels = torch.LongTensor(labels)
     texts_or_text_pairs = list(zip(sent1, sent2))
     features = tokenizer(
@@ -100,16 +90,16 @@ def ds_to_tensors(dataset, tokenizer, batch_size, test):
         truncation=True,
         return_tensors="pt"
     )
-    # cnt_batches = len(labels) / batch_size
-    # print(type(features[0]))
-    # TODO: just figure out how to get list of list of ids and this should be done
     ids = torch.split(features["input_ids"], batch_size)
     masks = torch.split(features["attention_mask"], batch_size)
     segments = torch.split(features["token_type_ids"], batch_size)
     labels = torch.split(labels, batch_size)
-    # print(describe_var(features))
-    # TODO: split in batches
     return list(zip(zip(ids, masks, segments), labels))
+#     FOR SIAMESE
+#     sent1 = list(map(vocab.tokens_to_ids, sent1))
+#     sent2 = list(map(vocab.tokens_to_ids, sent2))
+#     # labels = map(lambda x: dic_labels[x], df["gold_label"])
+#     return MyDataLoader(sent1, sent2, labels, batch_size)
 
 
 class NLIDataModule(pl.LightningDataModule):
