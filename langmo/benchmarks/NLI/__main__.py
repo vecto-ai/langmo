@@ -97,7 +97,7 @@ def main():
     #model_name = "prajjwal1/bert-mini"
     #model_name = "bert-base-uncased"
     #model_name = "albert-base-v2"
-        model_name = params["model_name"]
+    model_name = params["model_name"]
     wandb_logger = WandbLogger(project=f"NLI{'_test' if params['test'] else ''}",
                                name=f"{model_name}_{timestamp}")
     # wandb_logger.log_hyperparams(config)
