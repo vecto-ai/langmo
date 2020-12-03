@@ -8,6 +8,9 @@ import numpy as np
 # from torch.utils.data import DataLoader
 import horovod.torch as hvd
 import datasets
+import transformers
+from protonn.utils import describe_var
+from datasets import logging as tr_logging
 
 
 def zero_pad_item(sample, max_len):
@@ -30,7 +33,8 @@ def sequences_to_padded_tensor(seqs, max_len):
     # print(seqs)
     padded = [zero_pad_item(s, max_len) for s in seqs]
     padded = np.array(padded, dtype=np.int64)
-    padded = np.rollaxis(padded, 1, 0)
+    # LSTM-specific
+    # padded = np.rollaxis(padded, 1, 0)
     padded = torch.from_numpy(padded)
     return padded
 
@@ -48,6 +52,8 @@ def sequences_to_padded_tensor(seqs, max_len):
 class MyDataLoader():
     def __init__(self, sent1, sent2, labels, batch_size):
         # optinally sort
+        if hvd.rank() != 0:
+            tr_logging.set_verbosity_error()
         tuples = list(zip(sent1, sent2, labels))
         cnt_batches = len(tuples) / batch_size
         batches = np.array_split(tuples, cnt_batches)
@@ -61,7 +67,7 @@ class MyDataLoader():
         sent1 = sequences_to_padded_tensor(sent1, max_len)
         sent2 = sequences_to_padded_tensor(sent2, max_len)
         labels = torch.LongTensor(labels)
-        return (sent1, sent2, labels)
+        return ((sent1, sent2), labels)
 
     def __len__(self):
         return len(self.batches)
@@ -70,24 +76,39 @@ class MyDataLoader():
         return self.batches[idx]
 
 
-def ds_to_tensors(dataset, vocab, batch_size, test):
+def ds_to_tensors(dataset, tokenizer, batch_size, test):
     sent1 = [i["premise"].lower() for i in dataset]
     sent2 = [i["hypothesis"].lower() for i in dataset]
     labels = [i["label"] for i in dataset]
     if test:
-        sent1 = sent1[:32]
-        sent2 = sent2[:32]
-        labels = labels[:32]
-    sent1 = list(map(vocab.tokens_to_ids, sent1))
-    sent2 = list(map(vocab.tokens_to_ids, sent2))
-    # labels = map(lambda x: dic_labels[x], df["gold_label"])
-    return MyDataLoader(sent1, sent2, labels, batch_size)
+        # TODO: use bs and hvd size
+        sent1 = sent1[:32 * 2]
+        sent2 = sent2[:32 * 2]
+        labels = labels[:32 * 2]
+    labels = torch.LongTensor(labels)
+    texts_or_text_pairs = list(zip(sent1, sent2))
+    features = tokenizer(
+        texts_or_text_pairs,
+        max_length=128,
+        padding='max_length',
+        truncation=True,
+        return_tensors="pt"
+    )
+    ids = torch.split(features["input_ids"], batch_size)
+    masks = torch.split(features["attention_mask"], batch_size)
+    segments = torch.split(features["token_type_ids"], batch_size)
+    labels = torch.split(labels, batch_size)
+    return list(zip(zip(ids, masks, segments), labels))
+#     FOR SIAMESE
+#     sent1 = list(map(vocab.tokens_to_ids, sent1))
+#     sent2 = list(map(vocab.tokens_to_ids, sent2))
+#     # labels = map(lambda x: dic_labels[x], df["gold_label"])
+#     return MyDataLoader(sent1, sent2, labels, batch_size)
 
 
 class NLIDataModule(pl.LightningDataModule):
-    def __init__(self, path, vocab, batch_size, test):
+    def __init__(self, vocab, batch_size, test):
         super().__init__()
-        self.path = path
         self.batch_size = batch_size
         self.vocab = vocab
         self.test = test
@@ -97,7 +118,7 @@ class NLIDataModule(pl.LightningDataModule):
     def setup(self, stage=None):
         # print("doing setup")
         # TODO: do donwload here
-        # TODO: probably need to scatter indices here by hvd explicitly
+
         pass
 
     def train_dataloader(self):

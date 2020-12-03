@@ -9,7 +9,8 @@ class Siamese(nn.Module):
         self.bottom = bottom
         self.top = top
 
-    def forward(self, left, right):
+    def forward(self, inputs):
+        left, right = inputs
         self.bottom.hidden = None
         h_left = self.bottom(left)[-1]
         self.bottom.hidden = None
