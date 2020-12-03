@@ -26,6 +26,7 @@ class PLModel(pl.LightningModule):
         #     torch.zeros((128, params["batch_size"]), dtype=torch.int64),
         #     torch.zeros((128, params["batch_size"]), dtype=torch.int64),
         # ))
+        self.ds_prefixes = {0: "matched", 1: "mismatched", 2: "hans"}
 
     def forward(self, inputs):
         # print(describe_var(inputs))
@@ -45,8 +46,6 @@ class PLModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
-        ds_prefixes = {0: "matched", 1: "mismatched", 2: "hans"}
-        pref = ds_prefixes[dataloader_idx]
         inputs, targets = batch
         if self.hparams["test"]:
             print(
@@ -60,6 +59,7 @@ class PLModel(pl.LightningModule):
             logits = torch.cat((entail, non_entail.unsqueeze(1)), 1)
         loss = F.cross_entropy(logits, targets)
         acc = accuracy(logits, targets)
+        pref = self.ds_prefixes[dataloader_idx]
         metrics = {
             f"val_loss_{pref}": loss,
             f"val_acc_{pref}": acc,
@@ -71,9 +71,9 @@ class PLModel(pl.LightningModule):
         if not self.trainer.running_sanity_check:
             for metrics_dict in outputs:
                 # print(f"worker {hvd.rank()}", metrics_dict)
-                self.logger.agg_and_log_metrics(metrics_dict, step=self.current_epoch)
-                # for md in metrics_dict:
-                #     self.log_dict(md)
+                # self.logger.agg_and_log_metrics(metrics_dict, step=self.current_epoch)
+                for md in metrics_dict:
+                    self.log_dict(md)
 
     def configure_optimizers(self):
         return torch.optim.AdamW(

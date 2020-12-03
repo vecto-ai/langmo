@@ -114,7 +114,6 @@ class NLIDataModule(pl.LightningDataModule):
     def setup(self, stage=None):
         # print("doing setup")
         # TODO: do donwload here
-        # TODO: probably need to scatter indices here by hvd explicitly
 
         pass
 
