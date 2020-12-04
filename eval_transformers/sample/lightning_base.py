@@ -6,6 +6,7 @@ from typing import Any, Dict
 
 import pytorch_lightning as pl
 from pytorch_lightning.utilities import rank_zero_info
+from pytorch_lightning.loggers import WandbLogger
 
 from transformers import (
     AdamW,
@@ -335,12 +336,14 @@ def add_generic_args(parser, root_dir) -> None:
         help="The input data dir. Should contain the training files for the CoNLL-2003 NER task.",
     )
 
+wandb_logger = WandbLogger(project="NLI_sample")
 
 def generic_train(
     model: BaseTransformer,
     args: argparse.Namespace,
     early_stopping_callback=None,
-    logger=True,  # can pass WandbLogger() here
+    # logger=True,  # can pass WandbLogger() here
+    logger=wandb_logger,
     extra_callbacks=[],
     checkpoint_callback=None,
     logging_callback=None,
