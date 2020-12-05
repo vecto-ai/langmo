@@ -5,5 +5,5 @@
     # probably TSUBAME-KFC/DL
     # sbatch run_kfc.sh
     # abci
-    qsub -g gcb50300 run.sh
+    qsub -g gcb50300 -m be -M alex@blackbird.pw run.sh
 #fi
