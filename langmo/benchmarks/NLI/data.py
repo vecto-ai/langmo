@@ -77,8 +77,8 @@ class MyDataLoader():
 
 
 def ds_to_tensors(dataset, tokenizer, batch_size, test):
-    sent1 = [i["premise"].lower() for i in dataset]
-    sent2 = [i["hypothesis"].lower() for i in dataset]
+    sent1 = [i["premise"] for i in dataset] # lower
+    sent2 = [i["hypothesis"] for i in dataset]
     labels = [i["label"] for i in dataset]
     if test:
         # TODO: use bs and hvd size
