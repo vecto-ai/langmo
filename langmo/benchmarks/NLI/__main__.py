@@ -51,10 +51,6 @@ class PLModel(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
         inputs, targets = batch
-        if self.hparams["test"]:
-            print(
-                f"worker {hvd.rank()} of {hvd.size()} doing val batch {batch_idx} of dataloader {dataloader_idx}"
-            )
         logits = self(inputs)
         if dataloader_idx == 2:
             entail = logits[:, :1]
@@ -63,6 +59,12 @@ class PLModel(pl.LightningModule):
             logits = torch.cat((entail, non_entail.unsqueeze(1)), 1)
         loss = F.cross_entropy(logits, targets)
         acc = accuracy(logits, targets)
+        if self.hparams["test"]:
+            print(
+                f"worker {hvd.rank()} of {hvd.size()}\n"
+                f"\tval batch {batch_idx} ({logits.size()}) of dloader {dataloader_idx}\n"
+                f"\ttargets: {targets.sum()}, acc is {acc}"
+            )
         metrics = {
             f"val_loss": loss,
             f"val_acc": acc,
@@ -81,6 +83,12 @@ class PLModel(pl.LightningModule):
                     f"val_loss_{pref}": loss,
                     f"val_acc_{pref}": acc,
                 }
+                if self.hparams["test"]:
+                    print(
+                        f"worker {hvd.rank()} of {hvd.size()}\n"
+                        f"\tvalidation end\n"
+                        f"\tacc is {acc}"
+                    )                
                 # print(f"worker {hvd.rank()}", metrics_dict)
                 # self.logger.agg_and_log_metrics(metrics, step=self.current_epoch)
                 # for md in metrics_dict:
