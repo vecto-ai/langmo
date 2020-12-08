@@ -59,7 +59,7 @@ class PLModel(pl.LightningModule):
             logits = torch.cat((entail, non_entail.unsqueeze(1)), 1)
         loss = F.cross_entropy(logits, targets)
         acc = accuracy(logits, targets)
-        if self.hparams["test"]:
+        if self.hparams["test"] and dataloader_idx==2:
             print(
                 f"worker {hvd.rank()} of {hvd.size()}\n"
                 f"\tval batch {batch_idx} ({logits.size()}) of dloader {dataloader_idx}\n"
@@ -83,16 +83,16 @@ class PLModel(pl.LightningModule):
                     f"val_loss_{pref}": loss,
                     f"val_acc_{pref}": acc,
                 }
-                if self.hparams["test"]:
+                if self.hparams["test"] and i==2:
                     print(
                         f"worker {hvd.rank()} of {hvd.size()}\n"
                         f"\tvalidation end\n"
-                        f"\tacc is {acc}"
-                    )                
+                        f"\tdl id is {i}, acc is {acc}"
+                    ) 
                 # print(f"worker {hvd.rank()}", metrics_dict)
                 # self.logger.agg_and_log_metrics(metrics, step=self.current_epoch)
                 # for md in metrics_dict:
-                self.log_dict(metrics)
+                self.log_dict(metrics, sync_dist=True)
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
@@ -142,6 +142,8 @@ def main():
     net = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=3)
     # net = Net(embs)
     model = PLModel(net, params)
+    if params["test"]:
+        params["cnt_epochs"] = 1
     trainer = pl.Trainer(
         gpus=1,
         num_sanity_val_steps=0,
@@ -151,8 +153,7 @@ def main():
         # early_stop_callback=early_stop_callback,
         logger=wandb_logger,
         progress_bar_refresh_rate=0)
-    if params["test"]:
-        print("fit")
+
     # wandb_logger.watch(net, log='gradients', log_freq=100)
     data_module = NLIDataModule(
         # embs.vocabulary,
