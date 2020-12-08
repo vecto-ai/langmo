@@ -59,7 +59,7 @@ class PLModel(pl.LightningModule):
             logits = torch.cat((entail, non_entail.unsqueeze(1)), 1)
         loss = F.cross_entropy(logits, targets)
         acc = accuracy(logits, targets)
-        if self.hparams["test"] and dataloader_idx==2:
+        if self.hparams["test"] and dataloader_idx == 2:
             print(
                 f"worker {hvd.rank()} of {hvd.size()}\n"
                 f"\tval batch {batch_idx} ({logits.size()}) of dloader {dataloader_idx}\n"
