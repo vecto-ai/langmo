@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd
-#$ -l rt_F=4
-#$ -l h_rt=02:00:00
+#$ -l rt_F=2
+#$ -l h_rt=03:00:00
 #$ -N NLI
 #$ -j y
 #$ -o $JOB_NAME.o$JOB_ID

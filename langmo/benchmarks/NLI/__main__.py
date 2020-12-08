@@ -17,6 +17,7 @@ import horovod.torch as hvd
 from protonn.utils import describe_var
 from protonn.utils import get_time_str
 from transformers import logging as tr_logging
+from transformers.optimization import get_linear_schedule_with_warmup
 # import logging
 
 
@@ -86,9 +87,14 @@ class PLModel(pl.LightningModule):
                 self.log_dict(metrics)
 
     def configure_optimizers(self):
-        return torch.optim.AdamW(
+        optimizer = torch.optim.AdamW(
             [param for param in self.net.parameters() if param.requires_grad], lr=0.00001
         )
+        # steps = self.dataset_size / effective_batch_size) * self.hparams.max_epochs
+        scheduler = get_linear_schedule_with_warmup(
+            optimizer, num_warmup_steps=0, num_training_steps=50000
+        )
+        return [[optimizer], [scheduler]]
         # return torch.optim.SGD(self.net.parameters(), lr=0.001, momentum=0.9)
 
 
@@ -111,8 +117,9 @@ def main():
     #model_name = "bert-base-uncased"
     #model_name = "albert-base-v2"
     model_name = params["model_name"]
+    name_run = f"{model_name}_{'↓' if params['uncase'] else '◯'}_{timestamp[:-3]}"
     wandb_logger = WandbLogger(project=f"NLI{'_test' if params['test'] else ''}",
-                               name=f"{model_name}_{timestamp}")
+                               name=name_run)
     # wandb_logger.log_hyperparams(config)
     # early_stop_callback = EarlyStopping(
     #     monitor='val_loss',
@@ -143,7 +150,7 @@ def main():
         # embs.vocabulary,
         transformers.AutoTokenizer.from_pretrained(model_name),
         batch_size=params["batch_size"],
-        test=params["test"])
+        params=params)
     trainer.fit(model, data_module)
 
 
