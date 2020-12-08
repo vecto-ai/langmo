@@ -8,4 +8,4 @@ embedding_size: 128
 window_size: 1
 cnt_epochs: 10
 test: false
-    
+uncase: false
