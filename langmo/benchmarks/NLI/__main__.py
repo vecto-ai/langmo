@@ -143,7 +143,7 @@ def main():
     # net = Net(embs)
     model = PLModel(net, params)
     if params["test"]:
-        params["cnt_epochs"] = 1
+        params["cnt_epochs"] = 2
     trainer = pl.Trainer(
         gpus=1,
         num_sanity_val_steps=0,
