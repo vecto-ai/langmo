@@ -94,9 +94,10 @@ class PLModel(pl.LightningModule):
         if self.trainer.running_sanity_check:
             self.trainer.running_sanity_check = False  # so that loggers don't skip logging
             self.trainer.current_epoch = -1
-            self.log_dict(metrics)
+        self.log_dict(metrics)
         if self.trainer.current_epoch == -1:
             self.trainer.current_epoch = 0
+            self.trainer.running_sanity_check = True
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
