@@ -1,20 +1,20 @@
 import yaml
 import sys
 import torch
-import vecto
-import vecto.embeddings
-import platform
+# import vecto
+# import vecto.embeddings
+# import platform
 import torch.nn.functional as F
 from langmo.utils import get_unique_results_path
 from .data import NLIDataModule
-from .model import Net
+# from .model import Net
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.metrics.functional import accuracy
 import transformers
 from transformers import AutoModelForSequenceClassification
 import horovod.torch as hvd
-from protonn.utils import describe_var
+# from protonn.utils import describe_var
 from protonn.utils import get_time_str
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
@@ -73,17 +73,7 @@ class PLModel(pl.LightningModule):
         return metrics
 
     def validation_epoch_end(self, outputs):
-        # print(describe_var(outputs))
         metrics = {}
-        if self.trainer.running_sanity_check:
-            self.trainer.running_sanity_check = False  # so that loggers don't skip logging
-            self.trainer.current_epoch = -1 
-            print(f"##### OLOLO we are in running_sanity_check epoch is {self.current_epoch}")
-            #metrics["step"] = self.global_step
-            #metrics["epoch"] = self.current_epoch - 1
-        #else:
-            #metrics["step"] = self.global_step
-            #metrics["epoch"] = self.current_epoch
         for i, lst_split in enumerate(outputs):
             pref = self.ds_prefixes[i]
             loss = torch.stack([x['val_loss'] for x in lst_split]).mean()  # .item()
@@ -97,12 +87,16 @@ class PLModel(pl.LightningModule):
                     f"\tdl id is {i}, acc is {acc}"
                 )
             # print(f"worker {hvd.rank()}", metrics_dict)
-            print("saving metrics", metrics)
-            #self.logger.agg_and_log_metrics(metrics)  # , step=self.current_epoch + 1
+            # print("saving metrics", metrics)
+            # self.logger.agg_and_log_metrics(metrics)  # , step=self.current_epoch + 1
             # for md in metrics_dict:
             # self.log_dict(metrics, sync_dist=True)
+        if self.trainer.running_sanity_check:
+            self.trainer.running_sanity_check = False  # so that loggers don't skip logging
+            self.trainer.current_epoch = -1
             self.log_dict(metrics)
-
+        if self.trainer.current_epoch == -1:
+            self.trainer.current_epoch = 0
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
