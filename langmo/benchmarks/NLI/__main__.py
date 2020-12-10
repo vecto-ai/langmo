@@ -74,25 +74,27 @@ class PLModel(pl.LightningModule):
 
     def validation_epoch_end(self, outputs):
         # print(describe_var(outputs))
-        #if not self.trainer.running_sanity_check:
-        for i, lst_split in enumerate(outputs):
-            pref = self.ds_prefixes[i]
-            loss = torch.stack([x['val_loss'] for x in lst_split]).mean()
-            acc = torch.stack([x['val_acc'] for x in lst_split]).mean()
-            metrics = {
-                f"val_loss_{pref}": loss,
-                f"val_acc_{pref}": acc,
-            }
-            if self.hparams["test"] and i==2:
-                print(
-                    f"worker {hvd.rank()} of {hvd.size()}\n"
-                    f"\tvalidation end\n"
-                    f"\tdl id is {i}, acc is {acc}"
-                ) 
-            # print(f"worker {hvd.rank()}", metrics_dict)
-            # self.logger.agg_and_log_metrics(metrics, step=self.current_epoch)
-            # for md in metrics_dict:
-            self.log_dict(metrics, sync_dist=True)
+        if self.trainer.running_sanity_check:
+            print(f"##### OLOLO we are in running_sanity_check epoch is {self.current_epoch}")
+            for i, lst_split in enumerate(outputs):
+                pref = self.ds_prefixes[i]
+                loss = torch.stack([x['val_loss'] for x in lst_split]).mean().item()
+                acc = torch.stack([x['val_acc'] for x in lst_split]).mean().item()
+                metrics = {
+                    f"val_loss_{pref}": loss,
+                    f"val_acc_{pref}": acc,
+                }
+                if self.hparams["test"] and i == 2:
+                    print(
+                        f"worker {hvd.rank()} of {hvd.size()}\n"
+                        f"\tvalidation end\n"
+                        f"\tdl id is {i}, acc is {acc}"
+                    )
+                # print(f"worker {hvd.rank()}", metrics_dict)
+                print("saving metrics", metrics)
+                self.logger.agg_and_log_metrics(metrics, step=self.current_epoch + 1)
+                # for md in metrics_dict:
+                # self.log_dict(metrics, sync_dist=True)
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
