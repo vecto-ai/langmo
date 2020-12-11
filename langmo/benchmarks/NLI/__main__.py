@@ -78,11 +78,10 @@ class PLModel(pl.LightningModule):
             metrics["epoch"] = -1
         else:
             metrics["epoch"] = self.current_epoch
-            # self.trainer.running_sanity_check = False
         for i, lst_split in enumerate(outputs):
             pref = self.ds_prefixes[i]
             loss = torch.stack([x['val_loss'] for x in lst_split]).mean()  # .item()
-            # print("LOSSS IS", type(loss), loss)
+            # TODO: refactor this reduction an logging in one helper function
             loss = hvd.allreduce(loss)
             acc = torch.stack([x['val_acc'] for x in lst_split]).mean()  # .item()
             acc = hvd.allreduce(acc)
@@ -94,18 +93,8 @@ class PLModel(pl.LightningModule):
                     f"\tvalidation end\n"
                     f"\tdl id is {i}, acc is {acc}"
                 )
-        # reduce
-        # log only from worker 0
         if hvd.rank() == 0:
-            # print("saving metrics", metrics)
             self.logger.log_metrics(metrics, step=self.global_step)
-        # if self.trainer.running_sanity_check:
-        #     self.trainer.current_epoch = -1
-        #     self.trainer.running_sanity_check = False
-        # self.log_dict(metrics, sync_dist=True, on_epoch=True)
-        #if self.trainer.current_epoch == -1:
-        #    self.trainer.current_epoch = 0
-        #    self.trainer.running_sanity_check = True
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
