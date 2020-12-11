@@ -74,10 +74,18 @@ class PLModel(pl.LightningModule):
 
     def validation_epoch_end(self, outputs):
         metrics = {}
+        if self.trainer.running_sanity_check:
+            metrics["epoch"] = -1
+        else:
+            metrics["epoch"] = self.current_epoch
+            # self.trainer.running_sanity_check = False
         for i, lst_split in enumerate(outputs):
             pref = self.ds_prefixes[i]
             loss = torch.stack([x['val_loss'] for x in lst_split]).mean()  # .item()
+            # print("LOSSS IS", type(loss), loss)
+            loss = hvd.allreduce(loss)
             acc = torch.stack([x['val_acc'] for x in lst_split]).mean()  # .item()
+            acc = hvd.allreduce(acc)
             metrics[f"val_loss_{pref}"] = loss
             metrics[f"val_acc_{pref}"] = acc
             if self.hparams["test"] and i == 2:
@@ -86,18 +94,18 @@ class PLModel(pl.LightningModule):
                     f"\tvalidation end\n"
                     f"\tdl id is {i}, acc is {acc}"
                 )
-            # print(f"worker {hvd.rank()}", metrics_dict)
+        # reduce
+        # log only from worker 0
+        if hvd.rank() == 0:
             # print("saving metrics", metrics)
-            # self.logger.agg_and_log_metrics(metrics)  # , step=self.current_epoch + 1
-            # for md in metrics_dict:
-            # self.log_dict(metrics, sync_dist=True)
-        if self.trainer.running_sanity_check:
-            self.trainer.running_sanity_check = False  # so that loggers don't skip logging
-            self.trainer.current_epoch = -1
-        self.log_dict(metrics)
-        if self.trainer.current_epoch == -1:
-            self.trainer.current_epoch = 0
-            self.trainer.running_sanity_check = True
+            self.logger.log_metrics(metrics, step=self.global_step)
+        # if self.trainer.running_sanity_check:
+        #     self.trainer.current_epoch = -1
+        #     self.trainer.running_sanity_check = False
+        # self.log_dict(metrics, sync_dist=True, on_epoch=True)
+        #if self.trainer.current_epoch == -1:
+        #    self.trainer.current_epoch = 0
+        #    self.trainer.running_sanity_check = True
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
