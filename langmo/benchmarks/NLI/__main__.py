@@ -1,20 +1,20 @@
 import yaml
 import sys
 import torch
-import vecto
-import vecto.embeddings
-import platform
+# import vecto
+# import vecto.embeddings
+# import platform
 import torch.nn.functional as F
 from langmo.utils import get_unique_results_path
 from .data import NLIDataModule
-from .model import Net
+# from .model import Net
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.metrics.functional import accuracy
 import transformers
 from transformers import AutoModelForSequenceClassification
 import horovod.torch as hvd
-from protonn.utils import describe_var
+# from protonn.utils import describe_var
 from protonn.utils import get_time_str
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
@@ -46,15 +46,11 @@ class PLModel(pl.LightningModule):
             "train_acc": acc,
         }
         self.log_dict(metrics, on_step=True, on_epoch=True)
-        # print(f"worker {hvd.rank()} of {hvd.size()} doing train batch {batch_idx} of size {s1.size()}")
+        # print(f"worker {hvd.rank()} of {hvd.size()} doing train batch {batch_idx} of size {logits.size()}")
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
         inputs, targets = batch
-        if self.hparams["test"]:
-            print(
-                f"worker {hvd.rank()} of {hvd.size()} doing val batch {batch_idx} of dataloader {dataloader_idx}"
-            )
         logits = self(inputs)
         if dataloader_idx == 2:
             entail = logits[:, :1]
@@ -63,6 +59,12 @@ class PLModel(pl.LightningModule):
             logits = torch.cat((entail, non_entail.unsqueeze(1)), 1)
         loss = F.cross_entropy(logits, targets)
         acc = accuracy(logits, targets)
+        if self.hparams["test"] and dataloader_idx == 2:
+            print(
+                f"worker {hvd.rank()} of {hvd.size()}\n"
+                f"\tval batch {batch_idx} ({logits.size()}) of dloader {dataloader_idx}\n"
+                f"\ttargets: {targets.sum()}, acc is {acc}"
+            )
         metrics = {
             f"val_loss": loss,
             f"val_acc": acc,
@@ -71,20 +73,28 @@ class PLModel(pl.LightningModule):
         return metrics
 
     def validation_epoch_end(self, outputs):
-        # print(describe_var(outputs))
-        if not self.trainer.running_sanity_check:
-            for i, lst_split in enumerate(outputs):
-                pref = self.ds_prefixes[i]
-                loss = torch.stack([x['val_loss'] for x in lst_split]).mean()
-                acc = torch.stack([x['val_acc'] for x in lst_split]).mean()
-                metrics = {
-                    f"val_loss_{pref}": loss,
-                    f"val_acc_{pref}": acc,
-                }
-                # print(f"worker {hvd.rank()}", metrics_dict)
-                # self.logger.agg_and_log_metrics(metrics, step=self.current_epoch)
-                # for md in metrics_dict:
-                self.log_dict(metrics)
+        metrics = {}
+        if self.trainer.running_sanity_check:
+            metrics["epoch"] = -1
+        else:
+            metrics["epoch"] = self.current_epoch
+        for i, lst_split in enumerate(outputs):
+            pref = self.ds_prefixes[i]
+            loss = torch.stack([x['val_loss'] for x in lst_split]).mean()  # .item()
+            # TODO: refactor this reduction an logging in one helper function
+            loss = hvd.allreduce(loss)
+            acc = torch.stack([x['val_acc'] for x in lst_split]).mean()  # .item()
+            acc = hvd.allreduce(acc)
+            metrics[f"val_loss_{pref}"] = loss
+            metrics[f"val_acc_{pref}"] = acc
+            if self.hparams["test"] and i == 2:
+                print(
+                    f"worker {hvd.rank()} of {hvd.size()}\n"
+                    f"\tvalidation end\n"
+                    f"\tdl id is {i}, acc is {acc}"
+                )
+        if hvd.rank() == 0:
+            self.logger.log_metrics(metrics, step=self.global_step)
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
@@ -134,17 +144,18 @@ def main():
     net = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=3)
     # net = Net(embs)
     model = PLModel(net, params)
+    if params["test"]:
+        params["cnt_epochs"] = 3
     trainer = pl.Trainer(
         gpus=1,
-        num_sanity_val_steps=0,
+        num_sanity_val_steps=-1,
         max_epochs=params["cnt_epochs"],
         distributed_backend="horovod",
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
         logger=wandb_logger,
         progress_bar_refresh_rate=0)
-    if params["test"]:
-        print("fit")
+
     # wandb_logger.watch(net, log='gradients', log_freq=100)
     data_module = NLIDataModule(
         # embs.vocabulary,
