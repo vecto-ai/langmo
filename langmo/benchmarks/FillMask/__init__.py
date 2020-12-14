@@ -1,6 +1,7 @@
 from transformers import pipeline
 from vecto.benchmarks.base import Benchmark as BaseBenchmark
 import json
+from vecto.utils.data import print_json
 
 
 # TODO: we don't know which is mask token
@@ -50,4 +51,4 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(name_model)
     benchmark = Benchmark(model, tokenizer)
     result = benchmark.run()
-    print(result)
+    print_json(result)
