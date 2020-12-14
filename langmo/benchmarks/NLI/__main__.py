@@ -124,9 +124,9 @@ def main():
     if hvd.rank() != 0:
         tr_logging.set_verbosity_error()
     timestamp = get_time_str()
-    #model_name = "prajjwal1/bert-mini"
-    #model_name = "bert-base-uncased"
-    #model_name = "albert-base-v2"
+    #name_model = "prajjwal1/bert-mini"
+    #name_model = "bert-base-uncased"
+    #name_model = "albert-base-v2"
     # wandb_logger.log_hyperparams(config)
     # early_stop_callback = EarlyStopping(
     #     monitor='val_loss',
@@ -137,13 +137,14 @@ def main():
     # )
     # print("create tainer")
     # embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
-    model_name = params["model_name"]
-    net = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=3)
+    name_model = params["model_name"]
+    net = AutoModelForSequenceClassification.from_pretrained(name_model, num_labels=3)
+    name_run = name_model
     if params["randomize"]:
         reinit_model(net)
-        model_name = "_RND"
+        name_run += "_RND"
     # net = Net(embs)
-    name_run = f"{model_name}_{'↓' if params['uncase'] else '◯'}_{timestamp[:-3]}"
+    name_run += f"_{'↓' if params['uncase'] else '◯'}_{timestamp[:-3]}"
     wandb_logger = WandbLogger(project=f"NLI{'_test' if params['test'] else ''}",
                                name=name_run)
     model = PLModel(net, params)
@@ -162,7 +163,7 @@ def main():
     # wandb_logger.watch(net, log='gradients', log_freq=100)
     data_module = NLIDataModule(
         # embs.vocabulary,
-        transformers.AutoTokenizer.from_pretrained(model_name),
+        transformers.AutoTokenizer.from_pretrained(name_model),
         batch_size=params["batch_size"],
         params=params)
     trainer.fit(model, data_module)

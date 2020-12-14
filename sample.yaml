@@ -1,0 +1,10 @@
+# model_name: "prajjwal1/bert-mini"
+model_name: "albert-base-v2"
+path_embeddings: "/groups2/gcb50300/data/NLP/embeddings/glove.6B.300d/"
+batch_size: 32
+#embedding_size: 128
+#window_siz e: 1
+cnt_epochs: 16
+test: false
+uncase: false
+randomize: true
