@@ -18,6 +18,7 @@ import horovod.torch as hvd
 from protonn.utils import get_time_str
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
+from langmo.nn.utils import reinit_model
 # import logging
 
 
@@ -126,10 +127,6 @@ def main():
     #model_name = "prajjwal1/bert-mini"
     #model_name = "bert-base-uncased"
     #model_name = "albert-base-v2"
-    model_name = params["model_name"]
-    name_run = f"{model_name}_{'↓' if params['uncase'] else '◯'}_{timestamp[:-3]}"
-    wandb_logger = WandbLogger(project=f"NLI{'_test' if params['test'] else ''}",
-                               name=name_run)
     # wandb_logger.log_hyperparams(config)
     # early_stop_callback = EarlyStopping(
     #     monitor='val_loss',
@@ -140,9 +137,15 @@ def main():
     # )
     # print("create tainer")
     # embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
-
+    model_name = params["model_name"]
     net = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=3)
+    if params["randomize"]:
+        reinit_model(net)
+        model_name = "_RND"
     # net = Net(embs)
+    name_run = f"{model_name}_{'↓' if params['uncase'] else '◯'}_{timestamp[:-3]}"
+    wandb_logger = WandbLogger(project=f"NLI{'_test' if params['test'] else ''}",
+                               name=name_run)
     model = PLModel(net, params)
     if params["test"]:
         params["cnt_epochs"] = 3
