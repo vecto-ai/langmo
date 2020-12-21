@@ -1,5 +1,3 @@
-import yaml
-import sys
 import torch
 # import vecto
 # import vecto.embeddings
@@ -19,6 +17,7 @@ from protonn.utils import get_time_str
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
 from langmo.nn.utils import reinit_model
+from langmo.utils import load_config
 # import logging
 
 
@@ -112,12 +111,7 @@ class PLModel(pl.LightningModule):
 def main():
     # path_data = "/groups1/gac50489/datasets/cosmoflow/cosmoUniverse_2019_05_4parE_tf_small"
     # path_data = "/groups1/gac50489/datasets/cosmoflow_full/cosmoUniverse_2019_05_4parE_tf"
-    if len(sys.argv) < 2:
-        print("run main.py config.yaml")
-        return
-    path_config = sys.argv[1]
-    with open(path_config, "r") as cfg:
-        params = yaml.load(cfg, Loader=yaml.SafeLoader)
+    params = load_config()
     path_results_base = "./out/NLI"
     params["path_results"] = get_unique_results_path(path_results_base)
     hvd.init()
