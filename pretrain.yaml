@@ -1,0 +1,7 @@
+cnt_epochs: 3
+uncase: False
+batch_size: 32
+max_length: 64
+path_corpus: "./data/wikitext-2"
+name_model: "prajjwal1/bert-mini"
+test: False

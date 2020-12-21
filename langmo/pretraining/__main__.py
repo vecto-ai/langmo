@@ -1,11 +1,12 @@
 import pytorch_lightning as pl
 import torch
-# from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.metrics.functional import accuracy
+from pytorch_lightning.loggers import WandbLogger
+# from pytorch_lightning.metrics.functional import accuracy
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers.optimization import get_linear_schedule_with_warmup
 
 from .data import TextDataModule
+from langmo.utils import load_config
 
 
 # define PL model
@@ -34,7 +35,8 @@ class PLModel(pl.LightningModule):
         # loss_nsp = for NSP self.fwd_nsp()
         # use different forwards
         # loss = loss_mlm + loss_nsp # + other aux tasks
-        print(f"loss: {loss.item()}")
+        # print(f"loss: {loss.item()}")
+        self.log("loss", loss)
         return loss
 
     def configure_optimizers(self):
@@ -48,30 +50,19 @@ class PLModel(pl.LightningModule):
         return [[optimizer], [scheduler]]
 
 
-# create trainer
-
-
 def main():
-    params = dict(
-        cnt_epochs=3,
-        uncase=True,
-        test=True,
-        batch_size=16,
-        max_length=32,
-        path_corpus="/home/blackbird/Projects_heavy/NLP/vecto/tests/data/corpora/multiple_files"
-    )
-    name_model = "prajjwal1/bert-mini"
+    params = load_config()
     model = PLModel(
-        net=AutoModelForMaskedLM.from_pretrained(name_model),
+        net=AutoModelForMaskedLM.from_pretrained(params["name_model"]),
         params=params,
     )
 
-    name_run = name_model
+    name_run = params["name_model"]
     # if params["randomize"]:
     #     reinit_model(net)
     #     name_run += "_RND"
     # name_run += f"_{'↓' if params['uncase'] else '◯'}_{timestamp[:-3]}"
-    wandb_name = f"NLI{'_test' if params['test'] else ''}"
+    wandb_name = f"pretrain{'_test' if params['test'] else ''}"
 
     trainer = pl.Trainer(
         # gpus=1,
@@ -80,11 +71,11 @@ def main():
         # distributed_backend="horovod",
         # replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
-        # wandb_logger = WandbLogger(project=wandb_name, name=name_run),
+        logger=WandbLogger(project=wandb_name, name=name_run),
         progress_bar_refresh_rate=0,
     )
     data_module = TextDataModule(
-        tokenizer=AutoTokenizer.from_pretrained(name_model),
+        tokenizer=AutoTokenizer.from_pretrained(params["name_model"]),
         params=params,
         # embs.vocabulary,
         # batch_size=params["batch_size"],
