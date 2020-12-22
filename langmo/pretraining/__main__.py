@@ -9,6 +9,8 @@ from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers.optimization import get_linear_schedule_with_warmup
 
 from .data import TextDataModule
+from transformers import logging as tr_logging
+import horovod.torch as hvd
 
 
 # define PL model
@@ -20,10 +22,10 @@ class PLModel(pl.LightningModule):
         self.tokenizer = tokenizer
 
     def forward(self, encoded):
-        input_ids = encoded["input_ids"]
-        token_type_ids = encoded["token_type_ids"]
-        attention_mask = encoded["attention_mask"]
-        labels = encoded["labels"]
+        input_ids = encoded.input_ids
+        token_type_ids = encoded.token_type_ids
+        attention_mask = encoded.attention_mask
+        labels = encoded.labels
         result = self.net(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -104,19 +106,23 @@ def main():
     #     name_run += "_RND"
     # name_run += f"_{'↓' if params['uncase'] else '◯'}_{timestamp[:-3]}"
     wandb_name = f"pretrain{'_test' if params['test'] else ''}"
+    hvd.init()
+    if hvd.rank() != 0:
+        tr_logging.set_verbosity_error()
 
     n_step = 1000  # TODO: should this go to params?
     on_n_step_callback = CheckpointEveryNSteps(n_step)
 
     trainer = pl.Trainer(
-        # gpus=1,
+        gpus=1,
         num_sanity_val_steps=0,
         max_epochs=params["cnt_epochs"],
-        # distributed_backend="horovod",
-        # replace_sampler_ddp=False,
+        distributed_backend="horovod",
+        replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
         logger=WandbLogger(project=wandb_name, name=name_run),
         callbacks=[on_n_step_callback],
+        # TODO: figure out what is this
         progress_bar_refresh_rate=0,
     )
 

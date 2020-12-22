@@ -2,6 +2,11 @@ import torch
 import pytorch_lightning as pl
 from vecto.corpus import ViewCorpus
 from torch.utils.data import DataLoader
+import horovod.torch as hvd
+from collections import namedtuple
+
+
+TBatch = namedtuple("TBatch", ["input_ids", "token_type_ids", "attention_mask", "labels"])
 
 
 def shuffle_tensor(tensor):
@@ -37,6 +42,8 @@ class Collate:
         # that is before sequences are converted to IDS
 
         # consider masking or not masking special tokens like SEP and CLS
+
+        # TODO: check if we have to copy() here!!!!
         encoded["labels"] = encoded["input_ids"]
         # mask here
         ids = encoded["input_ids"]
@@ -44,19 +51,18 @@ class Collate:
         for i in range(len(encoded["input_ids"])):
             ids[i] = self.mask_line(ids[i], self.tokenizer.mask_token_id)
         # TODO: shouldn't we compute loss only from masked parts?
-        return encoded
 
+        return TBatch(input_ids=ids,
+                      token_type_ids=encoded["token_type_ids"],
+                      attention_mask=encoded["attention_mask"],
+                      labels=encoded["labels"])
 
 
 class TextDataModule(pl.LightningDataModule):
     def __init__(self, tokenizer, params):  # , vocab, batch_size, params):
         super().__init__()
-        # self.batch_size = batch_size
-        # self.vocab = vocab
         self.params = params
         # self.test = params["test"]
-        # self.percent_start = float(hvd.rank()) / float(hvd.size()) * 100
-        # self.percent_end = float(hvd.rank() + 1) / float(hvd.size()) * 100
         self.tokenizer = tokenizer
 
     def setup(self, stage=None):
@@ -64,23 +70,7 @@ class TextDataModule(pl.LightningDataModule):
         # TODO: do donwload here
         pass
 
-
     def train_dataloader(self):
-        # ri = datasets.ReadInstruction(
-        #     "train", from_=self.percent_start, to=self.percent_end, unit="%"
-        # )
-        # ds = datasets.load_dataset("multi_nli", split=ri)
-        # return ds_to_tensors(ds, self.vocab, self.batch_size, self.test, self.params)
-
-        # WHAT WE WANT
-        # from vecto.corpus import Corpus
-        # corpus = Corpus("/path", worker_id, size)
-        # iter = corpus.get_sentence_iterator()
-        #
-        # TODO:
-        # - `worker_id`/rank
-        # - sent3???? TRICKY
-        #
         # sent3 options:
         # - recycle old sentences (ring buffer)
         # - read from other worker (another corpus view~
@@ -95,19 +85,12 @@ class TextDataModule(pl.LightningDataModule):
         # return [[mlm_ids, sent1_ids, sent2_ids, sent3_ids]  x for batch_size] y for cnt_batches]
 
         corpus = ViewCorpus(self.params["path_corpus"])
+        # TODO: do this in rank 0 and send to the rest
+        # Otherwise make sure files are sorted in the same order
         corpus.load_dir_strucute()
-        # TODO: use actual rank and size
-        line_iter = corpus.get_line_iterator(rank=0, size=1)
+        line_iter = corpus.get_line_iterator(rank=hvd.rank(), size=hvd.size())
         # my_sequence = ["cows produce beer.", "I like cold milk test test test test test test test."]
         dataset = [line for line in line_iter if len(line) > 10]
         dataloader = DataLoader(
             dataset, batch_size=self.params["batch_size"], collate_fn=Collate(self.tokenizer, self.params))
-        # TODO: batch using dataloader
-        # TODO: mask random 15% of tokens
-
-        # Example:
-        # here `encoded` is one batch
-        # batch_size = 2
-        # cnt_batches = 3
-
         return dataloader
