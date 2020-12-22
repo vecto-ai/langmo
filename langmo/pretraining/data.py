@@ -43,15 +43,11 @@ class Collate:
 
         # consider masking or not masking special tokens like SEP and CLS
 
-        # TODO: check if we have to copy() here!!!!
-        encoded["labels"] = encoded["input_ids"]
-        # mask here
+        encoded["labels"] = encoded["input_ids"].clone()
         ids = encoded["input_ids"]
-        # should we do w/o padding and pad later?
         for i in range(len(encoded["input_ids"])):
             ids[i] = self.mask_line(ids[i], self.tokenizer.mask_token_id)
-        # TODO: shouldn't we compute loss only from masked parts?
-
+            ids[i][0] = 42
         return TBatch(input_ids=ids,
                       token_type_ids=encoded["token_type_ids"],
                       attention_mask=encoded["attention_mask"],
