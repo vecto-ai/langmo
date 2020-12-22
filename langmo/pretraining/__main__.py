@@ -1,19 +1,23 @@
+from pathlib import Path
+
 import pytorch_lightning as pl
 import torch
+from langmo.utils import load_config
 from pytorch_lightning.loggers import WandbLogger
 # from pytorch_lightning.metrics.functional import accuracy
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers.optimization import get_linear_schedule_with_warmup
 
 from .data import TextDataModule
-from langmo.utils import load_config
 
 
 # define PL model
 class PLModel(pl.LightningModule):
-    def __init__(self, net, params):
+    def __init__(self, net, tokenizer, params):
         super().__init__()
+        # TODO: read this from params
         self.net = net
+        self.tokenizer = tokenizer
 
     def forward(self, encoded):
         input_ids = encoded["input_ids"]
@@ -49,11 +53,48 @@ class PLModel(pl.LightningModule):
         )
         return [[optimizer], [scheduler]]
 
+    def save_pretrained(self):
+        file_name = "tmp"  # logdir + current snapshot name
+        self.net.save_pretrained(file_name)
+
+
+# From here:
+# https://github.com/PyTorchLightning/pytorch-lightning/issues/2534#issuecomment-674582085
+class CheckpointEveryNSteps(pl.Callback):
+    def __init__(
+        self,
+        save_step_frequency,
+        prefix="N-Step-Checkpoint",
+        use_modelcheckpoint_filename=False,
+    ):
+        self.save_step_frequency = save_step_frequency
+        self.prefix = prefix
+        self.use_modelcheckpoint_filename = use_modelcheckpoint_filename
+
+    def on_batch_end(self, trainer: pl.Trainer, _):
+        epoch = trainer.current_epoch
+        global_step = trainer.global_step
+        if global_step % self.save_step_frequency == 0:
+            if self.use_modelcheckpoint_filename:
+                filename = trainer.checkpoint_callback.filename
+            else:
+                filename = f"{self.prefix}_{epoch=}_{global_step=}.ckpt"
+            dirpath = trainer.checkpoint_callback.dirpath
+
+            save_path = Path(dirpath).joinpath(filename)
+            trainer.save_checkpoint(save_path)
+
+            save_path = Path(dirpath).joinpath(filename + ".hfull")
+            trainer.model.net.save_pretrained(save_path)
+            trainer.model.tokenizer.save_pretrained(save_path)
+
 
 def main():
     params = load_config()
+    tokenizer = AutoTokenizer.from_pretrained(params["name_model"])
     model = PLModel(
         net=AutoModelForMaskedLM.from_pretrained(params["name_model"]),
+        tokenizer=tokenizer,
         params=params,
     )
 
@@ -64,6 +105,9 @@ def main():
     # name_run += f"_{'↓' if params['uncase'] else '◯'}_{timestamp[:-3]}"
     wandb_name = f"pretrain{'_test' if params['test'] else ''}"
 
+    n_step = 1000  # TODO: should this go to params?
+    on_n_step_callback = CheckpointEveryNSteps(n_step)
+
     trainer = pl.Trainer(
         # gpus=1,
         num_sanity_val_steps=0,
@@ -72,10 +116,12 @@ def main():
         # replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
         logger=WandbLogger(project=wandb_name, name=name_run),
+        callbacks=[on_n_step_callback],
         progress_bar_refresh_rate=0,
     )
+
     data_module = TextDataModule(
-        tokenizer=AutoTokenizer.from_pretrained(params["name_model"]),
+        tokenizer=tokenizer,
         params=params,
         # embs.vocabulary,
         # batch_size=params["batch_size"],
