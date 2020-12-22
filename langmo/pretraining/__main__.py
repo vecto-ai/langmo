@@ -36,6 +36,7 @@ class PLModel(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         result = self.forward(batch)
+        # TODO: how about loss only / more loss for masked tokens?
         loss = result["loss"]
         # loss_mlm = for MLM, with long ids self.fwd_mlm()
         # loss_nsp = for NSP self.fwd_nsp()
