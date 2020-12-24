@@ -19,9 +19,10 @@ from transformers import AutoModelForSequenceClassification
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
 
-from ...checkpoint import CheckpointEveryNSteps
-from ...nn.utils import reinit_model
-from ...utils import get_unique_results_path, load_config
+from langmo.checkpoint import CheckpointEveryNSteps
+from langmo.nn.utils import reinit_model
+from langmo.utils import get_unique_results_path, load_config
+
 from .data import NLIDataModule
 
 # import logging
