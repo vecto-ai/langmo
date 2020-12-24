@@ -2,24 +2,28 @@ from pathlib import Path
 
 import pytorch_lightning as pl
 import torch
-from langmo.utils import load_config
+import os
+
 from pytorch_lightning.loggers import WandbLogger
 # from pytorch_lightning.metrics.functional import accuracy
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers.optimization import get_linear_schedule_with_warmup
 
-from .data import TextDataModule
 from transformers import logging as tr_logging
 import horovod.torch as hvd
+from langmo.checkpoint import CheckpointEveryNSteps
+from langmo.utils import load_config
+from langmo.utils import get_unique_results_path
+from .data import TextDataModule
 
 
-# define PL model
 class PLModel(pl.LightningModule):
     def __init__(self, net, tokenizer, params):
         super().__init__()
         # TODO: read this from params
         self.net = net
         self.tokenizer = tokenizer
+        self.hparams = params
 
     def forward(self, encoded):
         input_ids = encoded.input_ids
@@ -61,39 +65,14 @@ class PLModel(pl.LightningModule):
         self.net.save_pretrained(file_name)
 
 
-# From here:
-# https://github.com/PyTorchLightning/pytorch-lightning/issues/2534#issuecomment-674582085
-class CheckpointEveryNSteps(pl.Callback):
-    def __init__(
-        self,
-        save_step_frequency,
-        prefix="N-Step-Checkpoint",
-        use_modelcheckpoint_filename=False,
-    ):
-        self.save_step_frequency = save_step_frequency
-        self.prefix = prefix
-        self.use_modelcheckpoint_filename = use_modelcheckpoint_filename
-
-    def on_batch_end(self, trainer: pl.Trainer, _):
-        epoch = trainer.current_epoch
-        global_step = trainer.global_step
-        if global_step % self.save_step_frequency == 0:
-            if self.use_modelcheckpoint_filename:
-                filename = trainer.checkpoint_callback.filename
-            else:
-                filename = f"{self.prefix}_{epoch=}_{global_step=}.ckpt"
-            dirpath = trainer.checkpoint_callback.dirpath
-
-            save_path = Path(dirpath).joinpath(filename)
-            trainer.save_checkpoint(save_path)
-
-            save_path = Path(dirpath).joinpath(filename + ".hfull")
-            trainer.model.net.save_pretrained(save_path)
-            trainer.model.tokenizer.save_pretrained(save_path)
-
-
 def main():
     params = load_config()
+    name_run = params["name_model"]
+    name_project = f"pretrain{'_test' if params['test'] else ''}"
+    params["path_results"] = os.path.join(params["path_results"], name_project)
+    if params["create_unique_path"]:
+        params["path_results"] = get_unique_results_path(params["path_results"])
+
     tokenizer = AutoTokenizer.from_pretrained(params["name_model"])
     model = PLModel(
         net=AutoModelForMaskedLM.from_pretrained(params["name_model"]),
@@ -101,28 +80,34 @@ def main():
         params=params,
     )
 
-    name_run = params["name_model"]
     # if params["randomize"]:
     #     reinit_model(net)
     #     name_run += "_RND"
     # name_run += f"_{'↓' if params['uncase'] else '◯'}_{timestamp[:-3]}"
-    wandb_name = f"pretrain{'_test' if params['test'] else ''}"
     hvd.init()
-    if hvd.rank() != 0:
-        tr_logging.set_verbosity_error()
+    if hvd.rank() == 0:
+        (Path(params["path_results"]) / "wandb").mkdir(parents=True, exist_ok=True)
+    else:
+        tr_logging.set_verbosity_error()  # to reduce warning of unused weights
 
     n_step = 1000  # TODO: should this go to params?
     on_n_step_callback = CheckpointEveryNSteps(n_step)
 
     trainer = pl.Trainer(
+        default_root_dir=params["path_results"],
+        weights_save_path=params["path_results"],
         gpus=1,
         num_sanity_val_steps=0,
         max_epochs=params["cnt_epochs"],
         distributed_backend="horovod",
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
-        logger=WandbLogger(project=wandb_name, name=name_run),
+        logger=WandbLogger(project=name_project, name=name_run, save_dir=params["path_results"]),
+        # TODO: is this ok?
+        # theirs samples do like you did
+        # but there is special checkpoint_callback param too....
         callbacks=[on_n_step_callback],
+        checkpoint_callback=False,
         # TODO: figure out what is this
         progress_bar_refresh_rate=0,
     )

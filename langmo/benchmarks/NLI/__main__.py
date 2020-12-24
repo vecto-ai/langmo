@@ -1,10 +1,11 @@
 import torch
+import os
+from pathlib import Path
 # import vecto
 # import vecto.embeddings
 # import platform
 import torch.nn.functional as F
 from langmo.utils import get_unique_results_path
-from .data import NLIDataModule
 # from .model import Net
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
@@ -16,15 +17,18 @@ import horovod.torch as hvd
 from protonn.utils import get_time_str
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
+from .data import NLIDataModule
 from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
+from langmo.checkpoint import CheckpointEveryNSteps
 # import logging
 
 
 class PLModel(pl.LightningModule):
-    def __init__(self, net, params):
+    def __init__(self, net, tokenizer, params):
         super().__init__()
         self.net = net
+        self.tokenizer = tokenizer
         self.hparams = params
         # self.example_input_array = ((
         #     torch.zeros((128, params["batch_size"]), dtype=torch.int64),
@@ -111,16 +115,21 @@ class PLModel(pl.LightningModule):
 def main():
     # path_data = "/groups1/gac50489/datasets/cosmoflow/cosmoUniverse_2019_05_4parE_tf_small"
     # path_data = "/groups1/gac50489/datasets/cosmoflow_full/cosmoUniverse_2019_05_4parE_tf"
+
+    # TODO: reuse this setup code
     params = load_config()
-    path_results_base = "./out/NLI"
-    params["path_results"] = get_unique_results_path(path_results_base)
+    name_project = f"NLI{'_test' if params['test'] else ''}"
+    params["path_results"] = os.path.join(params["path_results"], name_project)
+    if params["create_unique_path"]:
+        params["path_results"] = get_unique_results_path(params["path_results"])
     hvd.init()
-    if hvd.rank() != 0:
-        tr_logging.set_verbosity_error()
+    if hvd.rank() == 0:
+        (Path(params["path_results"]) / "wandb").mkdir(parents=True, exist_ok=True)
+    else:
+        tr_logging.set_verbosity_error()  # to reduce warning of unused weights
     timestamp = get_time_str()
-    #name_model = "prajjwal1/bert-mini"
-    #name_model = "bert-base-uncased"
-    #name_model = "albert-base-v2"
+    # END OF TODO
+
     # wandb_logger.log_hyperparams(config)
     # early_stop_callback = EarlyStopping(
     #     monitor='val_loss',
@@ -139,25 +148,33 @@ def main():
         name_run += "_RND"
     # net = Net(embs)
     name_run += f"_{'↓' if params['uncase'] else '◯'}_{timestamp[:-3]}"
-    wandb_logger = WandbLogger(project=f"NLI{'_test' if params['test'] else ''}",
-                               name=name_run)
-    model = PLModel(net, params)
+    wandb_logger = WandbLogger(project=name_project,
+                               name=name_run,
+                               save_dir=params["path_results"])
+    tokenizer = transformers.AutoTokenizer.from_pretrained(name_model)
+    model = PLModel(net, tokenizer, params)
+    n_step = 1000 if not params["test"] else 4
+    on_n_step_callback = CheckpointEveryNSteps(n_step)
     if params["test"]:
         params["cnt_epochs"] = 3
     trainer = pl.Trainer(
+        default_root_dir=params["path_results"],
+        weights_save_path=params["path_results"],
         gpus=1,
         num_sanity_val_steps=-1,
         max_epochs=params["cnt_epochs"],
         distributed_backend="horovod",
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
+        callbacks=[on_n_step_callback],
+        checkpoint_callback=False,
         logger=wandb_logger,
         progress_bar_refresh_rate=0)
 
     # wandb_logger.watch(net, log='gradients', log_freq=100)
     data_module = NLIDataModule(
         # embs.vocabulary,
-        transformers.AutoTokenizer.from_pretrained(name_model),
+        tokenizer,
         batch_size=params["batch_size"],
         params=params)
     trainer.fit(model, data_module)
