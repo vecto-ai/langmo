@@ -1,26 +1,29 @@
-import torch
 import os
 from pathlib import Path
+
+import horovod.torch as hvd
+# from .model import Net
+# from .model import Net
+import pytorch_lightning as pl
+import torch
 # import vecto
 # import vecto.embeddings
 # import platform
 import torch.nn.functional as F
-from langmo.utils import get_unique_results_path
-# from .model import Net
-import pytorch_lightning as pl
-from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.metrics.functional import accuracy
 import transformers
-from transformers import AutoModelForSequenceClassification
-import horovod.torch as hvd
+from langmo.checkpoint import CheckpointEveryNSteps
+from langmo.nn.utils import reinit_model
+from langmo.utils import get_unique_results_path, load_config
 # from protonn.utils import describe_var
 from protonn.utils import get_time_str
+from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.metrics.functional import accuracy
+from transformers import AutoModelForSequenceClassification
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
+
 from .data import NLIDataModule
-from langmo.nn.utils import reinit_model
-from langmo.utils import load_config
-from langmo.checkpoint import CheckpointEveryNSteps
+
 # import logging
 
 
@@ -84,10 +87,10 @@ class PLModel(pl.LightningModule):
             metrics["epoch"] = self.current_epoch
         for i, lst_split in enumerate(outputs):
             pref = self.ds_prefixes[i]
-            loss = torch.stack([x['val_loss'] for x in lst_split]).mean()  # .item()
+            loss = torch.stack([x["val_loss"] for x in lst_split]).mean()  # .item()
             # TODO: refactor this reduction an logging in one helper function
             loss = hvd.allreduce(loss)
-            acc = torch.stack([x['val_acc'] for x in lst_split]).mean()  # .item()
+            acc = torch.stack([x["val_acc"] for x in lst_split]).mean()  # .item()
             acc = hvd.allreduce(acc)
             metrics[f"val_loss_{pref}"] = loss
             metrics[f"val_acc_{pref}"] = acc
@@ -102,7 +105,8 @@ class PLModel(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
-            [param for param in self.net.parameters() if param.requires_grad], lr=0.00001
+            [param for param in self.net.parameters() if param.requires_grad],
+            lr=0.00001,
         )
         # steps = self.dataset_size / effective_batch_size) * self.hparams.max_epochs
         scheduler = get_linear_schedule_with_warmup(
@@ -148,9 +152,11 @@ def main():
         name_run += "_RND"
     # net = Net(embs)
     name_run += f"_{'↓' if params['uncase'] else '◯'}_{timestamp[:-3]}"
-    wandb_logger = WandbLogger(project=name_project,
-                               name=name_run,
-                               save_dir=params["path_results"])
+    wandb_logger = WandbLogger(
+        project=name_project,
+        name=name_run,
+        save_dir=params["path_results"],
+    )
     tokenizer = transformers.AutoTokenizer.from_pretrained(name_model)
     model = PLModel(net, tokenizer, params)
     n_step = 1000 if not params["test"] else 4
@@ -164,19 +170,22 @@ def main():
         num_sanity_val_steps=-1,
         max_epochs=params["cnt_epochs"],
         distributed_backend="horovod",
+        precision=params["precision"],
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
         callbacks=[on_n_step_callback],
         checkpoint_callback=False,
         logger=wandb_logger,
-        progress_bar_refresh_rate=0)
+        progress_bar_refresh_rate=0,
+    )
 
     # wandb_logger.watch(net, log='gradients', log_freq=100)
     data_module = NLIDataModule(
         # embs.vocabulary,
         tokenizer,
         batch_size=params["batch_size"],
-        params=params)
+        params=params,
+    )
     trainer.fit(model, data_module)
 
 

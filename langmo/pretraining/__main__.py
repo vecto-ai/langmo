@@ -1,19 +1,16 @@
+import os
 from pathlib import Path
 
+import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
-import os
-
+from langmo.checkpoint import CheckpointEveryNSteps
+from langmo.utils import get_unique_results_path, load_config
 from pytorch_lightning.loggers import WandbLogger
-# from pytorch_lightning.metrics.functional import accuracy
 from transformers import AutoModelForMaskedLM, AutoTokenizer
+from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
 
-from transformers import logging as tr_logging
-import horovod.torch as hvd
-from langmo.checkpoint import CheckpointEveryNSteps
-from langmo.utils import load_config
-from langmo.utils import get_unique_results_path
 from .data import TextDataModule
 
 
@@ -100,9 +97,12 @@ def main():
         num_sanity_val_steps=0,
         max_epochs=params["cnt_epochs"],
         distributed_backend="horovod",
+        precision=params["precision"],
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
-        logger=WandbLogger(project=name_project, name=name_run, save_dir=params["path_results"]),
+        logger=WandbLogger(
+            project=name_project, name=name_run, save_dir=params["path_results"]
+        ),
         # TODO: is this ok?
         # theirs samples do like you did
         # but there is special checkpoint_callback param too....

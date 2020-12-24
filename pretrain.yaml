@@ -5,5 +5,6 @@ max_length: 64
 path_corpus: "./data/wikitext-2"
 name_model: "prajjwal1/bert-mini"
 test: False
+precision: "FP16"
 path_results: "./logs"
 create_unique_path: true
