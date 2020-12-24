@@ -1,7 +1,8 @@
 import os
-import sys
-import yaml
 import platform
+import sys
+
+import yaml
 from protonn.utils import get_time_str
 
 
@@ -18,4 +19,18 @@ def load_config():
     path_config = sys.argv[1]
     with open(path_config, "r") as cfg:
         params = yaml.load(cfg, Loader=yaml.SafeLoader)
-    return params
+
+    # defaults
+    defaults = dict(
+        precision=32,
+        randomize=False,
+        path_results="./logs",
+        create_unique_path=True,
+    )
+    defaults.update(params)
+
+    # Convert to "FP16" to (int) 16
+    if isinstance(defaults["precision"], str):
+        defaults["precision"] = int(defaults["precision"].lower().replace("fp", ""))
+
+    return defaults
