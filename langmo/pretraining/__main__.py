@@ -4,13 +4,13 @@ from pathlib import Path
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
-from langmo.checkpoint import CheckpointEveryNSteps
-from langmo.utils import get_unique_results_path, load_config
 from pytorch_lightning.loggers import WandbLogger
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
 
+from ..checkpoint import CheckpointEveryNSteps
+from ..utils import get_unique_results_path, load_config
 from .data import TextDataModule
 
 
