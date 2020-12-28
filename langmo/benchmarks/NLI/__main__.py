@@ -1,14 +1,9 @@
-import os
-from pathlib import Path
-
 import horovod.torch as hvd
-# from .model import Net
 # from .model import Net
 import pytorch_lightning as pl
 import torch
 # import vecto
 # import vecto.embeddings
-# import platform
 import torch.nn.functional as F
 import transformers
 # from protonn.utils import describe_var
@@ -19,9 +14,9 @@ from transformers import AutoModelForSequenceClassification
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
 
-from langmo.checkpoint import CheckpointEveryNSteps
+# from langmo.checkpoint import CheckpointEveryNSteps
 from langmo.nn.utils import reinit_model
-from langmo.utils import get_unique_results_path, load_config
+from langmo.utils import load_config
 
 from .data import NLIDataModule
 
@@ -110,6 +105,7 @@ class PLModel(pl.LightningModule):
             lr=0.00001,
         )
         # steps = self.dataset_size / effective_batch_size) * self.hparams.max_epochs
+        # TODO: get real number of steps here
         scheduler = get_linear_schedule_with_warmup(
             optimizer, num_warmup_steps=0, num_training_steps=50000
         )
@@ -118,22 +114,12 @@ class PLModel(pl.LightningModule):
 
 
 def main():
-    # path_data = "/groups1/gac50489/datasets/cosmoflow/cosmoUniverse_2019_05_4parE_tf_small"
-    # path_data = "/groups1/gac50489/datasets/cosmoflow_full/cosmoUniverse_2019_05_4parE_tf"
-
-    # TODO: reuse this setup code
-    params = load_config()
-    name_project = f"NLI{'_test' if params['test'] else ''}"
-    params["path_results"] = os.path.join(params["path_results"], name_project)
-    if params["create_unique_path"]:
-        params["path_results"] = get_unique_results_path(params["path_results"])
     hvd.init()
-    if hvd.rank() == 0:
-        (Path(params["path_results"]) / "wandb").mkdir(parents=True, exist_ok=True)
-    else:
+    if hvd.rank() != 0:
         tr_logging.set_verbosity_error()  # to reduce warning of unused weights
+    name_task = "NLI"
+    params = load_config(name_task)
     timestamp = get_time_str()
-    # END OF TODO
 
     # wandb_logger.log_hyperparams(config)
     # early_stop_callback = EarlyStopping(
@@ -143,7 +129,6 @@ def main():
     #     verbose=True,
     #     mode="min",
     # )
-    # print("create tainer")
     # embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
     name_model = params["model_name"]
     net = AutoModelForSequenceClassification.from_pretrained(name_model, num_labels=3)
@@ -154,14 +139,14 @@ def main():
     # net = Net(embs)
     name_run += f"_{'↓' if params['uncase'] else '◯'}_{timestamp[:-3]}"
     wandb_logger = WandbLogger(
-        project=name_project,
+        project=params["name_project"],
         name=name_run,
         save_dir=params["path_results"],
     )
     tokenizer = transformers.AutoTokenizer.from_pretrained(name_model)
     model = PLModel(net, tokenizer, params)
-    n_step = 1000 if not params["test"] else 4
-    on_n_step_callback = CheckpointEveryNSteps(n_step)
+    # n_step = 1000 if not params["test"] else 4
+    # on_n_step_callback = CheckpointEveryNSteps(n_step)
     if params["test"]:
         params["cnt_epochs"] = 3
     trainer = pl.Trainer(
@@ -174,7 +159,8 @@ def main():
         precision=params["precision"],
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
-        callbacks=[on_n_step_callback],
+        # we probably don't need to checkpoint eval - but can make this optional
+        # callbacks=[on_n_step_callback],
         checkpoint_callback=False,
         logger=wandb_logger,
         progress_bar_refresh_rate=0,
