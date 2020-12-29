@@ -6,6 +6,7 @@ import torch
 # import vecto.embeddings
 import torch.nn.functional as F
 import transformers
+
 # from protonn.utils import describe_var
 from protonn.utils import get_time_str
 from pytorch_lightning.loggers import WandbLogger
@@ -100,7 +101,7 @@ class PLModel(pl.LightningModule):
             self.logger.log_metrics(metrics, step=self.global_step)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(
+        optimizer = transformers.optimization.AdamW(
             [param for param in self.net.parameters() if param.requires_grad],
             lr=0.00001,
         )
