@@ -1,10 +1,10 @@
-cnt_epochs: 3
+cnt_epochs: 10  
 uncase: False
 batch_size: 32
-max_length: 64
+max_length: 128
 path_corpus: "./data/wikitext-2"
 name_model: "prajjwal1/bert-mini"
 test: False
-precision: "FP16"
+precision: "FP32"
 path_results: "./logs"
 create_unique_path: true

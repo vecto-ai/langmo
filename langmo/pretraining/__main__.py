@@ -1,6 +1,7 @@
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
+import transformers
 from pytorch_lightning.loggers import WandbLogger
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
@@ -38,6 +39,9 @@ class PLModel(pl.LightningModule):
         result = self.forward(batch)
         # TODO: how about loss only / more loss for masked tokens?
         loss = result["loss"]
+        if torch.isnan(loss).item():
+            print("FUCK IT LOSS IS NAN")
+            exit(0)
         # loss_mlm = for MLM, with long ids self.fwd_mlm()
         # loss_nsp = for NSP self.fwd_nsp()
         # use different forwards
@@ -47,7 +51,7 @@ class PLModel(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(
+        optimizer = transformers.optimization.AdamW(
             [param for param in self.net.parameters() if param.requires_grad],
             lr=0.00001,
         )
@@ -56,9 +60,15 @@ class PLModel(pl.LightningModule):
         )
         return [[optimizer], [scheduler]]
 
-    def save_pretrained(self):
-        file_name = "tmp"  # logdir + current snapshot name
-        self.net.save_pretrained(file_name)
+    # def save_pretrained(self):
+    #     file_name = "tmp"  # logdir + current snapshot name
+    #     self.net.save_pretrained(file_name)
+
+    def train_epoch_end(self, * args, **kwargs):
+        if hvd.rank() == 0:
+            print("training epoch end")
+            print("args:", args)
+            print("kwargs:", kwargs)
 
 
 def main():
