@@ -1,3 +1,6 @@
+from collections import defaultdict
+from pathlib import Path
+
 import horovod.torch as hvd
 # from .model import Net
 import pytorch_lightning as pl
@@ -7,7 +10,7 @@ import torch
 import torch.nn.functional as F
 import transformers
 # from protonn.utils import describe_var
-from protonn.utils import get_time_str
+from protonn.utils import get_time_str, save_data_json
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.metrics.functional import accuracy
 from transformers import AutoModelForSequenceClassification
@@ -29,6 +32,7 @@ class PLModel(pl.LightningModule):
         self.net = net
         self.tokenizer = tokenizer
         self.hparams = params
+        self.hparams["train_logs"] = []
         # self.example_input_array = ((
         #     torch.zeros((128, params["batch_size"]), dtype=torch.int64),
         #     torch.zeros((128, params["batch_size"]), dtype=torch.int64),
@@ -75,6 +79,13 @@ class PLModel(pl.LightningModule):
         # self.log_dict(metrics)
         return metrics
 
+    def _update_hparams_train_logs(self, metrics):
+        entry = dict(epoch=metrics["epoch"])
+        for k, v in metrics.items():
+            val = v.item() if hasattr(v, "item") else v
+            entry[k] = val
+        self.hparams["train_logs"].append(entry)
+
     def validation_epoch_end(self, outputs):
         metrics = {}
         if self.trainer.running_sanity_check:
@@ -98,6 +109,9 @@ class PLModel(pl.LightningModule):
                 )
         if hvd.rank() == 0:
             self.logger.log_metrics(metrics, step=self.global_step)
+            self._update_hparams_train_logs(metrics)
+            path = Path(self.hparams["path_results"]).joinpath("train_logs.json")
+            save_data_json(self.hparams["train_logs"], path)
 
     def configure_optimizers(self):
         optimizer = transformers.optimization.AdamW(
