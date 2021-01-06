@@ -4,10 +4,11 @@ import os
 from pathlib import Path
 from typing import Any, Dict
 
+import packaging
 import pytorch_lightning as pl
 from pytorch_lightning.utilities import rank_zero_info
-from pytorch_lightning.loggers import WandbLogger
 
+import pkg_resources
 from transformers import (
     AdamW,
     AutoConfig,
@@ -29,12 +30,21 @@ from transformers.optimization import (
     get_linear_schedule_with_warmup,
     get_polynomial_decay_schedule_with_warmup,
 )
-from transformers.utils.versions import require_version_examples
 
 
 logger = logging.getLogger(__name__)
 
-require_version_examples("pytorch_lightning>=1.0.4")
+
+def require_min_ver(pkg, min_ver):
+    got_ver = pkg_resources.get_distribution(pkg).version
+    if packaging.version.parse(got_ver) < packaging.version.parse(min_ver):
+        logger.warning(
+            f"{pkg}>={min_ver} is required for a normal functioning of this module, but found {pkg}=={got_ver}. "
+            "Try: pip install -r examples/requirements.txt"
+        )
+
+
+require_min_ver("pytorch_lightning", "1.0.4")
 
 MODEL_MODES = {
     "base": AutoModel,
@@ -336,14 +346,13 @@ def add_generic_args(parser, root_dir) -> None:
         help="The input data dir. Should contain the training files for the CoNLL-2003 NER task.",
     )
 
-wandb_logger = WandbLogger(project="NLI_sample")
 
 def generic_train(
     model: BaseTransformer,
     args: argparse.Namespace,
     early_stopping_callback=None,
+    logger=pl.loggers.wandb.WandbLogger(project="NLI_sample"),
     # logger=True,  # can pass WandbLogger() here
-    logger=wandb_logger,
     extra_callbacks=[],
     checkpoint_callback=None,
     logging_callback=None,
@@ -376,8 +385,6 @@ def generic_train(
         train_params["distributed_backend"] = "ddp"
 
     train_params["accumulate_grad_batches"] = args.accumulate_grad_batches
-    train_params["accelerator"] = extra_train_kwargs.get("accelerator", None)
-    train_params["profiler"] = extra_train_kwargs.get("profiler", None)
 
     trainer = pl.Trainer.from_argparse_args(
         args,

@@ -1,3 +1,9 @@
+if git config --get user.email > /dev/null; then
+    EMAILARGS="-m be -M $(git config --get user.email)"
+else
+    echo "$0 WARNING: git email not set!"
+fi
+
 #if [[ $SGE_CLUSTER_NAME = "t3" ]]; then
     # TSUBAME 3.0
 #    qsub -g tgc-ebdcrest run.sh
@@ -5,5 +11,5 @@
     # probably TSUBAME-KFC/DL
     # sbatch run_kfc.sh
     # abci
-    qsub -g gcb50300 -m be -M alex@blackbird.pw run.sh
+    qsub -g gcb50300 $EMAILARGS run.sh
 #fi
