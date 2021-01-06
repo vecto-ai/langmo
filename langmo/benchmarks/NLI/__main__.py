@@ -6,7 +6,6 @@ import torch
 # import vecto.embeddings
 import torch.nn.functional as F
 import transformers
-
 # from protonn.utils import describe_var
 from protonn.utils import get_time_str
 from pytorch_lightning.loggers import WandbLogger
@@ -103,7 +102,7 @@ class PLModel(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = transformers.optimization.AdamW(
             [param for param in self.net.parameters() if param.requires_grad],
-            lr=0.00001,
+            lr=3e-5,
         )
         # steps = self.dataset_size / effective_batch_size) * self.hparams.max_epochs
         # TODO: get real number of steps here
