@@ -1,4 +1,3 @@
-from collections import defaultdict
 from pathlib import Path
 
 import horovod.torch as hvd
@@ -110,18 +109,25 @@ class PLModel(pl.LightningModule):
         if hvd.rank() == 0:
             self.logger.log_metrics(metrics, step=self.global_step)
             self._update_hparams_train_logs(metrics)
-            path = Path(self.hparams["path_results"]).joinpath("train_logs.json")
-            save_data_json(self.hparams["train_logs"], path)
+            path = Path(self.hparams["path_results"]).joinpath("metadata.json")
+            save_data_json(self.hparams, path)
 
     def configure_optimizers(self):
         optimizer = transformers.optimization.AdamW(
             [param for param in self.net.parameters() if param.requires_grad],
             lr=3e-5,
         )
-        # steps = self.dataset_size / effective_batch_size) * self.hparams.max_epochs
-        # TODO: get real number of steps here
+        # TODO(vatai): warmaps steps should be in param
+        warmup_steps = 0  # self.hparams["warmup_steps"]
+        cnt_epochs = self.hparams["cnt_epochs"]
+        batch_size = self.hparams["batch_size"]
+        self.hparams["cnt_train_samples"] = self.trainer.datamodule.cnt_train_samples
+        num_samples = self.hparams["cnt_train_samples"]
+        training_steps = (num_samples / batch_size) * cnt_epochs / hvd.size()
         scheduler = get_linear_schedule_with_warmup(
-            optimizer, num_warmup_steps=0, num_training_steps=50000
+            optimizer,
+            num_warmup_steps=warmup_steps,
+            num_training_steps=training_steps,
         )
         return [[optimizer], [scheduler]]
         # return torch.optim.SGD(self.net.parameters(), lr=0.001, momentum=0.9)
@@ -146,6 +152,7 @@ def main():
     # embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
     name_model = params["model_name"]
     net = AutoModelForSequenceClassification.from_pretrained(name_model, num_labels=3)
+    # wandb_logger.watch(net, log='gradients', log_freq=100)
     name_run = name_model
     if params["randomize"]:
         reinit_model(net)
@@ -158,11 +165,21 @@ def main():
         save_dir=params["path_results"],
     )
     tokenizer = transformers.AutoTokenizer.from_pretrained(name_model)
-    model = PLModel(net, tokenizer, params)
+
     # n_step = 1000 if not params["test"] else 4
     # on_n_step_callback = CheckpointEveryNSteps(n_step)
     if params["test"]:
         params["cnt_epochs"] = 3
+
+    data_module = NLIDataModule(
+        # embs.vocabulary,
+        tokenizer,
+        batch_size=params["batch_size"],
+        params=params,
+    )
+
+    model = PLModel(net, tokenizer, params)
+
     trainer = pl.Trainer(
         default_root_dir=params["path_results"],
         weights_save_path=params["path_results"],
@@ -180,13 +197,6 @@ def main():
         progress_bar_refresh_rate=0,
     )
 
-    # wandb_logger.watch(net, log='gradients', log_freq=100)
-    data_module = NLIDataModule(
-        # embs.vocabulary,
-        tokenizer,
-        batch_size=params["batch_size"],
-        params=params,
-    )
     trainer.fit(model, data_module)
 
 
