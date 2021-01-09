@@ -115,7 +115,7 @@ class PLModel(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = transformers.optimization.AdamW(
             [param for param in self.net.parameters() if param.requires_grad],
-            lr=3e-5,
+            lr=3e-5, eps=1e-8,
         )
         # TODO(vatai): warmaps steps should be in param
         warmup_steps = 0  # self.hparams["warmup_steps"]
