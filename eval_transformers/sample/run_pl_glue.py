@@ -8,6 +8,7 @@ from argparse import Namespace
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
+from pytorch_lightning.metrics.functional import accuracy
 
 from lightning_base import BaseTransformer, add_generic_args, generic_train
 from transformers import glue_compute_metrics as compute_metrics
@@ -42,10 +43,12 @@ class GLUETransformer(BaseTransformer):
             inputs["token_type_ids"] = batch[2] if self.config.model_type in ["bert", "xlnet", "albert"] else None
 
         outputs = self(**inputs)
-        loss = outputs[0]
-
+        loss = outputs["loss"]
+        logits = outputs["logits"]
+        acc = accuracy(logits, inputs["labels"])
+        # print("loss", loss.item())
         lr_scheduler = self.trainer.lr_schedulers[0]["scheduler"]
-        tensorboard_logs = {"loss": loss, "rate": lr_scheduler.get_last_lr()[-1]}
+        tensorboard_logs = {"loss": loss, "rate": lr_scheduler.get_last_lr()[-1], "train_acc": acc}
         return {"loss": loss, "log": tensorboard_logs}
 
     def prepare_data(self):
