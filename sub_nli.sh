@@ -11,5 +11,5 @@ fi
     # probably TSUBAME-KFC/DL
     # sbatch run_kfc.sh
     # abci
-    qsub -g gcb50300 $EMAILARGS run.sh
+    qsub -g gcb50300 $EMAILARGS run_nli.sh
 #fi

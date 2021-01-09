@@ -12,6 +12,7 @@ import transformers
 from protonn.utils import get_time_str, save_data_json
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.metrics.functional import accuracy
+from pytorch_lightning.callbacks import LearningRateMonitor
 from transformers import AutoModelForSequenceClassification
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
@@ -40,9 +41,11 @@ class PLModel(pl.LightningModule):
 
     def forward(self, inputs):
         # print(describe_var(inputs))
-        return self.net(*inputs)[0]
+        # print(inputs[2])
+        return self.net(**inputs)["logits"]
 
     def training_step(self, batch, batch_idx):
+        # print("##### WE ARE IN TRIANING STEP")
         inputs, targets = batch
         logits = self(inputs)
         loss = F.cross_entropy(logits, targets)
@@ -53,6 +56,7 @@ class PLModel(pl.LightningModule):
         }
         self.log_dict(metrics, on_step=True, on_epoch=True)
         # print(f"worker {hvd.rank()} of {hvd.size()} doing train batch {batch_idx} of size {logits.size()}")
+        # print("loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
@@ -118,7 +122,7 @@ class PLModel(pl.LightningModule):
             lr=3e-5, eps=1e-8,
         )
         # TODO(vatai): warmaps steps should be in param
-        warmup_steps = 0  # self.hparams["warmup_steps"]
+        warmup_steps = 500  # self.hparams["warmup_steps"]
         cnt_epochs = self.hparams["cnt_epochs"]
         batch_size = self.hparams["batch_size"]
         self.hparams["cnt_train_samples"] = self.trainer.datamodule.cnt_train_samples
@@ -129,6 +133,7 @@ class PLModel(pl.LightningModule):
             num_warmup_steps=warmup_steps,
             num_training_steps=training_steps,
         )
+        print(" >>>>>> optimizer", optimizer, scheduler)
         return [[optimizer], [scheduler]]
         # return torch.optim.SGD(self.net.parameters(), lr=0.001, momentum=0.9)
 
@@ -165,8 +170,7 @@ def main():
         save_dir=params["path_results"],
     )
     tokenizer = transformers.AutoTokenizer.from_pretrained(name_model)
-
-    # n_step = 1000 if not params["test"] else 4
+    # n_step = 4000 if not params["test"] else 4
     # on_n_step_callback = CheckpointEveryNSteps(n_step)
     if params["test"]:
         params["cnt_epochs"] = 3
@@ -179,19 +183,20 @@ def main():
     )
 
     model = PLModel(net, tokenizer, params)
-
+    lr_monitor = LearningRateMonitor(logging_interval='step')
     trainer = pl.Trainer(
         default_root_dir=params["path_results"],
         weights_save_path=params["path_results"],
         gpus=1,
-        num_sanity_val_steps=-1,
+        # num_sanity_val_steps=-1,
+        num_sanity_val_steps=0,
         max_epochs=params["cnt_epochs"],
         distributed_backend="horovod",
         precision=params["precision"],
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
         # we probably don't need to checkpoint eval - but can make this optional
-        # callbacks=[on_n_step_callback],
+        callbacks=[lr_monitor],  # on_n_step_callback
         checkpoint_callback=False,
         logger=wandb_logger,
         progress_bar_refresh_rate=0,

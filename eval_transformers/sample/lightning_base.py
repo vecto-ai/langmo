@@ -4,11 +4,9 @@ import os
 from pathlib import Path
 from typing import Any, Dict
 
-import packaging
 import pytorch_lightning as pl
 from pytorch_lightning.utilities import rank_zero_info
 
-import pkg_resources
 from transformers import (
     AdamW,
     AutoConfig,
@@ -30,21 +28,12 @@ from transformers.optimization import (
     get_linear_schedule_with_warmup,
     get_polynomial_decay_schedule_with_warmup,
 )
+from transformers.utils.versions import require_version_examples
 
 
 logger = logging.getLogger(__name__)
 
-
-def require_min_ver(pkg, min_ver):
-    got_ver = pkg_resources.get_distribution(pkg).version
-    if packaging.version.parse(got_ver) < packaging.version.parse(min_ver):
-        logger.warning(
-            f"{pkg}>={min_ver} is required for a normal functioning of this module, but found {pkg}=={got_ver}. "
-            "Try: pip install -r examples/requirements.txt"
-        )
-
-
-require_min_ver("pytorch_lightning", "1.0.4")
+require_version_examples("pytorch_lightning>=1.0.4")
 
 MODEL_MODES = {
     "base": AutoModel,
@@ -138,6 +127,7 @@ class BaseTransformer(pl.LightningModule):
         return scheduler
 
     def configure_optimizers(self):
+        print(self.hparams)
         """Prepare optimizer and schedule (linear warmup and decay)"""
         model = self.model
         no_decay = ["bias", "LayerNorm.weight"]
@@ -163,7 +153,7 @@ class BaseTransformer(pl.LightningModule):
         self.opt = optimizer
 
         scheduler = self.get_lr_scheduler()
-
+        print(" >>>>>> optimizer", optimizer, scheduler)
         return [optimizer], [scheduler]
 
     def test_step(self, batch, batch_nb):
@@ -281,11 +271,13 @@ class LoggingCallback(pl.Callback):
     def on_batch_end(self, trainer, pl_module):
         lr_scheduler = trainer.lr_schedulers[0]["scheduler"]
         lrs = {f"lr_group_{i}": lr for i, lr in enumerate(lr_scheduler.get_lr())}
-        pl_module.logger.log_metrics(lrs)
+        pl_module.log_dict(lrs)
 
     def on_validation_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
         rank_zero_info("***** Validation results *****")
         metrics = trainer.callback_metrics
+        pl_module.log_dict(metrics)
+
         # Log results
         for key in sorted(metrics):
             if key not in ["log", "progress_bar"]:
@@ -351,8 +343,8 @@ def generic_train(
     model: BaseTransformer,
     args: argparse.Namespace,
     early_stopping_callback=None,
-    logger=pl.loggers.wandb.WandbLogger(project="NLI_sample"),
     # logger=True,  # can pass WandbLogger() here
+    logger=pl.loggers.wandb.WandbLogger(project="NLI_HF_PL"),
     extra_callbacks=[],
     checkpoint_callback=None,
     logging_callback=None,
@@ -385,6 +377,8 @@ def generic_train(
         train_params["distributed_backend"] = "ddp"
 
     train_params["accumulate_grad_batches"] = args.accumulate_grad_batches
+    train_params["accelerator"] = extra_train_kwargs.get("accelerator", None)
+    train_params["profiler"] = extra_train_kwargs.get("profiler", None)
 
     trainer = pl.Trainer.from_argparse_args(
         args,

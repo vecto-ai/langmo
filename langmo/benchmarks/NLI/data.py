@@ -8,9 +8,9 @@ import horovod.torch as hvd
 import numpy as np
 import pytorch_lightning as pl
 import torch
-import transformers
+# import transformers
 from datasets import logging as tr_logging
-from protonn.utils import describe_var
+# from protonn.utils import describe_var
 
 
 def zero_pad_item(sample, max_len):
@@ -49,31 +49,31 @@ def sequences_to_padded_tensor(seqs, max_len):
 #     return (sent1, sent2, labels)
 
 
-class MyDataLoader:
-    def __init__(self, sent1, sent2, labels, batch_size):
-        # optinally sort
-        if hvd.rank() != 0:
-            tr_logging.set_verbosity_error()
-        tuples = list(zip(sent1, sent2, labels))
-        cnt_batches = len(tuples) / batch_size
-        batches = np.array_split(tuples, cnt_batches)
-        self.batches = [self.zero_pad_batch(b) for b in batches]
+# class MyDataLoader:
+#     def __init__(self, sent1, sent2, labels, batch_size):
+#         # optinally sort
+#         if hvd.rank() != 0:
+#             tr_logging.set_verbosity_error()
+#         tuples = list(zip(sent1, sent2, labels))
+#         cnt_batches = len(tuples) / batch_size
+#         batches = np.array_split(tuples, cnt_batches)
+#         self.batches = [self.zero_pad_batch(b) for b in batches]
 
-    def zero_pad_batch(self, batch):
-        sent1, sent2, labels = zip(*batch)
-        max_len_sent1 = max(len(s) for s in sent1)
-        max_len_sent2 = max(len(s) for s in sent2)
-        max_len = max(max_len_sent1, max_len_sent2)
-        sent1 = sequences_to_padded_tensor(sent1, max_len)
-        sent2 = sequences_to_padded_tensor(sent2, max_len)
-        labels = torch.LongTensor(labels)
-        return ((sent1, sent2), labels)
+#     def zero_pad_batch(self, batch):
+#         sent1, sent2, labels = zip(*batch)
+#         max_len_sent1 = max(len(s) for s in sent1)
+#         max_len_sent2 = max(len(s) for s in sent2)
+#         max_len = max(max_len_sent1, max_len_sent2)
+#         sent1 = sequences_to_padded_tensor(sent1, max_len)
+#         sent2 = sequences_to_padded_tensor(sent2, max_len)
+#         labels = torch.LongTensor(labels)
+#         return ((sent1, sent2), labels)
 
-    def __len__(self):
-        return len(self.batches)
+#     def __len__(self):
+#         return len(self.batches)
 
-    def __getitem__(self, idx):
-        return self.batches[idx]
+#     def __getitem__(self, idx):
+#         return self.batches[idx]
 
 
 def ds_to_tensors(dataset, tokenizer, batch_size, test, params):
@@ -90,9 +90,10 @@ def ds_to_tensors(dataset, tokenizer, batch_size, test, params):
         sent1 = [i.lower() for i in sent1]
         sent2 = [i.lower() for i in sent2]
     labels = torch.LongTensor(labels)
-    texts_or_text_pairs = list(zip(sent1, sent2))
+    # texts_or_text_pairs = list(zip(sent1, sent2))
     features = tokenizer(
-        texts_or_text_pairs,
+        text=sent1,
+        text_pair=sent1,
         max_length=128,
         padding="max_length",
         truncation=True,
@@ -102,7 +103,8 @@ def ds_to_tensors(dataset, tokenizer, batch_size, test, params):
     masks = torch.split(features["attention_mask"], batch_size)
     segments = torch.split(features["token_type_ids"], batch_size)
     labels = torch.split(labels, batch_size)
-    return list(zip(zip(ids, masks, segments), labels))
+    batches_inputs = [{"input_ids": i[0], "attention_mask": i[1], "token_type_ids": i[2]} for i in zip(ids, masks, segments)]
+    return list(zip(batches_inputs, labels))
 
 
 #     FOR SIAMESE
@@ -153,5 +155,5 @@ class NLIDataModule(pl.LightningDataModule):
         return [
             self._get_dataset_tensor("multi_nli", "validation_matched"),
             self._get_dataset_tensor("multi_nli", "validation_mismatched"),
-            self._get_dataset_tensor("hans", "validation"),
+            # self._get_dataset_tensor("hans", "validation"),
         ]
