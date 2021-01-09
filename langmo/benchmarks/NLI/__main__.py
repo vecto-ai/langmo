@@ -133,6 +133,7 @@ class PLModel(pl.LightningModule):
             num_warmup_steps=warmup_steps,
             num_training_steps=training_steps,
         )
+        scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}
         print(" >>>>>> optimizer", optimizer, scheduler)
         return [[optimizer], [scheduler]]
         # return torch.optim.SGD(self.net.parameters(), lr=0.001, momentum=0.9)
