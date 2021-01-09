@@ -122,7 +122,7 @@ class PLModel(pl.LightningModule):
             lr=3e-5, eps=1e-8,
         )
         # TODO(vatai): warmaps steps should be in param
-        warmup_steps = 500  # self.hparams["warmup_steps"]
+        warmup_steps = 0  # self.hparams["warmup_steps"]
         cnt_epochs = self.hparams["cnt_epochs"]
         batch_size = self.hparams["batch_size"]
         self.hparams["cnt_train_samples"] = self.trainer.datamodule.cnt_train_samples
