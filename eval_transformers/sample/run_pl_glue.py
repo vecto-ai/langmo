@@ -38,12 +38,16 @@ class GLUETransformer(BaseTransformer):
 
     def training_step(self, batch, batch_idx):
         inputs = {"input_ids": batch[0], "attention_mask": batch[1], "labels": batch[3]}
-
+        # print(batch)
         if self.config.model_type != "distilbert":
             inputs["token_type_ids"] = batch[2] if self.config.model_type in ["bert", "xlnet", "albert"] else None
 
         outputs = self(**inputs)
         loss = outputs["loss"]
+        # print("input_ids", inputs["input_ids"][0], inputs["input_ids"].shape)
+        # print(self.tokenizer.decode(inputs["input_ids"][0]))
+        # print("loss,", loss.item())
+        # exit(1)
         logits = outputs["logits"]
         acc = accuracy(logits, inputs["labels"])
         # print("loss", loss.item())
