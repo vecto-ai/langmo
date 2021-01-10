@@ -45,7 +45,6 @@ class PLModel(pl.LightningModule):
         return self.net(**inputs)["logits"]
 
     def training_step(self, batch, batch_idx):
-        # print("##### WE ARE IN TRIANING STEP")
         inputs, targets = batch
         logits = self(inputs)
         loss = F.cross_entropy(logits, targets)
@@ -119,10 +118,11 @@ class PLModel(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = transformers.optimization.AdamW(
             [param for param in self.net.parameters() if param.requires_grad],
-            lr=3e-5, eps=1e-8,
+            lr=5e-6, eps=1e-7,
         )
+        # optimizer.clip_grad_norm(1.0)
         # TODO(vatai): warmaps steps should be in param
-        warmup_steps = 0  # self.hparams["warmup_steps"]
+        warmup_steps = 50  # self.hparams["warmup_steps"]
         cnt_epochs = self.hparams["cnt_epochs"]
         batch_size = self.hparams["batch_size"]
         self.hparams["cnt_train_samples"] = self.trainer.datamodule.cnt_train_samples
@@ -201,6 +201,8 @@ def main():
         checkpoint_callback=False,
         logger=wandb_logger,
         progress_bar_refresh_rate=0,
+        gradient_clip_val=0.5,
+        track_grad_norm=2,
     )
 
     trainer.fit(model, data_module)

@@ -93,7 +93,7 @@ def ds_to_tensors(dataset, tokenizer, batch_size, test, params):
     # texts_or_text_pairs = list(zip(sent1, sent2))
     features = tokenizer(
         text=sent1,
-        text_pair=sent1,
+        text_pair=sent2,
         max_length=128,
         padding="max_length",
         truncation=True,
