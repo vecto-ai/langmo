@@ -1,5 +1,5 @@
 if git config --get user.email > /dev/null; then
-    EMAILARGS="-m be -M $(git config --get user.email)"
+    EMAILARGS="-m bea -M $(git config --get user.email)"
 else
     echo "$0 WARNING: git email not set!"
 fi
