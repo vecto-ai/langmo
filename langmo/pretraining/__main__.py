@@ -85,7 +85,7 @@ def main():
         params=params,
     )
 
-    n_step = 1000  # TODO: should this go to params?
+    n_step = 5000  # TODO: should this go to params?
     on_n_step_callback = CheckpointEveryNSteps(n_step)
     scheudle_eval_callback = ScheduleEval(n_step)
     trainer = pl.Trainer(

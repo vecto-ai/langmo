@@ -1,5 +1,6 @@
 nli.yaml
 config.yaml
+pretrain.yaml
 out
 logs
 # Byte-compiled / optimized / DLL files
