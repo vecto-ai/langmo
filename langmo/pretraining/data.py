@@ -1,7 +1,6 @@
 import torch
 import pytorch_lightning as pl
 from vecto.corpus import ViewCorpus
-from torch.utils.data import DataLoader
 import horovod.torch as hvd
 from collections import namedtuple
 
@@ -14,10 +13,19 @@ def shuffle_tensor(tensor):
     return tensor[perm_indices]
 
 
-class Collate:
-    def __init__(self, tokenizer, params):
+class BatchIter:
+    def __init__(self, line_iter, tokenizer, params):
+        self.__gen__ = self._generate_samples()
+        self.line_iter = line_iter
+        self.batch_size = params["batch_size"]
+        self.max_length = params["max_length"]
         self.tokenizer = tokenizer
-        self.params = params
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self.__gen__)
 
     def mask_line(self, line, mask_id):
         # TODO: move to config
@@ -29,10 +37,10 @@ class Collate:
         line[ids_nonzero] = mask_id
         return line
 
-    def __call__(self, items):
+    def encode_batch(self, lines):
         encoded = self.tokenizer(
-            items,
-            max_length=self.params["max_length"],
+            lines,
+            max_length=self.max_length,
             # TODO: consider padding to the max length of the batch
             padding="max_length",
             truncation="only_first",
@@ -53,12 +61,22 @@ class Collate:
                       attention_mask=encoded["attention_mask"],
                       labels=encoded["labels"])
 
+    def _generate_samples(self):
+        batch = []
+        for line in self.line_iter:
+            # TODO: should be a parameter
+            if len(line) > 10:
+                batch.append(line)
+            if len(batch) == self.batch_size:
+                ret = self.encode_batch(batch)
+                yield ret
+                batch = []
+
 
 class TextDataModule(pl.LightningDataModule):
     def __init__(self, tokenizer, params):  # , vocab, batch_size, params):
         super().__init__()
         self.params = params
-        # self.test = params["test"]
         self.tokenizer = tokenizer
 
     def setup(self, stage=None):
@@ -83,10 +101,12 @@ class TextDataModule(pl.LightningDataModule):
         corpus = ViewCorpus(self.params["path_corpus"])
         # TODO: do this in rank 0 and send to the rest
         # Otherwise make sure files are sorted in the same order
+        # TODO: implement some proper logger
+        # print("created view corpus")
         corpus.load_dir_strucute()
+        # TODO: add an option to skip short lines to line iter
+        # print("loaded dir structure")
         line_iter = corpus.get_line_iterator(rank=hvd.rank(), size=hvd.size())
-        # my_sequence = ["cows produce beer.", "I like cold milk test test test test test test test."]
-        dataset = [line for line in line_iter if len(line) > 10]
-        dataloader = DataLoader(
-            dataset, batch_size=self.params["batch_size"], collate_fn=Collate(self.tokenizer, self.params))
-        return dataloader
+        # print("created line iter")
+        batch_iter = BatchIter(line_iter, self.tokenizer, self.params)
+        return batch_iter
