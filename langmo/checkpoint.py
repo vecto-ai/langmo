@@ -1,6 +1,7 @@
 from pathlib import Path
-import pytorch_lightning as pl
+
 import horovod.torch as hvd
+import pytorch_lightning as pl
 
 
 class BaseNStepCallback(pl.Callback):
@@ -16,9 +17,9 @@ class BaseNStepCallback(pl.Callback):
         global_step = trainer.global_step
         epoch = trainer.current_epoch
         path_destination = (
-            Path(trainer.model.hparams["path_results"]) /
-            self.prefix /
-            f"epoch{epoch}_step{global_step}"
+            Path(trainer.model.hparams["path_results"])
+            / self.prefix
+            / f"epoch{epoch}_step{global_step}"
         )
         return path_destination
 
@@ -34,11 +35,11 @@ class CheckpointEveryNSteps(BaseNStepCallback):
             path_hf = path_checkpoint / "hf"
             trainer.model.net.save_pretrained(path_hf)
             trainer.model.tokenizer.save_pretrained(path_hf)
+            trainer.model.save_metadata(path_checkpoint)
 
 
 # TODO: this moves to CLI. but we can create something like .doit file here
 class ScheduleEval(BaseNStepCallback):
-
     def on_batch_end(self, trainer: pl.Trainer, _):
         if hvd.rank() != 0:
             return
