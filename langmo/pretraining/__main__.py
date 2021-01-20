@@ -7,7 +7,7 @@ from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
 
-from langmo.checkpoint import CheckpointEveryNSteps, ScheduleEval
+from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
 
@@ -53,8 +53,10 @@ class PLModel(pl.LightningModule):
             [param for param in self.net.parameters() if param.requires_grad],
             lr=0.00001,
         )
+        # TODO: get rough estimation of training steps here
+        # maybe after first epoch is trained - reset iterators?
         scheduler = get_linear_schedule_with_warmup(
-            optimizer, num_warmup_steps=0, num_training_steps=50000
+            optimizer, num_warmup_steps=100, num_training_steps=500000
         )
         return [[optimizer], [scheduler]]
 
@@ -85,9 +87,9 @@ def main():
         params=params,
     )
 
-    n_step = 5000  # TODO: should this go to params?
-    on_n_step_callback = CheckpointEveryNSteps(n_step)
-    scheudle_eval_callback = ScheduleEval(n_step)
+    n_steps_checkpoint = 5000  # TODO: should this go to params?
+    on_n_step_checkpoint = CheckpointEveryNSteps(n_steps_checkpoint)
+    # scheudle_eval_callback = ScheduleEval(n_step)
     trainer = pl.Trainer(
         default_root_dir=params["path_results"],
         weights_save_path=params["path_results"],
@@ -103,13 +105,16 @@ def main():
             name=name_run,
             save_dir=params["path_results"],
         ),
+        reload_dataloaders_every_epoch=True,
         # TODO: is this ok?
         # theirs samples do like you did
         # but there is special checkpoint_callback param too....
-        callbacks=[on_n_step_callback, scheudle_eval_callback],
+        callbacks=[on_n_step_checkpoint],
         checkpoint_callback=False,
+        gradient_clip_val=0.6,
         # TODO: figure out what is this
         progress_bar_refresh_rate=0,
+        track_grad_norm=2,
     )
 
     data_module = TextDataModule(

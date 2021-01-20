@@ -1,5 +1,6 @@
 from pathlib import Path
 import pytorch_lightning as pl
+import horovod.torch as hvd
 
 
 class BaseNStepCallback(pl.Callback):
@@ -24,6 +25,8 @@ class BaseNStepCallback(pl.Callback):
 
 class CheckpointEveryNSteps(BaseNStepCallback):
     def on_batch_end(self, trainer: pl.Trainer, _):
+        if hvd.rank() != 0:
+            return
         global_step = trainer.global_step
         if global_step % self.save_step_frequency == 0:
             path_checkpoint = self.get_path_destination(trainer)
@@ -37,7 +40,9 @@ class CheckpointEveryNSteps(BaseNStepCallback):
 class ScheduleEval(BaseNStepCallback):
 
     def on_batch_end(self, trainer: pl.Trainer, _):
+        if hvd.rank() != 0:
+            return
         global_step = trainer.global_step
         if global_step % self.save_step_frequency == 0:
-            path_dst = self.get_path_destination(trainer)
+            # path_dst = self.get_path_destination(trainer)
             print("DON'T SCHEDULE EVAL HERE, USE CLI")

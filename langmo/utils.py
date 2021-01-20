@@ -31,6 +31,7 @@ def load_config(name_task):
         path_results="./logs",
         create_unique_path=True,
         uncase=False,
+        cnt_epochs=5,
     )
     params.update(params_user)
     params["name_project"] = f"{name_task}{'_test' if params['test'] else ''}"
