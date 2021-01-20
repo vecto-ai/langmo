@@ -155,5 +155,5 @@ class NLIDataModule(pl.LightningDataModule):
         return [
             self._get_dataset_tensor("multi_nli", "validation_matched"),
             self._get_dataset_tensor("multi_nli", "validation_mismatched"),
-            # self._get_dataset_tensor("hans", "validation"),
+            self._get_dataset_tensor("hans", "validation"),
         ]
