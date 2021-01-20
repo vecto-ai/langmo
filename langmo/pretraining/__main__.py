@@ -1,7 +1,10 @@
+from pathlib import Path
+
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
 import transformers
+from protonn.utils import save_data_json
 from pytorch_lightning.loggers import WandbLogger
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
@@ -64,11 +67,18 @@ class PLModel(pl.LightningModule):
     #     file_name = "tmp"  # logdir + current snapshot name
     #     self.net.save_pretrained(file_name)
 
-    def train_epoch_end(self, * args, **kwargs):
+    def train_epoch_end(self, *args, **kwargs):
         if hvd.rank() == 0:
             print("training epoch end")
             print("args:", args)
             print("kwargs:", kwargs)
+
+    def save_metadata(self, path=None):
+        # default `save_path` is `hparam["path_results"]`
+        if path is None:
+            path = self.hparams["path_results"]
+        path = Path(path) / "metadata.json"
+        save_data_json(self.hparams, path)
 
 
 def main():

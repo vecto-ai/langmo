@@ -10,9 +10,9 @@ import torch.nn.functional as F
 import transformers
 # from protonn.utils import describe_var
 from protonn.utils import get_time_str, save_data_json
+from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.metrics.functional import accuracy
-from pytorch_lightning.callbacks import LearningRateMonitor
 from transformers import AutoModelForSequenceClassification
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
@@ -81,12 +81,16 @@ class PLModel(pl.LightningModule):
         # self.log_dict(metrics)
         return metrics
 
-    def _update_hparams_train_logs(self, metrics):
+    def append_metrics_to_train_logs(self, metrics):
         entry = dict(epoch=metrics["epoch"])
         for k, v in metrics.items():
             val = v.item() if hasattr(v, "item") else v
             entry[k] = val
         self.hparams["train_logs"].append(entry)
+
+    def save_metadata(self):
+        path = Path(self.hparams["path_results"]) / "metadata.json"
+        save_data_json(self.hparams, path)
 
     def validation_epoch_end(self, outputs):
         metrics = {}
@@ -111,14 +115,14 @@ class PLModel(pl.LightningModule):
                 )
         if hvd.rank() == 0:
             self.logger.log_metrics(metrics, step=self.global_step)
-            self._update_hparams_train_logs(metrics)
-            path = Path(self.hparams["path_results"]).joinpath("metadata.json")
-            save_data_json(self.hparams, path)
+            self.append_metrics_to_train_logs(metrics)
+            self.save_metadata()
 
     def configure_optimizers(self):
         optimizer = transformers.optimization.AdamW(
             [param for param in self.net.parameters() if param.requires_grad],
-            lr=5e-6, eps=1e-7,
+            lr=5e-6,
+            eps=1e-7,
         )
         # optimizer.clip_grad_norm(1.0)
         # TODO(vatai): warmaps steps should be in param
@@ -184,7 +188,7 @@ def main():
     )
 
     model = PLModel(net, tokenizer, params)
-    lr_monitor = LearningRateMonitor(logging_interval='step')
+    lr_monitor = LearningRateMonitor(logging_interval="step")
     trainer = pl.Trainer(
         default_root_dir=params["path_results"],
         weights_save_path=params["path_results"],
