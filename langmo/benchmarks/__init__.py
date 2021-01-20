@@ -5,11 +5,12 @@ import stat
 
 # TODO: allow user to provide paltform-specific headers
 # TODO: this will be probably done though protonn
+# TODO: make console logs go to the target dir
 header_ABCI = (
     "#!/bin/bash\n"
     "#$ -cwd\n"
     "#$ -l rt_F=1\n"
-    "#$ -l h_rt=02:00:00\n"
+    "#$ -l h_rt=04:00:00\n"
     "#$ -N NLP\n"
     "#$ -j y\n"
     "#$ -o $JOB_NAME.o$JOB_ID\n\n"

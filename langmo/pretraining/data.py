@@ -80,9 +80,12 @@ class TextDataModule(pl.LightningDataModule):
         self.tokenizer = tokenizer
 
     def setup(self, stage=None):
-        # print("doing setup")
-        # TODO: do donwload here
-        pass
+        # print("@@@@@@@@@@@@@@ OLOLOLOLO doing setup")
+        self.corpus = ViewCorpus(self.params["path_corpus"])
+        # TODO: do this in rank 0 and send to the rest
+        # Otherwise make sure files are sorted in the same order
+        self.corpus.load_dir_strucute()
+        print("loaded corpus of size", self.corpus.total_bytes)
 
     def train_dataloader(self):
         # sent3 options:
@@ -98,15 +101,11 @@ class TextDataModule(pl.LightningDataModule):
         # sent3_ids = random/remote = sentence (single sentence)
         # return [[mlm_ids, sent1_ids, sent2_ids, sent3_ids]  x for batch_size] y for cnt_batches]
 
-        corpus = ViewCorpus(self.params["path_corpus"])
-        # TODO: do this in rank 0 and send to the rest
-        # Otherwise make sure files are sorted in the same order
         # TODO: implement some proper logger
         # print("created view corpus")
-        corpus.load_dir_strucute()
         # TODO: add an option to skip short lines to line iter
         # print("loaded dir structure")
-        line_iter = corpus.get_line_iterator(rank=hvd.rank(), size=hvd.size())
+        line_iter = self.corpus.get_line_iterator(rank=hvd.rank(), size=hvd.size())
         # print("created line iter")
         batch_iter = BatchIter(line_iter, self.tokenizer, self.params)
         return batch_iter
