@@ -1,11 +1,13 @@
-import torch
-import pytorch_lightning as pl
-from vecto.corpus import ViewCorpus
-import horovod.torch as hvd
 from collections import namedtuple
 
+import horovod.torch as hvd
+import pytorch_lightning as pl
+import torch
+from vecto.corpus import ViewCorpus
 
-TBatch = namedtuple("TBatch", ["input_ids", "token_type_ids", "attention_mask", "labels"])
+TBatch = namedtuple(
+    "TBatch", ["input_ids", "token_type_ids", "attention_mask", "labels"]
+)
 
 
 def shuffle_tensor(tensor):
@@ -56,10 +58,12 @@ class BatchIter:
         for i in range(len(encoded["input_ids"])):
             ids[i] = self.mask_line(ids[i], self.tokenizer.mask_token_id)
             ids[i][0] = 42
-        return TBatch(input_ids=ids,
-                      token_type_ids=encoded["token_type_ids"],
-                      attention_mask=encoded["attention_mask"],
-                      labels=encoded["labels"])
+        return TBatch(
+            input_ids=ids,
+            token_type_ids=encoded["token_type_ids"],
+            attention_mask=encoded["attention_mask"],
+            labels=encoded["labels"],
+        )
 
     def _generate_samples(self):
         batch = []
@@ -80,7 +84,6 @@ class TextDataModule(pl.LightningDataModule):
         self.tokenizer = tokenizer
 
     def setup(self, stage=None):
-        # print("@@@@@@@@@@@@@@ OLOLOLOLO doing setup")
         self.corpus = ViewCorpus(self.params["path_corpus"])
         # TODO: do this in rank 0 and send to the rest
         # Otherwise make sure files are sorted in the same order
