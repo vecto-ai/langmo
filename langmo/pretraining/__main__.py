@@ -73,11 +73,13 @@ class PLModel(pl.LightningModule):
             print("args:", args)
             print("kwargs:", kwargs)
 
-    def save_metadata(self, path=None):
+    def save_metadata(self, corpus_metadata, path=None):
         # default `save_path` is `hparam["path_results"]`
         if path is None:
             path = self.hparams["path_results"]
         path = Path(path) / "metadata.json"
+        if corpus_metadata is not None:
+            self.hparams["corpus"] = corpus_metadata
         save_data_json(self.hparams, path)
 
 

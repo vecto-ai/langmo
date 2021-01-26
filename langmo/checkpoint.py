@@ -35,7 +35,8 @@ class CheckpointEveryNSteps(BaseNStepCallback):
             path_hf = path_checkpoint / "hf"
             trainer.model.net.save_pretrained(path_hf)
             trainer.model.tokenizer.save_pretrained(path_hf)
-            trainer.model.save_metadata(path_checkpoint)
+            metadata = trainer.datamodule.corpus.metadata
+            trainer.model.save_metadata(metadata, path_checkpoint)
 
 
 # TODO: this moves to CLI. but we can create something like .doit file here
