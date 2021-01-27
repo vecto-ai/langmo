@@ -54,7 +54,7 @@ class PLModel(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = transformers.optimization.AdamW(
             [param for param in self.net.parameters() if param.requires_grad],
-            lr=5e-5, eps=1e-6, beta_1=0.9, beta_2=0.999
+            lr=5e-5, eps=1e-6, betas=(0.9, 0.999)
         )
         # TODO: get rough estimation of training steps here
         # maybe after first epoch is trained - reset iterators?
