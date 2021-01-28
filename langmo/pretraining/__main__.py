@@ -24,6 +24,7 @@ class PLModel(pl.LightningModule):
         self.net = net
         self.tokenizer = tokenizer
         self.hparams = params
+        self.hparams["cnt_workers"] = hvd.size()
 
     def forward(self, encoded):
         input_ids = encoded.input_ids
@@ -93,6 +94,7 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(params["name_model"])
     net = AutoModelForMaskedLM.from_pretrained(params["name_model"])
     reinit_model(net)
+    net.train()
     model = PLModel(
         net=net,
         tokenizer=tokenizer,
@@ -123,7 +125,7 @@ def main():
         # but there is special checkpoint_callback param too....
         callbacks=[on_n_step_checkpoint],
         checkpoint_callback=False,
-        # gradient_clip_val=1.0,
+        gradient_clip_val=1.0,
         # TODO: figure out what is this
         progress_bar_refresh_rate=0,
         track_grad_norm=2,
