@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -cwd
-#$ -l rt_F=1
+#$ -l rt_F=4
 #$ -l h_rt=06:55:00
 #$ -N Pretrain
 #$ -j y

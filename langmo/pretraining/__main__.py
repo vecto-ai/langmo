@@ -59,7 +59,7 @@ class PLModel(pl.LightningModule):
         # TODO: get rough estimation of training steps here
         # maybe after first epoch is trained - reset iterators?
         scheduler = get_linear_schedule_with_warmup(
-            optimizer, num_warmup_steps=100, num_training_steps=500000
+            optimizer, num_warmup_steps=1000, num_training_steps=500000
         )
         return [[optimizer], [scheduler]]
 
@@ -123,7 +123,7 @@ def main():
         # but there is special checkpoint_callback param too....
         callbacks=[on_n_step_checkpoint],
         checkpoint_callback=False,
-        gradient_clip_val=1.0,
+        # gradient_clip_val=1.0,
         # TODO: figure out what is this
         progress_bar_refresh_rate=0,
         track_grad_norm=2,
