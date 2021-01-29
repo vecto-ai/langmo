@@ -5,8 +5,8 @@ import pytorch_lightning as pl
 import torch
 import transformers
 from protonn.utils import save_data_json
-from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import LearningRateMonitor
+from pytorch_lightning.loggers import WandbLogger
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
@@ -59,15 +59,17 @@ class PLModel(pl.LightningModule):
         # self.log("epoch", self.current_epoch)
         return loss
 
-    def optimizer_step(self,
-                       current_epoch,
-                       batch_nb,
-                       optimizer,
-                       optimizer_idx,
-                       closure,
-                       on_tpu=False,
-                       using_native_amp=False,
-                       using_lbfgs=False):
+    def optimizer_step(
+        self,
+        current_epoch,
+        batch_nb,
+        optimizer,
+        optimizer_idx,
+        closure,
+        on_tpu=False,
+        using_native_amp=False,
+        using_lbfgs=False,
+    ):
         optimizer.step(closure=closure)
         for scheduler in self.trainer.lr_schedulers:
             scheduler["scheduler"].step()
@@ -75,16 +77,20 @@ class PLModel(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = transformers.optimization.AdamW(
             [param for param in self.net.parameters() if param.requires_grad],
-            lr=5e-5, eps=1e-6, betas=(0.9, 0.999)
+            lr=self.hparams["lr"],
+            eps=self.hparams["eps"],
+            betas=(self.hparams["beta1"], self.hparams["beta2"]),
         )
         # TODO: get rough estimation of training steps here
         # maybe after first epoch is trained - reset iterators?
         scheduler = get_linear_schedule_with_warmup(
-            optimizer, num_warmup_steps=500, num_training_steps=500000
+            optimizer,
+            num_warmup_steps=self.hparams["num_warmup_steps"],
+            num_training_steps=self.hparams["num_training_steps"],
         )
         return {
-            'optimizer': optimizer,
-            'lr_scheduler': scheduler,
+            "optimizer": optimizer,
+            "lr_scheduler": scheduler,
             # 'monitor': 'lr'
         }
         # return [[optimizer], [scheduler]]
