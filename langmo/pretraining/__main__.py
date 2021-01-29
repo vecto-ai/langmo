@@ -11,7 +11,7 @@ from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
 
-from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
+from langmo.checkpoint import CheckpointEveryNSteps, ScheduleEval
 from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
 
@@ -78,7 +78,7 @@ class PLModel(pl.LightningModule):
         # TODO: get rough estimation of training steps here
         # maybe after first epoch is trained - reset iterators?
         scheduler = get_linear_schedule_with_warmup(
-            optimizer, num_warmup_steps=1000, num_training_steps=200000
+            optimizer, num_warmup_steps=100, num_training_steps=500000
         )
         return {
             'optimizer': optimizer,
@@ -147,7 +147,7 @@ def main():
         # TODO: is this ok?
         # theirs samples do like you did
         # but there is special checkpoint_callback param too....
-        callbacks=[on_n_step_checkpoint],  # , lr_monitor],
+        callbacks=[on_n_step_checkpoint, lr_monitor],
         checkpoint_callback=False,
         gradient_clip_val=1.0,
         # TODO: figure out what is this
