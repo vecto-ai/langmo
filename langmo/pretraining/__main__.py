@@ -78,7 +78,7 @@ class PLModel(pl.LightningModule):
         # TODO: get rough estimation of training steps here
         # maybe after first epoch is trained - reset iterators?
         scheduler = get_linear_schedule_with_warmup(
-            optimizer, num_warmup_steps=100, num_training_steps=500000
+            optimizer, num_warmup_steps=500, num_training_steps=500000
         )
         return {
             'optimizer': optimizer,
