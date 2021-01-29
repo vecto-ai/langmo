@@ -55,6 +55,8 @@ class PLModel(pl.LightningModule):
         # lr = self.trainer.optimizers[0].param_groups[0]["lr"]
         # print(f"ep {self.current_epoch}, step {self.global_step}, loss: {loss.item()}, lr {lr}")
         self.log("loss", loss)
+        # TODO: move this to train_epoch_end when it is fixed
+        # self.log("epoch", self.current_epoch)
         return loss
 
     def optimizer_step(self,
