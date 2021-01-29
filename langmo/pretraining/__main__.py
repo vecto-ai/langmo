@@ -11,7 +11,7 @@ from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
 
-from langmo.checkpoint import CheckpointEveryNSteps, ScheduleEval
+from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
 
@@ -127,7 +127,7 @@ def main():
     n_steps_checkpoint = 5000  # TODO: should this go to params?
     on_n_step_checkpoint = CheckpointEveryNSteps(n_steps_checkpoint)
     # scheudle_eval_callback = ScheduleEval(n_step)
-    # lr_monitor = LearningRateMonitor(logging_interval="step")
+    lr_monitor = LearningRateMonitor(logging_interval="step")
     trainer = pl.Trainer(
         default_root_dir=params["path_results"],
         weights_save_path=params["path_results"],
