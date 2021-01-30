@@ -32,12 +32,13 @@ def load_config(name_task):
         create_unique_path=True,
         uncase=False,
         cnt_epochs=5,
-        lr=5e-5,
         eps=1e-6,
         beta1=0.9,
         beta2=0.999,
-        num_warmup_steps=500,
-        num_training_steps=500000,
+        max_lr=5e-5,
+        initial_lr=0.0,
+        cnt_warmup_steps=500,
+        cnt_training_steps=500000,
     )
     params.update(params_user)
     name_project = f"{name_task}{'_test' if params['test'] else ''}"
