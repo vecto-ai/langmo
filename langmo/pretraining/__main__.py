@@ -9,7 +9,6 @@ from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
-from transformers.optimization import get_linear_schedule_with_warmup
 
 from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 from langmo.nn.utils import reinit_model
@@ -53,47 +52,39 @@ class PLModel(pl.LightningModule):
         # use different forwards
         # loss = loss_mlm + loss_nsp # + other aux tasks
         # lr = self.trainer.optimizers[0].param_groups[0]["lr"]
-        # print(f"ep {self.current_epoch}, step {self.global_step}, loss: {loss.item()}, lr {lr}")
+        # print(
+        #     f"ep {self.current_epoch}, step {self.global_step}, loss: {loss.item()}, lr {lr}"
+        # )
         self.log("loss", loss)
         # TODO: move this to train_epoch_end when it is fixed
         # self.log("epoch", self.current_epoch)
         return loss
 
-    def optimizer_step(
-        self,
-        current_epoch,
-        batch_nb,
-        optimizer,
-        optimizer_idx,
-        closure,
-        on_tpu=False,
-        using_native_amp=False,
-        using_lbfgs=False,
-    ):
-        optimizer.step(closure=closure)
-        for scheduler in self.trainer.lr_schedulers:
-            scheduler["scheduler"].step()
-
     def configure_optimizers(self):
         optimizer = transformers.optimization.AdamW(
             [param for param in self.net.parameters() if param.requires_grad],
-            lr=self.hparams["lr"],
+            lr=self.hparams["initial_lr"],
             eps=self.hparams["eps"],
             betas=(self.hparams["beta1"], self.hparams["beta2"]),
         )
         # TODO: get rough estimation of training steps here
         # maybe after first epoch is trained - reset iterators?
-        scheduler = get_linear_schedule_with_warmup(
+        total_steps = self.hparams["cnt_training_steps"]
+        pct_start = self.hparams["cnt_warmup_steps"] / total_steps
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer,
-            num_warmup_steps=self.hparams["num_warmup_steps"],
-            num_training_steps=self.hparams["num_training_steps"],
+            max_lr=self.hparams["max_lr"],
+            total_steps=total_steps,
+            pct_start=pct_start,
+            anneal_strategy="linear",
         )
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": scheduler,
-            # 'monitor': 'lr'
-        }
-        # return [[optimizer], [scheduler]]
+        # scheduler = get_linear_schedule_with_warmup(
+        #     optimizer, # done
+        #     num_warmup_steps=self.hparams["num_warmup_steps"],
+        #     num_training_steps=self.hparams["num_training_steps"], # done
+        # )
+        scheduler = {"scheduler": scheduler, "interval": "step"}
+        return [[optimizer], [scheduler]]
 
     # def save_pretrained(self):
     #     file_name = "tmp"  # logdir + current snapshot name
