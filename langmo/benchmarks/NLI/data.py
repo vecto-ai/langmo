@@ -10,6 +10,7 @@ import pytorch_lightning as pl
 import torch
 # import transformers
 from datasets import logging as tr_logging
+
 # from protonn.utils import describe_var
 
 
@@ -82,7 +83,7 @@ def ds_to_tensors(dataset, tokenizer, batch_size, test, params):
     labels = [i["label"] for i in dataset]
     if test:
         # TODO: use bs and hvd size
-        cnt_testrun_samples = 32 * 2
+        cnt_testrun_samples = batch_size * 2
         sent1 = sent1[:cnt_testrun_samples]
         sent2 = sent2[:cnt_testrun_samples]
         labels = labels[:cnt_testrun_samples]
@@ -103,7 +104,10 @@ def ds_to_tensors(dataset, tokenizer, batch_size, test, params):
     masks = torch.split(features["attention_mask"], batch_size)
     segments = torch.split(features["token_type_ids"], batch_size)
     labels = torch.split(labels, batch_size)
-    batches_inputs = [{"input_ids": i[0], "attention_mask": i[1], "token_type_ids": i[2]} for i in zip(ids, masks, segments)]
+    batches_inputs = [
+        {"input_ids": i[0], "attention_mask": i[1], "token_type_ids": i[2]}
+        for i in zip(ids, masks, segments)
+    ]
     return list(zip(batches_inputs, labels))
 
 
