@@ -23,8 +23,8 @@ class PLModel(pl.LightningModule):
         # TODO: read this from params
         self.net = net
         self.tokenizer = tokenizer
+        params["cnt_workers"] = hvd.size()
         self.hparams = params
-        self.hparams["cnt_workers"] = hvd.size()
 
     def forward(self, encoded):
         input_ids = encoded.input_ids
