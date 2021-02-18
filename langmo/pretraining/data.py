@@ -3,7 +3,7 @@ from collections import namedtuple
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
-from vecto.corpus import ViewCorpus
+from vecto.corpus import Corpus, CorpusView
 
 TBatch = namedtuple(
     "TBatch", ["input_ids", "token_type_ids", "attention_mask", "labels"]
@@ -42,6 +42,7 @@ class BatchIter:
     def encode_batch(self, lines):
         encoded = self.tokenizer(
             lines,
+            is_split_into_words=True,
             max_length=self.max_length,
             # TODO: consider padding to the max length of the batch
             padding="max_length",
@@ -84,11 +85,14 @@ class TextDataModule(pl.LightningDataModule):
         self.tokenizer = tokenizer
 
     def setup(self, stage=None):
-        self.corpus = ViewCorpus(self.params["path_corpus"])
+        self.corpus = Corpus(self.params["path_corpus"])
         # TODO: do this in rank 0 and send to the rest
         # Otherwise make sure files are sorted in the same order
         self.corpus.load_dir_strucute()
         print("loaded corpus of size", self.corpus.total_bytes)
+        self.corpus_view = CorpusView(self.corpus,
+                                      rank=hvd.rank(),
+                                      size=hvd.size())
 
     def train_dataloader(self):
         # sent3 options:
@@ -108,7 +112,8 @@ class TextDataModule(pl.LightningDataModule):
         # print("created view corpus")
         # TODO: add an option to skip short lines to line iter
         # print("loaded dir structure")
-        line_iter = self.corpus.get_line_iterator(rank=hvd.rank(), size=hvd.size())
+        line_iter = self.corpus_view.get_sequence_iterator(sequence_length=self.params["max_length"],
+                                                          tokenizer=self.tokenizer.tokenize)
         # print("created line iter")
         batch_iter = BatchIter(line_iter, self.tokenizer, self.params)
         return batch_iter
