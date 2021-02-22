@@ -36,6 +36,7 @@ def load_config(name_task):
     # default params
     params = dict(
         test=False,
+        use_gpu=True,
         precision=32,
         batch_size=32,
         randomize=False,
