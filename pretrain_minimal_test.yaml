@@ -6,3 +6,4 @@ num_training_steps: 500
 path_corpus: "./data/wikitext-2"
 name_model: "prajjwal1/bert-mini"
 test: True
+initial_lr: 1e-5

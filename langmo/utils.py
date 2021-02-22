@@ -15,6 +15,12 @@ def get_unique_results_path(base):
     return new_path
 
 
+def parse_float(dic, key):
+    if key in dic:
+        if isinstance(dic[key], str):
+            dic[key] = float(dic[key])
+
+
 def load_config(name_task):
     if len(sys.argv) < 2:
         print("run main.py config.yaml")
@@ -22,6 +28,11 @@ def load_config(name_task):
     path_config = sys.argv[1]
     with open(path_config, "r") as cfg:
         params_user = yaml.load(cfg, Loader=yaml.SafeLoader)
+    parse_float(params_user, "initial_lr")
+    parse_float(params_user, "max_lr")
+    parse_float(params_user, "eps")
+    parse_float(params_user, "beta1")
+    parse_float(params_user, "beta2")
     # default params
     params = dict(
         test=False,
