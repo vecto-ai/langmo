@@ -127,10 +127,13 @@ def main():
     on_n_step_checkpoint = CheckpointEveryNSteps(n_steps_checkpoint)
     # scheudle_eval_callback = ScheduleEval(n_step)
     lr_monitor = LearningRateMonitor(logging_interval="step")
+    if params["use_gpu"]:
+        assert torch.cuda.device_count() > 0, "Asked for `use_gpu` but no gpu detected"
+    gpus = 1 if params["use_gpu"] else 0
     trainer = pl.Trainer(
         default_root_dir=params["path_results"],
         weights_save_path=params["path_results"],
-        gpus=1,
+        gpus=gpus,
         num_sanity_val_steps=0,
         max_epochs=params["cnt_epochs"],
         distributed_backend="horovod",
