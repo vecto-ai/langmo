@@ -9,7 +9,7 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 # import transformers
-from datasets import logging as tr_logging
+# from datasets import logging as tr_logging
 
 # from protonn.utils import describe_var
 
@@ -108,7 +108,8 @@ def ds_to_tensors(dataset, tokenizer, batch_size, test, params):
         {"input_ids": i[0], "attention_mask": i[1], "token_type_ids": i[2]}
         for i in zip(ids, masks, segments)
     ]
-    return list(zip(batches_inputs, labels))
+    res = list(zip(batches_inputs, labels))
+    return res
 
 
 #     FOR SIAMESE
@@ -125,6 +126,7 @@ class NLIDataModule(pl.LightningDataModule):
         self.vocab = vocab
         self.params = params
         self.test = params["test"]
+        # TODO: if test, make dataset loading faster by setting small percents here
         self.percent_start = float(hvd.rank()) / float(hvd.size()) * 100
         self.percent_end = float(hvd.rank() + 1) / float(hvd.size()) * 100
 
@@ -151,13 +153,15 @@ class NLIDataModule(pl.LightningDataModule):
         )
         ds = datasets.load_dataset(dataset, split=ri)
         return ds_to_tensors(ds, self.vocab, self.batch_size, self.test, self.params)
+        self.hparams = params
 
     def train_dataloader(self):
-        return self._get_dataset_tensor("multi_nli", "train")
+        return [self._get_dataset_tensor("multi_nli", "train")]
 
     def val_dataloader(self):
-        return [
+        dataloaders = [
             self._get_dataset_tensor("multi_nli", "validation_matched"),
             self._get_dataset_tensor("multi_nli", "validation_mismatched"),
             self._get_dataset_tensor("hans", "validation"),
         ]
+        return dataloaders

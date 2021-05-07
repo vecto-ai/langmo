@@ -24,7 +24,7 @@ class PLModel(pl.LightningModule):
         self.net = net
         self.tokenizer = tokenizer
         params["cnt_workers"] = hvd.size()
-        self.hparams = params
+        self.hparams.update(params)
 
     def forward(self, encoded):
         input_ids = encoded.input_ids
