@@ -12,7 +12,7 @@ import transformers
 from protonn.utils import get_time_str, save_data_json
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.metrics.functional import accuracy
+from torchmetrics.functional import accuracy
 from transformers import AutoModelForSequenceClassification
 from transformers import logging as tr_logging
 from transformers.optimization import get_linear_schedule_with_warmup
@@ -29,9 +29,9 @@ from .data import NLIDataModule
 class PLModel(pl.LightningModule):
     def __init__(self, net, tokenizer, params):
         super().__init__()
+        self.hparams.update(params)
         self.net = net
         self.tokenizer = tokenizer
-        self.hparams = params
         self.hparams["train_logs"] = []
         # self.example_input_array = ((
         #     torch.zeros((128, params["batch_size"]), dtype=torch.int64),
@@ -45,10 +45,13 @@ class PLModel(pl.LightningModule):
         return self.net(**inputs)["logits"]
 
     def training_step(self, batch, batch_idx):
-        inputs, targets = batch
+        # print("got tr batch\n" + describe_var(batch))
+        inputs, targets = batch[0]
+        # this is to fix PL 1.2+ thinking that top level list is multiple iterators
+        # should be address by returning proper dataloader
         logits = self(inputs)
         loss = F.cross_entropy(logits, targets)
-        acc = accuracy(logits, targets)
+        acc = accuracy(torch.nn.functional.softmax(logits), targets)
         metrics = {
             "train_loss": loss,
             "train_acc": acc,
@@ -67,7 +70,7 @@ class PLModel(pl.LightningModule):
             non_entail = non_entail.max(axis=1).values
             logits = torch.cat((entail, non_entail.unsqueeze(1)), 1)
         loss = F.cross_entropy(logits, targets)
-        acc = accuracy(logits, targets)
+        acc = accuracy(torch.nn.functional.softmax(logits), targets)
         if self.hparams["test"] and dataloader_idx == 2:
             print(
                 f"worker {hvd.rank()} of {hvd.size()}\n"
