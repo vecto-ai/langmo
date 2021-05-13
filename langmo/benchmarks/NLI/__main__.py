@@ -1,7 +1,8 @@
 from pathlib import Path
 
 import horovod.torch as hvd
-# from .model import Net
+# TODO: move this to langmo.nn
+from .model import Siamese, TopMLP2
 import pytorch_lightning as pl
 import torch
 # import vecto
@@ -14,25 +15,20 @@ from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from torchmetrics.functional import accuracy
 from transformers import AutoModelForSequenceClassification
+# from transformers import AutoModel
 from transformers import logging as tr_logging
-from transformers.optimization import get_linear_schedule_with_warmup
 
 # from langmo.checkpoint import CheckpointEveryNSteps
 from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
-
+from langmo.base import PLBase
 from .data import NLIDataModule
 
-# import logging
 
-
-class PLModel(pl.LightningModule):
+class PLModel(PLBase):
     def __init__(self, net, tokenizer, params):
-        super().__init__()
-        self.hparams.update(params)
-        self.net = net
-        self.tokenizer = tokenizer
-        self.hparams["train_logs"] = []
+        super().__init__(net, tokenizer, params)
+
         # self.example_input_array = ((
         #     torch.zeros((128, params["batch_size"]), dtype=torch.int64),
         #     torch.zeros((128, params["batch_size"]), dtype=torch.int64),
@@ -40,25 +36,20 @@ class PLModel(pl.LightningModule):
         self.ds_prefixes = {0: "matched", 1: "mismatched", 2: "hans"}
 
     def forward(self, inputs):
-        # print(describe_var(inputs))
-        # print(inputs[2])
         return self.net(**inputs)["logits"]
 
     def training_step(self, batch, batch_idx):
-        # print("got tr batch\n" + describe_var(batch))
         inputs, targets = batch[0]
         # this is to fix PL 1.2+ thinking that top level list is multiple iterators
         # should be address by returning proper dataloader
         logits = self(inputs)
         loss = F.cross_entropy(logits, targets)
-        acc = accuracy(torch.nn.functional.softmax(logits), targets)
+        acc = accuracy(torch.nn.functional.softmax(logits, dim=1), targets)
         metrics = {
             "train_loss": loss,
             "train_acc": acc,
         }
         self.log_dict(metrics, on_step=True, on_epoch=True)
-        # print(f"worker {hvd.rank()} of {hvd.size()} doing train batch {batch_idx} of size {logits.size()}")
-        # print("loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
@@ -70,7 +61,7 @@ class PLModel(pl.LightningModule):
             non_entail = non_entail.max(axis=1).values
             logits = torch.cat((entail, non_entail.unsqueeze(1)), 1)
         loss = F.cross_entropy(logits, targets)
-        acc = accuracy(torch.nn.functional.softmax(logits), targets)
+        acc = accuracy(torch.nn.functional.softmax(logits, dim=1), targets)
         if self.hparams["test"] and dataloader_idx == 2:
             print(
                 f"worker {hvd.rank()} of {hvd.size()}\n"
@@ -120,30 +111,9 @@ class PLModel(pl.LightningModule):
             self.logger.log_metrics(metrics, step=self.global_step)
             self.append_metrics_to_train_logs(metrics)
             self.save_metadata()
-
-    def configure_optimizers(self):
-        optimizer = transformers.optimization.AdamW(
-            [param for param in self.net.parameters() if param.requires_grad],
-            lr=5e-6,
-            eps=1e-7,
-        )
-        # optimizer.clip_grad_norm(1.0)
-        # TODO(vatai): warmaps steps should be in param
-        warmup_steps = 50  # self.hparams["warmup_steps"]
-        cnt_epochs = self.hparams["cnt_epochs"]
-        batch_size = self.hparams["batch_size"]
-        self.hparams["cnt_train_samples"] = self.trainer.datamodule.cnt_train_samples
-        num_samples = self.hparams["cnt_train_samples"]
-        training_steps = (num_samples / batch_size) * cnt_epochs / hvd.size()
-        scheduler = get_linear_schedule_with_warmup(
-            optimizer,
-            num_warmup_steps=warmup_steps,
-            num_training_steps=training_steps,
-        )
-        scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}
-        print(" >>>>>> optimizer", optimizer, scheduler)
-        return [[optimizer], [scheduler]]
-        # return torch.optim.SGD(self.net.parameters(), lr=0.001, momentum=0.9)
+            if metrics["epoch"] >= 0:
+                path_hf = Path(self.hparams["path_results"]) / f"ep{metrics['epoch']}"
+                self.save_as_hf(path_hf)
 
 
 def main():
@@ -162,15 +132,15 @@ def main():
     #     verbose=True,
     #     mode="min",
     # )
-    # embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
     name_model = params["model_name"]
     net = AutoModelForSequenceClassification.from_pretrained(name_model, num_labels=3)
-    # wandb_logger.watch(net, log='gradients', log_freq=100)
+    # embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
+    # bottom = AutoModel.from_pretrained(name_model)
+    # net = Siamese(bottom, TopMLP2())
     name_run = name_model
     if params["randomize"]:
         reinit_model(net)
         name_run += "_RND"
-    # net = Net(embs)
     name_run += f"_{'↓' if params['uncase'] else '◯'}_{timestamp[:-3]}"
     wandb_logger = WandbLogger(
         project=params["name_project"],

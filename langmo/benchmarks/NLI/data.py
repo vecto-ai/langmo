@@ -99,6 +99,7 @@ def ds_to_tensors(dataset, tokenizer, batch_size, test, params):
         padding="max_length",
         truncation=True,
         return_tensors="pt",
+        return_token_type_ids=True,
     )
     ids = torch.split(features["input_ids"], batch_size)
     masks = torch.split(features["attention_mask"], batch_size)
@@ -153,7 +154,6 @@ class NLIDataModule(pl.LightningDataModule):
         )
         ds = datasets.load_dataset(dataset, split=ri)
         return ds_to_tensors(ds, self.vocab, self.batch_size, self.test, self.params)
-        self.hparams = params
 
     def train_dataloader(self):
         return [self._get_dataset_tensor("multi_nli", "train")]
