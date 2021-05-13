@@ -33,8 +33,7 @@ class CheckpointEveryNSteps(BaseNStepCallback):
             path_checkpoint = self.get_path_destination(trainer)
             trainer.save_checkpoint(path_checkpoint / "PL_model.ckpt")
             path_hf = path_checkpoint / "hf"
-            trainer.model.net.save_pretrained(path_hf)
-            trainer.model.tokenizer.save_pretrained(path_hf)
+            trainer.model.save_as_hf(path_hf)
             metadata = trainer.datamodule.corpus.metadata
             trainer.model.save_metadata(metadata, path_checkpoint)
 

@@ -3,7 +3,6 @@ from pathlib import Path
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
-import transformers
 from protonn.utils import save_data_json
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
@@ -19,11 +18,9 @@ from .data import TextDataModule
 
 class PLModel(pl.LightningModule):
     def __init__(self, net, tokenizer, params):
-        super().__init__()
-        # TODO: read this from params
+        super().__init__(net, tokenizer, params)
         self.net = net
         self.tokenizer = tokenizer
-        params["cnt_workers"] = hvd.size()
         self.hparams.update(params)
 
     def forward(self, encoded):
@@ -59,32 +56,6 @@ class PLModel(pl.LightningModule):
         # TODO: move this to train_epoch_end when it is fixed
         # self.log("epoch", self.current_epoch)
         return loss
-
-    def configure_optimizers(self):
-        optimizer = transformers.optimization.AdamW(
-            [param for param in self.net.parameters() if param.requires_grad],
-            lr=self.hparams["initial_lr"],
-            eps=self.hparams["eps"],
-            betas=(self.hparams["beta1"], self.hparams["beta2"]),
-        )
-        # TODO: get rough estimation of training steps here
-        # maybe after first epoch is trained - reset iterators?
-        total_steps = self.hparams["cnt_training_steps"]
-        pct_start = self.hparams["cnt_warmup_steps"] / total_steps
-        scheduler = torch.optim.lr_scheduler.OneCycleLR(
-            optimizer,
-            max_lr=self.hparams["max_lr"],
-            total_steps=total_steps,
-            pct_start=pct_start,
-            anneal_strategy="linear",
-        )
-        # scheduler = get_linear_schedule_with_warmup(
-        #     optimizer, # done
-        #     num_warmup_steps=self.hparams["num_warmup_steps"],
-        #     num_training_steps=self.hparams["num_training_steps"], # done
-        # )
-        scheduler = {"scheduler": scheduler, "interval": "step"}
-        return [[optimizer], [scheduler]]
 
     # def save_pretrained(self):
     #     file_name = "tmp"  # logdir + current snapshot name

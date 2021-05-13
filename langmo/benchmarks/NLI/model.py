@@ -21,11 +21,11 @@ class Siamese(nn.Module):
         return h
 
 
-class Top(nn.Module):
-    def __init__(self, in_size=512, cnt_classes=3):
+class TopMLP2(nn.Module):
+    def __init__(self, in_size=512, hidden_size=256, cnt_classes=3):
         super().__init__()
-        self.l1 = nn.Linear(in_size, 256)
-        self.l2 = nn.Linear(256, cnt_classes)
+        self.l1 = nn.Linear(in_size, hidden_size)
+        self.l2 = nn.Linear(hidden_size, cnt_classes)
 
     def forward(self, x):
         h = self.l1(x)
@@ -71,5 +71,5 @@ class LSTM_Encoder(nn.Module):
 class Net(Siamese):
     def __init__(self, embs):
         encoder = LSTM_Encoder(embs, 128, 2)
-        top = Top()
+        top = TopMLP2()
         super().__init__(encoder, top)
