@@ -9,6 +9,7 @@ from pytorch_lightning.loggers import WandbLogger
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
 
+from langmo.base import PLBase
 from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
@@ -16,7 +17,7 @@ from langmo.utils import load_config
 from .data import TextDataModule
 
 
-class PLModel(pl.LightningModule):
+class PLModel(PLBase):
     def __init__(self, net, tokenizer, params):
         super().__init__(net, tokenizer, params)
         self.net = net
