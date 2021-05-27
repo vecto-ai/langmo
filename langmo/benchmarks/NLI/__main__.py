@@ -1,28 +1,28 @@
 from pathlib import Path
 
 import horovod.torch as hvd
-# TODO: move this to langmo.nn
-from .model import Siamese, TopMLP2
 import pytorch_lightning as pl
 import torch
 # import vecto
 # import vecto.embeddings
 import torch.nn.functional as F
 import transformers
-# from protonn.utils import describe_var
-from protonn.utils import get_time_str, save_data_json
+from protonn.utils import describe_var, get_time_str, save_data_json
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from torchmetrics.functional import accuracy
-from transformers import AutoModelForSequenceClassification
 # from transformers import AutoModel
+from transformers import AutoModelForSequenceClassification
 from transformers import logging as tr_logging
 
+from langmo.base import PLBase
 # from langmo.checkpoint import CheckpointEveryNSteps
 from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
-from langmo.base import PLBase
+
 from .data import NLIDataModule
+# TODO: move this to langmo.nn
+from .model import Siamese, TopMLP2
 
 
 class PLModel(PLBase):
@@ -53,6 +53,7 @@ class PLModel(PLBase):
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
+        print("got val batch\n" + describe_var(batch))
         inputs, targets = batch
         logits = self(inputs)
         if dataloader_idx == 2:
