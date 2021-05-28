@@ -28,7 +28,7 @@ class PLBase(pl.LightningModule):
         if hasattr(self.trainer.datamodule, "cnt_train_samples"):
             self.hparams["cnt_train_samples"] = self.trainer.datamodule.cnt_train_samples
             num_samples = self.hparams["cnt_train_samples"]
-            training_steps = int((num_samples / batch_size) * cnt_epochs / hvd.size())
+            training_steps = int((10 + num_samples / batch_size) * cnt_epochs / hvd.size())
         else:
             training_steps = self.hparams["cnt_training_steps"]
 

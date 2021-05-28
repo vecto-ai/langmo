@@ -51,6 +51,7 @@ def load_config(name_task):
         initial_lr=0.0,
         cnt_warmup_steps=500,
         cnt_training_steps=500000,
+        siamese=False,
     )
     params.update(params_user)
     name_project = f"{name_task}{'_test' if params['test'] else ''}"

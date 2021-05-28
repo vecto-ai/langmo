@@ -1,53 +1,79 @@
 # import numpy as np
-# import pandas
-# import json
 import datasets
-# from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader
 import horovod.torch as hvd
-# import os
-import numpy as np
 import pytorch_lightning as pl
 import torch
-# import transformers
 # from datasets import logging as tr_logging
 
 # from protonn.utils import describe_var
 
 
-def zero_pad_item(sample, max_len):
-    if sample.shape[0] > max_len:
-        return sample[:max_len]
-    else:
-        size_pad = max_len - sample.shape[0]
-        # print("!!!!", sample)
-        assert size_pad >= 0
-        res = np.hstack([np.zeros(size_pad, dtype=np.int64), sample])
-        return res
+# def zero_pad_item(sample, max_len):
+#     if sample.shape[0] > max_len:
+#         return sample[:max_len]
+#     else:
+#         size_pad = max_len - sample.shape[0]
+#         # print("!!!!", sample)
+#         assert size_pad >= 0
+#         res = np.hstack([np.zeros(size_pad, dtype=np.int64), sample])
+#         return res
 
 
-def sequences_to_padded_tensor(seqs, max_len):
-    seqs = list(seqs)
-    # max_len = max([len(s) for s in seqs])
-    # print(max_len)
-    # if max_len > 128:
-    #    max_len = 128
-    # print(seqs)
-    padded = [zero_pad_item(s, max_len) for s in seqs]
-    padded = np.array(padded, dtype=np.int64)
-    # LSTM-specific
-    # padded = np.rollaxis(padded, 1, 0)
-    padded = torch.from_numpy(padded)
-    return padded
+# def sequences_to_padded_tensor(seqs, max_len):
+#     seqs = list(seqs)
+#     # max_len = max([len(s) for s in seqs])
+#     # print(max_len)
+#     # if max_len > 128:
+#     #    max_len = 128
+#     # print(seqs)
+#     padded = [zero_pad_item(s, max_len) for s in seqs]
+#     padded = np.array(padded, dtype=np.int64)
+#     # LSTM-specific
+#     # padded = np.rollaxis(padded, 1, 0)
+#     padded = torch.from_numpy(padded)
+#     return padded
 
 
-# def my_collate(x):
-#     sent1, sent2, labels = zip(* x)
-#     # TODO: get max len from both parts
-#     sent1 = sequences_to_padded_tensor(sent1)
-#     sent2 = sequences_to_padded_tensor(sent2)
-#     labels = torch.LongTensor(labels)
-#     # TODO: rollaxis
-#     return (sent1, sent2, labels)
+class Collator:
+    def __init__(self, tokenizer, params):
+        self.tokenizer = tokenizer
+        self.params = params
+
+    def __call__(self, x):
+        sent1 = [i["premise"] for i in x]
+        sent2 = [i["hypothesis"] for i in x]
+        labels = [i["label"] for i in x]
+        labels = torch.LongTensor(labels)
+        tokenizer_params = {
+            "padding": "max_length",
+            "truncation": True,
+            "return_tensors": "pt",
+        }
+        if not self.params["siamese"]:
+            features = self.tokenizer(
+                text=sent1,
+                text_pair=sent2,
+                max_length=128,
+                ** tokenizer_params,
+            )
+            return (features, labels)
+        # siamese
+        sent1 = self.tokenizer(
+            text=sent1,
+            max_length=128,
+            ** tokenizer_params
+        )
+        sent2 = self.tokenizer(
+            text=sent2,
+            max_length=128,
+            ** tokenizer_params,
+        )
+        return ({"left": sent1, "right": sent2}, labels)
+        # sent1, sent2, labels = zip(* x)
+        # TODO: get max len from both parts
+        # sent1 = sequences_to_padded_tensor(sent1)
+        # sent2 = sequences_to_padded_tensor(sent2)
 
 
 # class MyDataLoader:
@@ -77,40 +103,40 @@ def sequences_to_padded_tensor(seqs, max_len):
 #         return self.batches[idx]
 
 
-def ds_to_tensors(dataset, tokenizer, batch_size, test, params):
-    sent1 = [i["premise"] for i in dataset]
-    sent2 = [i["hypothesis"] for i in dataset]
-    labels = [i["label"] for i in dataset]
-    if test:
-        # TODO: use bs and hvd size
-        cnt_testrun_samples = batch_size * 2
-        sent1 = sent1[:cnt_testrun_samples]
-        sent2 = sent2[:cnt_testrun_samples]
-        labels = labels[:cnt_testrun_samples]
-    if params["uncase"]:
-        sent1 = [i.lower() for i in sent1]
-        sent2 = [i.lower() for i in sent2]
-    labels = torch.LongTensor(labels)
-    # texts_or_text_pairs = list(zip(sent1, sent2))
-    features = tokenizer(
-        text=sent1,
-        text_pair=sent2,
-        max_length=128,
-        padding="max_length",
-        truncation=True,
-        return_tensors="pt",
-        return_token_type_ids=True,
-    )
-    ids = torch.split(features["input_ids"], batch_size)
-    masks = torch.split(features["attention_mask"], batch_size)
-    segments = torch.split(features["token_type_ids"], batch_size)
-    labels = torch.split(labels, batch_size)
-    batches_inputs = [
-        {"input_ids": i[0], "attention_mask": i[1], "token_type_ids": i[2]}
-        for i in zip(ids, masks, segments)
-    ]
-    res = list(zip(batches_inputs, labels))
-    return res
+# def ds_to_tensors(dataset, tokenizer, batch_size, test, params):
+#     sent1 = [i["premise"] for i in dataset]
+#     sent2 = [i["hypothesis"] for i in dataset]
+#     labels = [i["label"] for i in dataset]
+#     if test:
+#         # TODO: use bs and hvd size
+#         cnt_testrun_samples = batch_size * 2
+#         sent1 = sent1[:cnt_testrun_samples]
+#         sent2 = sent2[:cnt_testrun_samples]
+#         labels = labels[:cnt_testrun_samples]
+#     if params["uncase"]:
+#         sent1 = [i.lower() for i in sent1]
+#         sent2 = [i.lower() for i in sent2]
+#     labels = torch.LongTensor(labels)
+#     # texts_or_text_pairs = list(zip(sent1, sent2))
+#     features = tokenizer(
+#         text=sent1,
+#         text_pair=sent2,
+#         max_length=128,
+#         padding="max_length",
+#         truncation=True,
+#         return_tensors="pt",
+#         return_token_type_ids=True,
+#     )
+#     ids = torch.split(features["input_ids"], batch_size)
+#     masks = torch.split(features["attention_mask"], batch_size)
+#     segments = torch.split(features["token_type_ids"], batch_size)
+#     labels = torch.split(labels, batch_size)
+#     batches_inputs = [
+#         {"input_ids": i[0], "attention_mask": i[1], "token_type_ids": i[2]}
+#         for i in zip(ids, masks, segments)
+#     ]
+#     res = list(zip(batches_inputs, labels))
+#     return res
 
 
 #     FOR SIAMESE
@@ -121,10 +147,10 @@ def ds_to_tensors(dataset, tokenizer, batch_size, test, params):
 
 
 class NLIDataModule(pl.LightningDataModule):
-    def __init__(self, vocab, batch_size, params):
+    def __init__(self, tokenizer, batch_size, params):
         super().__init__()
         self.batch_size = batch_size
-        self.vocab = vocab
+        self.tokenizer = tokenizer
         self.params = params
         self.test = params["test"]
         # TODO: if test, make dataset loading faster by setting small percents here
@@ -138,14 +164,15 @@ class NLIDataModule(pl.LightningDataModule):
         self.cnt_train_samples = 0
         if hvd.rank() == 0:
             # TODO: can we download without loading
-            datasets.load_dataset("hans")
+            ds_hans = datasets.load_dataset("hans")
+            print("preload hans", ds_hans)
             ds = datasets.load_dataset("multi_nli")
             self.cnt_train_samples = len(ds["train"])
 
         num_samples_tensor = torch.LongTensor([self.cnt_train_samples])
         self.cnt_train_samples = hvd.broadcast(num_samples_tensor, 0).item()
 
-    def _get_dataset_tensor(self, dataset, split):
+    def get_split_dataloader(self, dataset, split):
         ri = datasets.ReadInstruction(
             split,
             from_=self.percent_start,
@@ -153,15 +180,16 @@ class NLIDataModule(pl.LightningDataModule):
             unit="%",
         )
         ds = datasets.load_dataset(dataset, split=ri)
-        return ds_to_tensors(ds, self.vocab, self.batch_size, self.test, self.params)
+        collator = Collator(self.tokenizer, self.params)
+        return DataLoader(ds, batch_size=self.params["batch_size"], collate_fn=collator)
 
     def train_dataloader(self):
-        return [self._get_dataset_tensor("multi_nli", "train")]
+        return [self.get_split_dataloader("multi_nli", "train")]
 
     def val_dataloader(self):
         dataloaders = [
-            self._get_dataset_tensor("multi_nli", "validation_matched"),
-            self._get_dataset_tensor("multi_nli", "validation_mismatched"),
-            self._get_dataset_tensor("hans", "validation"),
+            self.get_split_dataloader("multi_nli", "validation_matched"),
+            self.get_split_dataloader("multi_nli", "validation_mismatched"),
+            self.get_split_dataloader("hans", "validation"),
         ]
         return dataloaders
