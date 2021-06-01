@@ -63,7 +63,7 @@ class PLModel(PLBase):
             non_entail = non_entail.max(axis=1).values
             logits = torch.cat((entail, non_entail.unsqueeze(1)), 1)
         loss = F.cross_entropy(logits, targets)
-        acc = accuracy(torch.nn.functional.softmax(logits, dim=1), targets)
+        # acc = accuracy(torch.nn.functional.softmax(logits, dim=1), targets)
         cnt_correct = (torch.argmax(logits, axis=1) == targets).sum()
         # if self.hparams["test"] and dataloader_idx == 2:
         #     print(
@@ -73,7 +73,7 @@ class PLModel(PLBase):
         #     )
         metrics = {
             f"val_loss": loss,
-            f"val_acc": acc,
+            # f"val_acc": acc,
             f"cnt_correct": cnt_correct,
             f"cnt_questions": torch.tensor(targets.shape[0]),
         }
@@ -110,8 +110,8 @@ class PLModel(PLBase):
             loss = torch.stack([x["val_loss"] for x in lst_split]).mean()  # .item()
             # TODO: refactor this reduction an logging in one helper function
             loss = hvd.allreduce(loss)
-            acc = torch.stack([x["val_acc"] for x in lst_split]).mean()  # .item()
-            acc = hvd.allreduce(acc)
+            # acc = torch.stack([x["val_acc"] for x in lst_split]).mean()  # .item()
+            # acc = hvd.allreduce(acc)
             for category in ["", "_entail", "_nonentail"]:
                 cnt_correct = aggregate_batch_stats(lst_split, f"cnt_correct{category}")
                 cnt_questions = aggregate_batch_stats(lst_split, f"cnt_questions{category}")
