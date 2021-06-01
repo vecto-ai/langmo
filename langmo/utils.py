@@ -8,9 +8,10 @@ import yaml
 from protonn.utils import get_time_str
 
 
-def get_unique_results_path(base):
+def get_unique_results_path(base, model_name):
     hostname = platform.node().split(".")[0]
-    new_path = os.path.join(base, f"{get_time_str()}_{hostname}")
+    short_name = model_name.split("/")[-1]
+    new_path = os.path.join(base, f"{get_time_str()}_{short_name}_{hostname}")
     # TODO: make this trully unique
     return new_path
 
@@ -58,7 +59,7 @@ def load_config(name_task):
     params["name_project"] = name_project
     params["path_results"] = os.path.join(params["path_results"], name_project)
     if params["create_unique_path"]:
-        params["path_results"] = get_unique_results_path(params["path_results"])
+        params["path_results"] = get_unique_results_path(params["path_results"], params["model_name"])
     if hvd.rank() == 0:
         (Path(params["path_results"]) / "wandb").mkdir(parents=True, exist_ok=True)
     # Convert to "FP16" to (int) 16

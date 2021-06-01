@@ -54,7 +54,7 @@ class PLModel(PLBase):
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
-        print("got val batch\n" + describe_var(batch))
+        # print("got val batch\n" + describe_var(batch))
         inputs, targets = batch
         logits = self(inputs)
         if dataloader_idx == 2:
