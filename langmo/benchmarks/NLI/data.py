@@ -99,6 +99,15 @@ from torch.utils.data import DataLoader, DistributedSampler
 #     # labels = map(lambda x: dic_labels[x], df["gold_label"])
 #     return MyDataLoader(sent1, sent2, labels, batch_size)
 
+dic_heuristics = {
+    "lexical_overlap": 0,
+    "constituent": 1,
+    "subsequence": 2
+}
+
+labels_heuristics = ["lexical_overlap", "constituent", "subsequence"]
+labels_entail = ["entail", "nonentail"]
+
 
 class Collator:
     def __init__(self, tokenizer, params):
@@ -110,6 +119,11 @@ class Collator:
         sent2 = [i["hypothesis"] for i in x]
         labels = [i["label"] for i in x]
         labels = torch.LongTensor(labels)
+        if "heuristic" in x[0]:
+            heuristic = [dic_heuristics[i["heuristic"]] for i in x]
+            heuristic = torch.LongTensor(heuristic)
+        else:
+            heuristic = None
         tokenizer_params = {
             "padding": "max_length",
             "truncation": True,
@@ -118,15 +132,12 @@ class Collator:
         }
         if not self.params["siamese"]:
             features = self.tokenizer(text=sent1, text_pair=sent2, **tokenizer_params)
-            return (features, labels)
-        # siamese
-        sent1 = self.tokenizer(text=sent1, **tokenizer_params)
-        sent2 = self.tokenizer(text=sent2, **tokenizer_params)
-        # sent1, sent2, labels = zip(* x)
+        else:
+            sent1 = self.tokenizer(text=sent1, **tokenizer_params)
+            sent2 = self.tokenizer(text=sent2, **tokenizer_params)
+            features = {"left": sent1, "right": sent2}
         # TODO: get max len from both parts
-        # sent1 = sequences_to_padded_tensor(sent1)
-        # sent2 = sequences_to_padded_tensor(sent2)
-        return ({"left": sent1, "right": sent2}, labels)
+        return (features, labels, heuristic)
 
 
 class NLIDataModule(pl.LightningDataModule):
@@ -137,8 +148,8 @@ class NLIDataModule(pl.LightningDataModule):
         self.params = params
         self.test = params["test"]
         # TODO: if test, make dataset loading faster by setting small percents here
-        self.percent_start = float(hvd.rank()) / float(hvd.size()) * 100
-        self.percent_end = float(hvd.rank() + 1) / float(hvd.size()) * 100
+        # self.percent_start = float(hvd.rank()) / float(hvd.size()) * 100
+        # self.percent_end = float(hvd.rank() + 1) / float(hvd.size()) * 100
 
     def setup(self, stage=None):
         # TODO: get the right data loaded (might be something like "to
