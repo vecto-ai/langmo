@@ -1,0 +1,9 @@
+model_name: "prajjwal1/bert-mini"
+cnt_epochs: 2
+test: true
+
+# path_embeddings: "/groups2/gcb50300/data/NLP/embeddings/glove.6B.300d/"
+# batch_size: 64
+uncase: false
+randomize: false
+precision: "FP32"
