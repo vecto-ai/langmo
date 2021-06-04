@@ -1,13 +1,9 @@
 # import numpy as np
 import datasets
-from torch.utils.data import DataLoader
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
-# from datasets import logging as tr_logging
-
-# from protonn.utils import describe_var
-
+from torch.utils.data import DataLoader, DistributedSampler
 
 # def zero_pad_item(sample, max_len):
 #     if sample.shape[0] > max_len:
@@ -33,48 +29,6 @@ import torch
 #     # padded = np.rollaxis(padded, 1, 0)
 #     padded = torch.from_numpy(padded)
 #     return padded
-
-
-class Collator:
-    def __init__(self, tokenizer, params):
-        self.tokenizer = tokenizer
-        self.params = params
-
-    def __call__(self, x):
-        sent1 = [i["premise"] for i in x]
-        sent2 = [i["hypothesis"] for i in x]
-        labels = [i["label"] for i in x]
-        labels = torch.LongTensor(labels)
-        tokenizer_params = {
-            "padding": "max_length",
-            "truncation": True,
-            "return_tensors": "pt",
-        }
-        if not self.params["siamese"]:
-            features = self.tokenizer(
-                text=sent1,
-                text_pair=sent2,
-                max_length=128,
-                ** tokenizer_params,
-            )
-            return (features, labels)
-        # siamese
-        sent1 = self.tokenizer(
-            text=sent1,
-            max_length=128,
-            ** tokenizer_params
-        )
-        sent2 = self.tokenizer(
-            text=sent2,
-            max_length=128,
-            ** tokenizer_params,
-        )
-        return ({"left": sent1, "right": sent2}, labels)
-        # sent1, sent2, labels = zip(* x)
-        # TODO: get max len from both parts
-        # sent1 = sequences_to_padded_tensor(sent1)
-        # sent2 = sequences_to_padded_tensor(sent2)
-
 
 # class MyDataLoader:
 #     def __init__(self, sent1, sent2, labels, batch_size):
@@ -146,6 +100,35 @@ class Collator:
 #     return MyDataLoader(sent1, sent2, labels, batch_size)
 
 
+class Collator:
+    def __init__(self, tokenizer, params):
+        self.tokenizer = tokenizer
+        self.params = params
+
+    def __call__(self, x):
+        sent1 = [i["premise"] for i in x]
+        sent2 = [i["hypothesis"] for i in x]
+        labels = [i["label"] for i in x]
+        labels = torch.LongTensor(labels)
+        tokenizer_params = {
+            "padding": "max_length",
+            "truncation": True,
+            "return_tensors": "pt",
+            "max_length": 128,
+        }
+        if not self.params["siamese"]:
+            features = self.tokenizer(text=sent1, text_pair=sent2, **tokenizer_params)
+            return (features, labels)
+        # siamese
+        sent1 = self.tokenizer(text=sent1, **tokenizer_params)
+        sent2 = self.tokenizer(text=sent2, **tokenizer_params)
+        # sent1, sent2, labels = zip(* x)
+        # TODO: get max len from both parts
+        # sent1 = sequences_to_padded_tensor(sent1)
+        # sent2 = sequences_to_padded_tensor(sent2)
+        return ({"left": sent1, "right": sent2}, labels)
+
+
 class NLIDataModule(pl.LightningDataModule):
     def __init__(self, tokenizer, batch_size, params):
         super().__init__()
@@ -173,15 +156,23 @@ class NLIDataModule(pl.LightningDataModule):
         self.cnt_train_samples = hvd.broadcast(num_samples_tensor, 0).item()
 
     def get_split_dataloader(self, dataset, split):
-        ri = datasets.ReadInstruction(
-            split,
-            from_=self.percent_start,
-            to=self.percent_end,
-            unit="%",
-        )
-        ds = datasets.load_dataset(dataset, split=ri)
+        ds = datasets.load_dataset(dataset, split=split)
         collator = Collator(self.tokenizer, self.params)
-        return DataLoader(ds, batch_size=self.params["batch_size"], collate_fn=collator)
+
+        sampler = DistributedSampler(
+            ds,
+            num_replicas=hvd.size(),
+            rank=hvd.rank(),
+            shuffle=(split != "train"),
+        )
+
+        return DataLoader(
+            ds,
+            batch_size=self.params["batch_size"],
+            collate_fn=collator,
+            shuffle=False,
+            sampler=sampler,
+        )
 
     def train_dataloader(self):
         return [self.get_split_dataloader("multi_nli", "train")]
