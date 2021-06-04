@@ -20,7 +20,7 @@ from langmo.base import PLBase
 from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
 
-from .data import NLIDataModule
+from .data import NLIDataModule, dic_heuristics, labels_entail, labels_heuristics
 
 
 class PLModel(PLBase):
@@ -36,10 +36,11 @@ class PLModel(PLBase):
     def forward(self, inputs):
         # print(inputs)
         # exit(1)
+        # inputs["test"] = 1
         return self.net(**inputs)["logits"]
 
     def training_step(self, batch, batch_idx):
-        inputs, targets = batch[0]
+        inputs, targets, heuristic = batch[0]
         # this is to fix PL 1.2+ thinking that top level list is multiple iterators
         # should be address by returning proper dataloader
         logits = self(inputs)
@@ -55,7 +56,7 @@ class PLModel(PLBase):
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
         # print("got val batch\n" + describe_var(batch))
-        inputs, targets = batch
+        inputs, targets, heuristic = batch
         logits = self(inputs)
         if dataloader_idx == 2:
             entail = logits[:, :1]
@@ -64,7 +65,8 @@ class PLModel(PLBase):
             logits = torch.cat((entail, non_entail.unsqueeze(1)), 1)
         loss = F.cross_entropy(logits, targets)
         # acc = accuracy(torch.nn.functional.softmax(logits, dim=1), targets)
-        cnt_correct = (torch.argmax(logits, axis=1) == targets).sum()
+        mask_correct = torch.argmax(logits, axis=1) == targets
+        cnt_correct = mask_correct.sum()
         # if self.hparams["test"] and dataloader_idx == 2:
         #     print(
         #         f"worker {hvd.rank()} of {hvd.size()}\n"
@@ -78,14 +80,12 @@ class PLModel(PLBase):
             f"cnt_questions": torch.tensor(targets.shape[0]),
         }
         if dataloader_idx == 2:
-            metrics["cnt_correct_entail"] = torch.logical_and((torch.argmax(logits, axis=1) == 0), (targets == 0)).sum()
-            metrics["cnt_questions_entail"] = (targets == 0).sum()
-            metrics["cnt_correct_nonentail"] = torch.logical_and((torch.argmax(logits, axis=1) == 1), (targets == 1)).sum()
-            metrics["cnt_questions_nonentail"] = (targets == 0).sum()
-        # print(f"targets", targets)
-        # print(f"logits", logits)
-        # print(f"logging cnt_correct as {cnt_correct} of {targets.shape}")
-        # self.log_dict(metrics)
+            for entail in [0, 1]:
+                for id_heuristic in [0, 1, 2]:
+                    split_name = f"{labels_heuristics[id_heuristic]}_{labels_entail[entail]}"
+                    mask_split = torch.logical_and((targets == entail), (heuristic == id_heuristic))
+                    metrics[f"cnt_correct_{split_name}"] = torch.logical_and(mask_correct, mask_split).sum()
+                    metrics[f"cnt_questions_{split_name}"] = mask_split.sum()
         return metrics
 
     def append_metrics_to_train_logs(self, metrics):
@@ -112,12 +112,25 @@ class PLModel(PLBase):
             loss = hvd.allreduce(loss)
             # acc = torch.stack([x["val_acc"] for x in lst_split]).mean()  # .item()
             # acc = hvd.allreduce(acc)
-            for category in ["", "_entail", "_nonentail"]:
-                cnt_correct = aggregate_batch_stats(lst_split, f"cnt_correct{category}")
-                cnt_questions = aggregate_batch_stats(lst_split, f"cnt_questions{category}")
-                if cnt_questions > 0:
-                    metrics[f"cnt_correct_{name_dataset}{category}"] = cnt_correct
-                    metrics[f"val_acc_{name_dataset}{category}"] = cnt_correct / cnt_questions
+            cnt_correct = aggregate_batch_stats(lst_split, "cnt_correct")
+            cnt_questions = aggregate_batch_stats(lst_split, "cnt_questions")
+            metrics[f"val_acc_{name_dataset}"] = cnt_correct / cnt_questions
+
+            for entail in [0, 1]:
+                cnt_correct_label = 0
+                cnt_questions_label = 0
+                for id_heuristic in [0, 1, 2]:
+                    split_name = f"{labels_heuristics[id_heuristic]}_{labels_entail[entail]}"
+                    cnt_correct = aggregate_batch_stats(lst_split, f"cnt_correct_{split_name}")
+                    cnt_questions = aggregate_batch_stats(lst_split, f"cnt_questions_{split_name}")
+                    if cnt_questions > 0:
+                        metrics[f"cnt_correct_{name_dataset}_{split_name}"] = cnt_correct
+                        metrics[f"val_acc_{name_dataset}_{split_name}"] = cnt_correct / cnt_questions
+                    cnt_correct_label += cnt_correct
+                    cnt_questions_label += cnt_questions
+                if cnt_questions_label > 0:
+                    metrics[f"val_acc_{name_dataset}_{labels_entail[entail]}"] = cnt_correct_label / cnt_questions_label
+
 
             # cnt_correct = aggregate_batch_stats(lst_split, "cnt_correct")
             metrics[f"val_loss_{name_dataset}"] = loss
