@@ -144,7 +144,6 @@ class NLIDataModule(pl.LightningDataModule):
         self.params = params
         self.shuffle = shuffle
         self.test = params["test"]
-        # TODO: if test, make dataset loading faster by setting small percents here
         self.percent_start = float(hvd.rank()) / float(hvd.size()) * 100
         self.percent_end = float(hvd.rank() + 1) / float(hvd.size()) * 100
 
@@ -163,17 +162,22 @@ class NLIDataModule(pl.LightningDataModule):
         num_samples_tensor = torch.LongTensor([self.cnt_train_samples])
         self.cnt_train_samples = hvd.broadcast(num_samples_tensor, 0).item()
 
-    def get_split_dataloader(self, dataset, split):
+    def get_split_dataloader(self, dataset_name, split):
         collator = Collator(self.tokenizer, self.params)
 
         shuffle = (split != "train") and (self.shuffle)
-
-        if shuffle:
-            dataset = datasets.load_dataset(dataset, split=split)
+        if self.test:
+            ds_size = self.batch_size * 2
+            start = hvd.rank() * ds_size
+            split = f"{split}[{start}:{start+ds_size}]"
+            dataset = datasets.load_dataset(dataset_name, split=split)
+            sampler = None
+        elif shuffle:
+            dataset = datasets.load_dataset(dataset_name, split=split)
             sampler = DistributedSampler(dataset, hvd.size(), hvd.rank(), shuffle)
         else:
             split = f"{split}[{int(self.percent_start)}%:{int(self.percent_end)}%]"
-            dataset = datasets.load_dataset(dataset, split=split)
+            dataset = datasets.load_dataset(dataset_name, split=split)
             sampler = None
         return DataLoader(
             dataset,
