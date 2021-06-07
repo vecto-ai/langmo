@@ -167,8 +167,10 @@ class NLIDataModule(pl.LightningDataModule):
         collator = Collator(self.tokenizer, self.params)
 
         shuffle = (split != "train") and (self.shuffle)
-
-        if shuffle:
+        if self.test:
+            print("This is a test")
+            exit()
+        elif shuffle:
             dataset = datasets.load_dataset(dataset, split=split)
             sampler = DistributedSampler(dataset, hvd.size(), hvd.rank(), shuffle)
         else:
