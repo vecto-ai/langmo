@@ -99,11 +99,7 @@ from torch.utils.data import DataLoader, DistributedSampler
 #     # labels = map(lambda x: dic_labels[x], df["gold_label"])
 #     return MyDataLoader(sent1, sent2, labels, batch_size)
 
-dic_heuristics = {
-    "lexical_overlap": 0,
-    "constituent": 1,
-    "subsequence": 2
-}
+dic_heuristics = {"lexical_overlap": 0, "constituent": 1, "subsequence": 2}
 
 labels_heuristics = ["lexical_overlap", "constituent", "subsequence"]
 labels_entail = ["entail", "nonentail"]
@@ -141,15 +137,16 @@ class Collator:
 
 
 class NLIDataModule(pl.LightningDataModule):
-    def __init__(self, tokenizer, batch_size, params):
+    def __init__(self, tokenizer, batch_size, shuffle, params):
         super().__init__()
         self.batch_size = batch_size
         self.tokenizer = tokenizer
         self.params = params
+        self.shuffle = shuffle
         self.test = params["test"]
         # TODO: if test, make dataset loading faster by setting small percents here
-        # self.percent_start = float(hvd.rank()) / float(hvd.size()) * 100
-        # self.percent_end = float(hvd.rank() + 1) / float(hvd.size()) * 100
+        self.percent_start = float(hvd.rank()) / float(hvd.size()) * 100
+        self.percent_end = float(hvd.rank() + 1) / float(hvd.size()) * 100
 
     def setup(self, stage=None):
         # TODO: get the right data loaded (might be something like "to
@@ -167,23 +164,19 @@ class NLIDataModule(pl.LightningDataModule):
         self.cnt_train_samples = hvd.broadcast(num_samples_tensor, 0).item()
 
     def get_split_dataloader(self, dataset, split):
-        ds = datasets.load_dataset(dataset, split=split)
         collator = Collator(self.tokenizer, self.params)
 
-        sampler = DistributedSampler(
-            ds,
-            num_replicas=hvd.size(),
-            rank=hvd.rank(),
-            shuffle=(split != "train"),
-        )
+        shuffle = (split != "train") and (self.shuffle)
 
-        return DataLoader(
-            ds,
-            batch_size=self.params["batch_size"],
-            collate_fn=collator,
-            shuffle=False,
-            sampler=sampler,
-        )
+        if shuffle:
+            ds = datasets.load_dataset(dataset, split=split)
+            sampler = DistributedSampler(ds, hvd.size(), hvd.rank(), shuffle)
+            kwargs = dict(sampler=sampler)
+        else:
+            split = f"{split}[{int(self.percent_start)}%:{int(self.percent_end)}%]"
+            kwargs = dict()
+            ds = datasets.load_dataset(dataset, split=split)
+        return DataLoader(ds, batch_size=self.batch_size, collate_fn=collator, **kwargs)
 
     def train_dataloader(self):
         return [self.get_split_dataloader("multi_nli", "train")]

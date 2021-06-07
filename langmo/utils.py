@@ -53,13 +53,17 @@ def load_config(name_task):
         cnt_warmup_steps=500,
         cnt_training_steps=500000,
         siamese=False,
+        shuffle=False,
     )
     params.update(params_user)
     name_project = f"{name_task}{'_test' if params['test'] else ''}"
     params["name_project"] = name_project
     params["path_results"] = os.path.join(params["path_results"], name_project)
     if params["create_unique_path"]:
-        params["path_results"] = get_unique_results_path(params["path_results"], params["model_name"])
+        params["path_results"] = get_unique_results_path(
+            params["path_results"],
+            params["model_name"],
+        )
     if hvd.rank() == 0:
         (Path(params["path_results"]) / "wandb").mkdir(parents=True, exist_ok=True)
     # Convert to "FP16" to (int) 16

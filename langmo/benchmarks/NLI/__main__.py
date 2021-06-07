@@ -215,6 +215,7 @@ def main():
         # embs.vocabulary,
         tokenizer,
         batch_size=params["batch_size"],
+        shuffle=params["shuffle"],
         params=params,
     )
 
