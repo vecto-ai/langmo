@@ -169,14 +169,18 @@ class NLIDataModule(pl.LightningDataModule):
         shuffle = (split != "train") and (self.shuffle)
 
         if shuffle:
-            ds = datasets.load_dataset(dataset, split=split)
-            sampler = DistributedSampler(ds, hvd.size(), hvd.rank(), shuffle)
-            kwargs = dict(sampler=sampler)
+            dataset = datasets.load_dataset(dataset, split=split)
+            sampler = DistributedSampler(dataset, hvd.size(), hvd.rank(), shuffle)
         else:
             split = f"{split}[{int(self.percent_start)}%:{int(self.percent_end)}%]"
-            kwargs = dict()
-            ds = datasets.load_dataset(dataset, split=split)
-        return DataLoader(ds, batch_size=self.batch_size, collate_fn=collator, **kwargs)
+            dataset = datasets.load_dataset(dataset, split=split)
+            sampler = None
+        return DataLoader(
+            dataset,
+            batch_size=self.batch_size,
+            collate_fn=collator,
+            sampler=sampler,
+        )
 
     def train_dataloader(self):
         return [self.get_split_dataloader("multi_nli", "train")]
