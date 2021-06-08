@@ -1,11 +1,11 @@
-import pytorch_lightning as pl
-import transformers
 # TODO: cnt workers should be put once to params instead of using hvd
 import horovod.torch as hvd
+import pytorch_lightning as pl
 import torch
+import transformers
+
 
 class PLBase(pl.LightningModule):
-
     def __init__(self, net, tokenizer, params):
         super().__init__()
         self.net = net
@@ -13,6 +13,7 @@ class PLBase(pl.LightningModule):
         params["cnt_workers"] = hvd.size()
         params["train_logs"] = []
         params["batch_size_effective"] = params["batch_size"] * params["cnt_workers"]
+        self.save_hyperparameters(params)
         self.hparams.update(params)
 
     def configure_optimizers(self):
@@ -48,5 +49,3 @@ class PLBase(pl.LightningModule):
     def save_as_hf(self, path):
         self.net.save_pretrained(path)
         self.tokenizer.save_pretrained(path)
-
-
