@@ -83,9 +83,9 @@ class TextDataModule(pl.LightningDataModule):
         super().__init__()
         self.params = params
         self.tokenizer = tokenizer
+        self.corpus = Corpus(self.params["path_corpus"])
 
     def setup(self, stage=None):
-        self.corpus = Corpus(self.params["path_corpus"])
         # TODO: do this in rank 0 and send to the rest
         # Otherwise make sure files are sorted in the same order
         self.corpus.load_dir_strucute()

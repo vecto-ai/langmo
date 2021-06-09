@@ -1,16 +1,15 @@
 from pathlib import Path
 
 import horovod.torch as hvd
-from .model import Siamese, TopMLP2, get_hidden_size, BertWithLSTM
 import pytorch_lightning as pl
 import torch
+import torch.nn.functional as F
+import transformers
+from protonn.utils import get_time_str
+from pytorch_lightning.callbacks import LearningRateMonitor
 # import vecto
 # import vecto.embeddings
 from pytorch_lightning.loggers import WandbLogger
-import torch.nn.functional as F
-import transformers
-from protonn.utils import describe_var, get_time_str, save_data_json
-from pytorch_lightning.callbacks import LearningRateMonitor
 from torchmetrics.functional import accuracy
 from transformers import AutoModel, AutoModelForSequenceClassification
 from transformers import logging as tr_logging
@@ -20,7 +19,8 @@ from langmo.base import PLBase
 from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
 
-from .data import NLIDataModule, dic_heuristics, labels_entail, labels_heuristics
+from .data import NLIDataModule, labels_entail, labels_heuristics
+from .model import BertWithLSTM, Siamese, TopMLP2, get_hidden_size
 
 
 class PLModel(PLBase):
@@ -82,29 +82,17 @@ class PLModel(PLBase):
         if dataloader_idx == 2:
             for entail in [0, 1]:
                 for id_heuristic in [0, 1, 2]:
+                    # fmt: off
                     split_name = f"{labels_heuristics[id_heuristic]}_{labels_entail[entail]}"
                     mask_split = torch.logical_and((targets == entail), (heuristic == id_heuristic))
                     metrics[f"cnt_correct_{split_name}"] = torch.logical_and(mask_correct, mask_split).sum()
                     metrics[f"cnt_questions_{split_name}"] = mask_split.sum()
+                    # fmt: on
         return metrics
-
-    def append_metrics_to_train_logs(self, metrics):
-        entry = dict(epoch=metrics["epoch"])
-        for k, v in metrics.items():
-            val = v.item() if hasattr(v, "item") else v
-            entry[k] = val
-        self.hparams["train_logs"].append(entry)
-
-    def save_metadata(self):
-        path = Path(self.hparams["path_results"]) / "metadata.json"
-        save_data_json(self.hparams, path)
 
     def validation_epoch_end(self, outputs):
         metrics = {}
-        if self.trainer.running_sanity_check:
-            metrics["epoch"] = -1
-        else:
-            metrics["epoch"] = self.current_epoch
+        self.add_epoch_id_to_metrics(metrics)
         for id_dataloader, lst_split in enumerate(outputs):
             name_dataset = self.ds_prefixes[id_dataloader]
             loss = torch.stack([x["val_loss"] for x in lst_split]).mean()  # .item()
@@ -119,6 +107,7 @@ class PLModel(PLBase):
             for entail in [0, 1]:
                 cnt_correct_label = 0
                 cnt_questions_label = 0
+                # fmt: off
                 for id_heuristic in [0, 1, 2]:
                     split_name = f"{labels_heuristics[id_heuristic]}_{labels_entail[entail]}"
                     cnt_correct = aggregate_batch_stats(lst_split, f"cnt_correct_{split_name}")
@@ -130,13 +119,13 @@ class PLModel(PLBase):
                     cnt_questions_label += cnt_questions
                 if cnt_questions_label > 0:
                     metrics[f"val_acc_{name_dataset}_{labels_entail[entail]}"] = cnt_correct_label / cnt_questions_label
-
+                # fmt: on
 
             # cnt_correct = aggregate_batch_stats(lst_split, "cnt_correct")
             metrics[f"val_loss_{name_dataset}"] = loss
             # metrics[f"val_acc_{pref}_btch"] = acc
-            #if id_dataloader == 2:
-             #   metrics[f"cnt"]
+            # if id_dataloader == 2:
+            #   metrics[f"cnt"]
             # if self.hparams["test"] and id_dataloader == 2:
             #     print(
             #         f"worker {hvd.rank()} of {hvd.size()}\n"
@@ -189,7 +178,9 @@ def main():
         net = Siamese(encoder, TopMLP2(in_size=hidden_size * 8))
         # print("$$$$$$ CREATING SIAMESE")
     else:
-        net = AutoModelForSequenceClassification.from_pretrained(name_model, num_labels=3)
+        net = AutoModelForSequenceClassification.from_pretrained(
+            name_model, num_labels=3
+        )
         name_run = name_model
 
     # wandb_logger.watch(net, log='gradients', log_freq=100)
