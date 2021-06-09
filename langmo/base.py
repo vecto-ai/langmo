@@ -2,6 +2,8 @@
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
+from protonn.utils import save_data_json
+from pathlib import Path
 import transformers
 
 
@@ -49,3 +51,22 @@ class PLBase(pl.LightningModule):
     def save_as_hf(self, path):
         self.net.save_pretrained(path)
         self.tokenizer.save_pretrained(path)
+
+    def save_metadata(self, path=None):
+        if path is None:
+            path = self.hparams["path_results"]
+        path = Path(path) / "metadata.json"
+        save_data_json(self.hparams, path)
+
+    def add_epoch_id_to_metrics(self, metrics):
+        if self.trainer.running_sanity_check:
+            metrics["epoch"] = -1
+        else:
+            metrics["epoch"] = self.current_epoch
+
+    def append_metrics_to_train_logs(self, metrics):
+        entry = dict(epoch=metrics["epoch"])
+        for k, v in metrics.items():
+            val = v.item() if hasattr(v, "item") else v
+            entry[k] = val
+        self.hparams["train_logs"].append(entry)

@@ -1,9 +1,6 @@
-from pathlib import Path
-
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
-from protonn.utils import save_data_json
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from transformers import AutoModelForMaskedLM, AutoTokenizer
@@ -13,7 +10,7 @@ from langmo.base import PLBase
 from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
-
+from langmo.callbacks.perf import PerfMonitor
 from .data import TextDataModule
 
 
@@ -22,6 +19,7 @@ class PLModel(PLBase):
         super().__init__(net, tokenizer, params)
         self.net = net
         self.tokenizer = tokenizer
+        # TODO: add corpus metadata
         self.hparams.update(params)
 
     def forward(self, encoded):
@@ -58,24 +56,23 @@ class PLModel(PLBase):
         # self.log("epoch", self.current_epoch)
         return loss
 
-    # def save_pretrained(self):
-    #     file_name = "tmp"  # logdir + current snapshot name
-    #     self.net.save_pretrained(file_name)
-
-    def train_epoch_end(self, *args, **kwargs):
+    def training_epoch_end(self, *args, **kwargs):
         if hvd.rank() == 0:
-            print("training epoch end")
-            print("args:", args)
-            print("kwargs:", kwargs)
+            # print("args:", args)
+            # print("kwargs:", kwargs)
+            metrics = {}
+            self.add_epoch_id_to_metrics(metrics)
+            self.append_metrics_to_train_logs(metrics)
+            print(f" ############## training epoch {metrics['epoch']} end ##################")
 
-    def save_metadata(self, corpus_metadata, path=None):
-        # default `save_path` is `hparam["path_results"]`
-        if path is None:
-            path = self.hparams["path_results"]
-        path = Path(path) / "metadata.json"
-        if corpus_metadata is not None:
-            self.hparams["corpus"] = corpus_metadata
-        save_data_json(self.hparams, path)
+    # def save_metadata(self, corpus_metadata, path=None):
+    #     # default `save_path` is `hparam["path_results"]`
+    #     if path is None:
+    #         path = self.hparams["path_results"]
+    #     path = Path(path) / "metadata.json"
+    #     if corpus_metadata is not None:
+    #         self.hparams["corpus"] = corpus_metadata
+    #     save_data_json(self.hparams, path)
 
 
 def main():
@@ -84,9 +81,9 @@ def main():
         tr_logging.set_verbosity_error()  # to reduce warning of unused weights
     name_task = "pretrain"
     params = load_config(name_task=name_task)
-    name_run = params["name_model"]
-    tokenizer = AutoTokenizer.from_pretrained(params["name_model"])
-    net = AutoModelForMaskedLM.from_pretrained(params["name_model"])
+    name_run = params["model_name"]
+    tokenizer = AutoTokenizer.from_pretrained(params["model_name"])
+    net = AutoModelForMaskedLM.from_pretrained(params["model_name"])
     reinit_model(net)
     net.train()
     model = PLModel(
@@ -94,6 +91,12 @@ def main():
         tokenizer=tokenizer,
         params=params,
     )
+    data_module = TextDataModule(
+        tokenizer=tokenizer,
+        params=params,
+        # embs.vocabulary,
+    )
+    model.hparams["corpus"] = data_module.corpus.metadata
 
     n_steps_checkpoint = 5000  # TODO: should this go to params?
     on_n_step_checkpoint = CheckpointEveryNSteps(n_steps_checkpoint)
@@ -121,20 +124,13 @@ def main():
         # TODO: is this ok?
         # theirs samples do like you did
         # but there is special checkpoint_callback param too....
-        callbacks=[on_n_step_checkpoint, lr_monitor],
+        callbacks=[on_n_step_checkpoint, lr_monitor, PerfMonitor()],
         checkpoint_callback=False,
         gradient_clip_val=1.0,
         # TODO: figure out what is this
         progress_bar_refresh_rate=0,
         track_grad_norm=2,
     )
-
-    data_module = TextDataModule(
-        tokenizer=tokenizer,
-        params=params,
-        # embs.vocabulary,
-    )
-
     trainer.fit(model, data_module)
     print("All done")
 

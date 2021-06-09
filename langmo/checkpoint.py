@@ -34,8 +34,8 @@ class CheckpointEveryNSteps(BaseNStepCallback):
             trainer.save_checkpoint(path_checkpoint / "PL_model.ckpt")
             path_hf = path_checkpoint / "hf"
             trainer.model.save_as_hf(path_hf)
-            metadata = trainer.datamodule.corpus.metadata
-            trainer.model.save_metadata(metadata, path_checkpoint)
+            # metadata = trainer.datamodule.corpus.metadata
+            trainer.model.save_metadata(path_checkpoint)
 
 
 # TODO: this moves to CLI. but we can create something like .doit file here
