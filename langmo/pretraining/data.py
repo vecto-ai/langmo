@@ -39,10 +39,11 @@ class BatchIter:
         line[ids_nonzero] = mask_id
         return line
 
-    def encode_batch(self, lines):
+    def encode_batch(self, batch):
+        lines = [self.tokenizer.convert_tokens_to_string(line) for line in batch]
         encoded = self.tokenizer(
             lines,
-            is_split_into_words=True,
+            # is_split_into_words=True,
             max_length=self.max_length,
             # TODO: consider padding to the max length of the batch
             padding="max_length",
@@ -111,7 +112,7 @@ class TextDataModule(pl.LightningDataModule):
         # print("created view corpus")
         # TODO: add an option to skip short lines to line iter
         # print("loaded dir structure")
-        line_iter = self.corpus_view.get_sequence_iterator(sequence_length=self.params["max_length"],
+        line_iter = self.corpus_view.get_sequence_iterator(sequence_length=self.params["max_length"] - 2,
                                                           tokenizer=self.tokenizer.tokenize)
         # print("created line iter")
         batch_iter = BatchIter(line_iter, self.tokenizer, self.params)
