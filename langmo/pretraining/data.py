@@ -46,7 +46,7 @@ class BatchIter:
             max_length=self.max_length,
             # TODO: consider padding to the max length of the batch
             padding="max_length",
-            truncation="only_first",
+            truncation=True,
             return_tensors="pt",
         )
         # TODO: for languages which can be tokenated - add support of word-level masking
