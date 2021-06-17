@@ -58,7 +58,6 @@ class BatchIter:
         ids = encoded["input_ids"]
         for i in range(len(encoded["input_ids"])):
             ids[i] = self.mask_line(ids[i], self.tokenizer.mask_token_id)
-            ids[i][0] = 42
         return TBatch(
             input_ids=ids,
             token_type_ids=encoded["token_type_ids"],
