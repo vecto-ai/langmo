@@ -4,6 +4,8 @@ import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
 from vecto.corpus import Corpus, CorpusView
+from threading import Thread
+from queue import Queue
 
 TBatch = namedtuple(
     "TBatch", ["input_ids", "token_type_ids", "attention_mask", "labels"]
@@ -17,17 +19,25 @@ def shuffle_tensor(tensor):
 
 class BatchIter:
     def __init__(self, line_iter, tokenizer, params):
-        self.__gen__ = self._generate_samples()
         self.line_iter = line_iter
         self.batch_size = params["batch_size"]
         self.max_length = params["max_length"]
         self.tokenizer = tokenizer
+        self._queue = Queue(maxsize=5)
+        self._thread = Thread(target=self.thread, args=(), daemon=True)
+        self._thread.start()
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        return next(self.__gen__)
+        batch = self._queue.get()
+        # print(self._queue.qsize())
+        if batch is None:
+            self._thread.join()
+            raise StopIteration()
+        return batch
+        # return next(self.__gen__)
 
     def mask_line(self, line, mask_id):
         # TODO: move to config
@@ -66,16 +76,21 @@ class BatchIter:
             labels=encoded["labels"],
         )
 
-    def _generate_samples(self):
+    def read_next_batch(self):
         batch = []
         for line in self.line_iter:
-            # TODO: should be a parameter
             if len(line) > 10:
                 batch.append(line)
             if len(batch) == self.batch_size:
                 ret = self.encode_batch(batch)
                 yield ret
                 batch = []
+        # discarding last incomplete batch here
+
+    def thread(self):
+        for batch in self.read_next_batch():
+            self._queue.put(batch)
+        self._queue.put(None)
 
 
 class TextDataModule(pl.LightningDataModule):

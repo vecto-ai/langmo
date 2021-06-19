@@ -111,7 +111,7 @@ def main():
         gpus=gpus,
         num_sanity_val_steps=0,
         max_epochs=params["cnt_epochs"],
-        distributed_backend="horovod",
+        accelerator="horovod",
         precision=params["precision"],
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
@@ -130,6 +130,7 @@ def main():
         # TODO: figure out what is this
         progress_bar_refresh_rate=0,
         track_grad_norm=2,
+        # profiler="simple",
     )
     trainer.fit(model, data_module)
     print("All done")

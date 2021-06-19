@@ -1,9 +1,9 @@
-cnt_epochs: 2
+cnt_epochs: 3
 uncase: False
 batch_size: 32
 max_length: 128
 num_training_steps: 500
-path_corpus: "./data/wikitext-2"
+path_corpus: "./data/brown"
 model_name: "prajjwal1/bert-mini"
 test: True
 initial_lr: 1e-5
