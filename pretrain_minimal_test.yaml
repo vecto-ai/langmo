@@ -3,7 +3,7 @@ uncase: False
 batch_size: 32
 max_length: 128
 num_training_steps: 500
-path_corpus: "./data/brown"
+path_corpus: "./data/sense"
 model_name: "prajjwal1/bert-mini"
 test: True
 initial_lr: 1e-5
