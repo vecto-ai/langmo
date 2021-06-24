@@ -17,8 +17,6 @@ from .data import TextDataModule
 class PLModel(PLBase):
     def __init__(self, net, tokenizer, params):
         super().__init__(net, tokenizer, params)
-        self.net = net
-        self.tokenizer = tokenizer
         # TODO: add corpus metadata
         self.hparams.update(params)
 
@@ -98,7 +96,7 @@ def main():
     )
     model.hparams["corpus"] = data_module.corpus.metadata
 
-    n_steps_checkpoint = 5000  # TODO: should this go to params?
+    n_steps_checkpoint = 10000  # TODO: should this go to params?
     on_n_step_checkpoint = CheckpointEveryNSteps(n_steps_checkpoint)
     # scheudle_eval_callback = ScheduleEval(n_step)
     lr_monitor = LearningRateMonitor(logging_interval="step")
