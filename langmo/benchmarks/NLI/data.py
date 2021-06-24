@@ -1,9 +1,69 @@
 # import numpy as np
 import datasets
 import horovod.torch as hvd
-import pytorch_lightning as pl
 import torch
-from torch.utils.data import DataLoader, DistributedSampler
+from langmo.benchmarks.base_data import BaseDataModule, BaseCollator
+
+dic_heuristics = {"lexical_overlap": 0, "constituent": 1, "subsequence": 2}
+
+labels_heuristics = ["lexical_overlap", "constituent", "subsequence"]
+labels_entail = ["entail", "nonentail"]
+
+
+class Collator(BaseCollator):
+    def __call__(self, x):
+        sent1 = [i["premise"] for i in x]
+        sent2 = [i["hypothesis"] for i in x]
+        labels = [i["label"] for i in x]
+        labels = torch.LongTensor(labels)
+        if "heuristic" in x[0]:
+            heuristic = [dic_heuristics[i["heuristic"]] for i in x]
+            heuristic = torch.LongTensor(heuristic)
+        else:
+            heuristic = None
+        if not self.params["siamese"]:
+            features = self.tokenizer(text=sent1, text_pair=sent2, **self.tokenizer_params)
+        else:
+            sent1 = self.tokenizer(text=sent1, **self.tokenizer_params)
+            sent2 = self.tokenizer(text=sent2, **self.tokenizer_params)
+            features = {"left": sent1, "right": sent2}
+        # TODO: get max len from both parts
+        return (features, labels, heuristic)
+
+
+class NLIDataModule(BaseDataModule):
+    def __init__(self, tokenizer, params):
+        super().__init__(tokenizer, params)
+        self.collator = Collator(self.tokenizer, params)
+
+    def setup(self, stage=None):
+        # TODO: get the right data loaded (might be something like "to
+        # local SSD")
+
+        self.cnt_train_samples = 0
+        if hvd.rank() == 0:
+            # TODO: can we download without loading
+            ds_hans = datasets.load_dataset("hans")
+            print("preload hans", ds_hans)
+            ds = datasets.load_dataset("multi_nli")
+            self.cnt_train_samples = len(ds["train"])
+
+        num_samples_tensor = torch.LongTensor([self.cnt_train_samples])
+        self.cnt_train_samples = hvd.broadcast(num_samples_tensor, 0).item()
+
+    def train_dataloader(self):
+        return [self.get_split_dataloader("multi_nli", "train")]
+
+    def val_dataloader(self):
+        dataloaders = [
+            self.get_split_dataloader("multi_nli", "validation_matched"),
+            self.get_split_dataloader("multi_nli", "validation_mismatched"),
+            self.get_split_dataloader("hans", "validation"),
+        ]
+        return dataloaders
+
+
+# ---- code to reuse when we pad manually-----------
 
 # def zero_pad_item(sample, max_len):
 #     if sample.shape[0] > max_len:
@@ -98,101 +158,3 @@ from torch.utils.data import DataLoader, DistributedSampler
 #     sent2 = list(map(vocab.tokens_to_ids, sent2))
 #     # labels = map(lambda x: dic_labels[x], df["gold_label"])
 #     return MyDataLoader(sent1, sent2, labels, batch_size)
-
-dic_heuristics = {"lexical_overlap": 0, "constituent": 1, "subsequence": 2}
-
-labels_heuristics = ["lexical_overlap", "constituent", "subsequence"]
-labels_entail = ["entail", "nonentail"]
-
-
-class Collator:
-    def __init__(self, tokenizer, params):
-        self.tokenizer = tokenizer
-        self.params = params
-
-    def __call__(self, x):
-        sent1 = [i["premise"] for i in x]
-        sent2 = [i["hypothesis"] for i in x]
-        labels = [i["label"] for i in x]
-        labels = torch.LongTensor(labels)
-        if "heuristic" in x[0]:
-            heuristic = [dic_heuristics[i["heuristic"]] for i in x]
-            heuristic = torch.LongTensor(heuristic)
-        else:
-            heuristic = None
-        tokenizer_params = {
-            "padding": "max_length",
-            "truncation": True,
-            "return_tensors": "pt",
-            "max_length": 128,
-        }
-        if not self.params["siamese"]:
-            features = self.tokenizer(text=sent1, text_pair=sent2, **tokenizer_params)
-        else:
-            sent1 = self.tokenizer(text=sent1, **tokenizer_params)
-            sent2 = self.tokenizer(text=sent2, **tokenizer_params)
-            features = {"left": sent1, "right": sent2}
-        # TODO: get max len from both parts
-        return (features, labels, heuristic)
-
-
-class NLIDataModule(pl.LightningDataModule):
-    def __init__(self, tokenizer, batch_size, shuffle, params):
-        super().__init__()
-        self.batch_size = batch_size
-        self.tokenizer = tokenizer
-        self.params = params
-        self.shuffle = shuffle
-        self.test = params["test"]
-        self.percent_start = float(hvd.rank()) / float(hvd.size()) * 100
-        self.percent_end = float(hvd.rank() + 1) / float(hvd.size()) * 100
-
-    def setup(self, stage=None):
-        # TODO: get the right data loaded (might be something like "to
-        # local SSD")
-
-        self.cnt_train_samples = 0
-        if hvd.rank() == 0:
-            # TODO: can we download without loading
-            ds_hans = datasets.load_dataset("hans")
-            print("preload hans", ds_hans)
-            ds = datasets.load_dataset("multi_nli")
-            self.cnt_train_samples = len(ds["train"])
-
-        num_samples_tensor = torch.LongTensor([self.cnt_train_samples])
-        self.cnt_train_samples = hvd.broadcast(num_samples_tensor, 0).item()
-
-    def get_split_dataloader(self, dataset_name, split):
-        collator = Collator(self.tokenizer, self.params)
-
-        shuffle = (split != "train") and (self.shuffle)
-        if self.test:
-            ds_size = self.batch_size * 2
-            start = hvd.rank() * ds_size
-            split = f"{split}[{start}:{start+ds_size}]"
-            dataset = datasets.load_dataset(dataset_name, split=split)
-            sampler = None
-        elif shuffle:
-            dataset = datasets.load_dataset(dataset_name, split=split)
-            sampler = DistributedSampler(dataset, hvd.size(), hvd.rank(), shuffle)
-        else:
-            split = f"{split}[{int(self.percent_start)}%:{int(self.percent_end)}%]"
-            dataset = datasets.load_dataset(dataset_name, split=split)
-            sampler = None
-        return DataLoader(
-            dataset,
-            batch_size=self.batch_size,
-            collate_fn=collator,
-            sampler=sampler,
-        )
-
-    def train_dataloader(self):
-        return [self.get_split_dataloader("multi_nli", "train")]
-
-    def val_dataloader(self):
-        dataloaders = [
-            self.get_split_dataloader("multi_nli", "validation_matched"),
-            self.get_split_dataloader("multi_nli", "validation_mismatched"),
-            self.get_split_dataloader("hans", "validation"),
-        ]
-        return dataloaders

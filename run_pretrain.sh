@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd
-#$ -l rt_F=4
-#$ -l h_rt=20:00:00
+#$ -l rt_AF=1
+#$ -l h_rt=30:00:00
 #$ -N Pretrain
 #$ -j y
 #$ -o $JOB_NAME.o$JOB_ID
@@ -11,7 +11,7 @@ source /etc/profile.d/modules.sh
 source modules.sh
 
 NUM_NODES=${NHOSTS}
-NUM_GPUS_PER_NODE=4
+NUM_GPUS_PER_NODE=8
 NUM_GPUS_PER_SOCKET=$(expr ${NUM_GPUS_PER_NODE} / 2)
 NUM_PROCS=$(expr ${NUM_NODES} \* ${NUM_GPUS_PER_NODE})
 
