@@ -1,15 +1,16 @@
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
+from pytorch_lightning.callbacks import LearningRateMonitor
+from pytorch_lightning.loggers import WandbLogger
+from transformers import AutoModelForMaskedLM, AutoTokenizer
+from transformers import logging as tr_logging
+
 from langmo.base import PLBase
 from langmo.callbacks.perf import PerfMonitor
 from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
-from pytorch_lightning.callbacks import LearningRateMonitor
-from pytorch_lightning.loggers import WandbLogger
-from transformers import AutoModelForMaskedLM, AutoTokenizer
-from transformers import logging as tr_logging
 
 from .data import TextDataModule
 
@@ -61,7 +62,7 @@ class PLModel(PLBase):
             metrics = {}
             self.add_epoch_id_to_metrics(metrics)
             self.append_metrics_to_train_logs(metrics)
-            print(f" ############## training epoch {metrics['epoch']} end ##################")
+            print(f" ########### training epoch {metrics['epoch']} end ###############")
 
     # def save_metadata(self, corpus_metadata, path=None):
     #     # default `save_path` is `hparam["path_results"]`
@@ -73,6 +74,31 @@ class PLModel(PLBase):
     #     save_data_json(self.hparams, path)
 
 
+def build_model(params):
+    if "resume" in params:
+        resume = params["resume"]
+        tokenizer = AutoTokenizer.from_pretrained(resume["hf"])
+        net = AutoModelForMaskedLM.from_pretrained(resume["hf"])
+        net.train()
+        model = PLModel.load_from_checkpoint(
+            resume["checkpoint"],
+            net=net,
+            tokenizer=tokenizer,
+            params=params,
+        )
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(params["model_name"])
+        net = AutoModelForMaskedLM.from_pretrained(params["model_name"])
+        reinit_model(net)
+        net.train()
+        model = PLModel(
+            net=net,
+            tokenizer=tokenizer,
+            params=params,
+        )
+    return model
+
+
 def main():
     hvd.init()
     if hvd.rank() != 0:
@@ -80,17 +106,9 @@ def main():
     name_task = "pretrain"
     params = load_config(name_task=name_task)
     name_run = params["model_name"]
-    tokenizer = AutoTokenizer.from_pretrained(params["model_name"])
-    net = AutoModelForMaskedLM.from_pretrained(params["model_name"])
-    reinit_model(net)
-    net.train()
-    model = PLModel(
-        net=net,
-        tokenizer=tokenizer,
-        params=params,
-    )
+    model = build_model(params)
     data_module = TextDataModule(
-        tokenizer=tokenizer,
+        tokenizer=model.tokenizer,
         params=params,
         # embs.vocabulary,
     )
@@ -103,6 +121,7 @@ def main():
     if params["use_gpu"]:
         assert torch.cuda.device_count() > 0, "Asked for `use_gpu` but no gpu detected"
     gpus = 1 if params["use_gpu"] else 0
+    checkpoint = params["resume"]["checkpoint"] if "resume" in params else None
     trainer = pl.Trainer(
         default_root_dir=params["path_results"],
         weights_save_path=params["path_results"],
@@ -129,6 +148,7 @@ def main():
         progress_bar_refresh_rate=0,
         track_grad_norm=2,
         # profiler="simple",
+        resume_from_checkpoint=checkpoint,
     )
     trainer.fit(model, data_module)
     print("All done")

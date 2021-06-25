@@ -7,3 +7,4 @@ path_corpus: "./data/sense"
 model_name: "prajjwal1/bert-mini"
 test: True
 initial_lr: 1e-5
+cnt_samples_per_epoch: 10000
