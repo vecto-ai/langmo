@@ -5,7 +5,7 @@ from pathlib import Path
 
 import horovod.torch as hvd
 import yaml
-from protonn.utils import get_time_str
+from protonn.utils import get_time_str, load_json
 
 
 def get_unique_results_path(base, model_name):
@@ -22,11 +22,7 @@ def parse_float(dic, key):
             dic[key] = float(dic[key])
 
 
-def load_config(name_task):
-    if len(sys.argv) < 2:
-        print("run main.py config.yaml")
-        exit(-1)
-    path_config = sys.argv[1]
+def load_yaml_config(path_config):
     with open(path_config, "r") as cfg:
         params_user = yaml.load(cfg, Loader=yaml.SafeLoader)
     parse_float(params_user, "initial_lr")
@@ -34,7 +30,10 @@ def load_config(name_task):
     parse_float(params_user, "eps")
     parse_float(params_user, "beta1")
     parse_float(params_user, "beta2")
-    # default params
+    return params_user
+
+
+def apply_defaults_to_params(params_user):
     params = dict(
         test=False,
         use_gpu=True,
@@ -56,6 +55,16 @@ def load_config(name_task):
         shuffle=False,
     )
     params.update(params_user)
+    return params
+
+
+def is_yaml_config(path):
+    return len(sys.argv) == 2 and path.is_file() and path.suffix in {".yaml", ".yml"}
+
+
+def load_yaml_config_with_defaults(path, name_task):
+    params_user = load_yaml_config(path)
+    params = apply_defaults_to_params(params_user)
     name_project = f"{name_task}{'_test' if params['test'] else ''}"
     params["name_project"] = name_project
     params["path_results"] = os.path.join(params["path_results"], name_project)
@@ -69,5 +78,36 @@ def load_config(name_task):
     # Convert to "FP16" to (int) 16
     if isinstance(params["precision"], str):
         params["precision"] = int(params["precision"].lower().replace("fp", ""))
-
     return params
+
+
+def is_resume_run(path):
+    path = path / "metadata.json"
+    return path.is_file() and path.suffix == ".json"
+
+
+def load_resume_run_params(path):
+    params = load_json(path / "metadata.json")
+    paths = dict(
+        metadata=str(path),
+        checkpoint=str(path / "PL_model.ckpt"),
+        hf=str(path / "hf"),
+    )
+    params["resume"] = paths
+    return params
+
+
+def load_config(name_task):
+    if len(sys.argv) < 2:
+        print("run main.py config.yaml")
+        print("or")
+        print("run main.py logs/path/to/snapshot/epoc10_step42000")
+        exit(-1)
+
+    path = Path(sys.argv[1])
+
+    if is_yaml_config(path):
+        return load_yaml_config_with_defaults(path, name_task)
+
+    if is_resume_run(path):
+        return load_resume_run_params(path)
