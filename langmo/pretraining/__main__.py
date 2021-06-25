@@ -1,16 +1,16 @@
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
+from langmo.base import PLBase
+from langmo.callbacks.perf import PerfMonitor
+from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
+from langmo.nn.utils import reinit_model
+from langmo.utils import load_config
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
 
-from langmo.base import PLBase
-from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
-from langmo.nn.utils import reinit_model
-from langmo.utils import load_config
-from langmo.callbacks.perf import PerfMonitor
 from .data import TextDataModule
 
 
@@ -118,7 +118,7 @@ def main():
             name=name_run,
             save_dir=params["path_results"],
         ),
-        reload_dataloaders_every_epoch=True,
+        reload_dataloaders_every_epoch=False,
         # TODO: is this ok?
         # theirs samples do like you did
         # but there is special checkpoint_callback param too....

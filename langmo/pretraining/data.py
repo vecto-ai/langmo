@@ -1,11 +1,11 @@
 from collections import namedtuple
+from queue import Queue
+from threading import Thread
 
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
 from vecto.corpus import Corpus, CorpusView
-from threading import Thread
-from queue import Queue
 
 TBatch = namedtuple(
     "TBatch", ["input_ids", "token_type_ids", "attention_mask", "labels"]
@@ -19,6 +19,7 @@ def shuffle_tensor(tensor):
 
 class BatchIter:
     def __init__(self, line_iter, tokenizer, params):
+        print("### CREATING BATCH ITER")
         self.line_iter = line_iter
         self.batch_size = params["batch_size"]
         self.max_length = params["max_length"]
@@ -26,16 +27,23 @@ class BatchIter:
         self._queue = Queue(maxsize=5)
         self._thread = Thread(target=self.thread, args=(), daemon=True)
         self._thread.start()
+        cnt_batches_per_epoch = params["cnt_samples_per_epoch"] / params["batch_size"]
+        self.batches_per_epoch = cnt_batches_per_epoch / hvd.size()
+        self.cnt_batches_produced = 0
 
     def __iter__(self):
         return self
 
     def __next__(self):
+        if self.cnt_batches_produced >= self.batches_per_epoch:
+            self.cnt_batches_produced = 0
+            raise StopIteration()
         batch = self._queue.get()
         # print(self._queue.qsize())
-        if batch is None:
-            self._thread.join()
-            raise StopIteration()
+        #if batch is None:
+        #    self._thread.join()
+        # raise StopIteration()
+        self.cnt_batches_produced += 1
         return batch
         # return next(self.__gen__)
 
@@ -105,9 +113,9 @@ class TextDataModule(pl.LightningDataModule):
         # Otherwise make sure files are sorted in the same order
         self.corpus.load_dir_strucute()
         print("loaded corpus of size", self.corpus.total_bytes)
-        self.corpus_view = CorpusView(self.corpus,
-                                      rank=hvd.rank(),
-                                      size=hvd.size())
+        #self.corpus_view = CorpusView(self.corpus,
+        #                              rank=hvd.rank(),
+        #                              size=hvd.size())
 
     def train_dataloader(self):
         # sent3 options:
@@ -127,8 +135,11 @@ class TextDataModule(pl.LightningDataModule):
         # print("created view corpus")
         # TODO: add an option to skip short lines to line iter
         # print("loaded dir structure")
-        line_iter = self.corpus_view.get_sequence_iterator(sequence_length=self.params["max_length"] - 2,
-                                                          tokenizer=self.tokenizer.tokenize)
+        line_iter = self.corpus.get_looped_sequence_iterator(
+            sequence_length=self.params["max_length"] - 2,
+            tokenizer=self.tokenizer.tokenize,
+            rank=hvd.rank(),
+            size=hvd.size())
         # print("created line iter")
         batch_iter = BatchIter(line_iter, self.tokenizer, self.params)
         return batch_iter
