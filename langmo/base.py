@@ -1,10 +1,11 @@
 # TODO: cnt workers should be put once to params instead of using hvd
+from pathlib import Path
+
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
-from protonn.utils import save_data_json
-from pathlib import Path
 import transformers
+from protonn.utils import save_data_json
 
 
 class PLBase(pl.LightningModule):
@@ -23,6 +24,7 @@ class PLBase(pl.LightningModule):
             [param for param in self.net.parameters() if param.requires_grad],
             lr=self.hparams["initial_lr"],
             eps=self.hparams["eps"],
+            weight_decay=self.hparams["weight_decay"],
             betas=(self.hparams["beta1"], self.hparams["beta2"]),
         )
         # optimizer.clip_grad_norm(1.0)
