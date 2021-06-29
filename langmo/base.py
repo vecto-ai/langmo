@@ -13,9 +13,7 @@ class PLBase(pl.LightningModule):
         super().__init__()
         self.net = net
         self.tokenizer = tokenizer
-        params["cnt_workers"] = hvd.size()
         params["train_logs"] = []
-        params["batch_size_effective"] = params["batch_size"] * params["cnt_workers"]
         self.save_hyperparameters(params)
         self.hparams.update(params)
 
