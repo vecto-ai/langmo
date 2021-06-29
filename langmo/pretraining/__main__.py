@@ -71,6 +71,15 @@ class PLModel(PLBase):
             self.append_metrics_to_train_logs(metrics)
             print(f" ########### training epoch {metrics['epoch']} end ###############")
 
+    def validation_step(self, batch, batch_idx):
+        result = self.forward(batch)
+        loss = result["loss"]
+        self.log("val_loss", loss)
+        return loss
+
+    def validation_epoch_end(self, outputs):
+        self.trainer.datamodule.val_rng_reset()
+
     # def save_metadata(self, corpus_metadata, path=None):
     #     # default `save_path` is `hparam["path_results"]`
     #     if path is None:
