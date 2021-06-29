@@ -1,16 +1,15 @@
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
-from pytorch_lightning.callbacks import LearningRateMonitor
-from pytorch_lightning.loggers import WandbLogger
-from transformers import AutoModelForMaskedLM, AutoTokenizer
-from transformers import logging as tr_logging
-
 from langmo.base import PLBase
 from langmo.callbacks.perf import PerfMonitor
 from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
+from pytorch_lightning.callbacks import LearningRateMonitor
+from pytorch_lightning.loggers import WandbLogger
+from transformers import AutoModelForMaskedLM, AutoTokenizer
+from transformers import logging as tr_logging
 
 from .data import TextDataModule
 
@@ -106,6 +105,14 @@ def main():
     name_task = "pretrain"
     params = load_config(name_task=name_task)
     name_run = params["model_name"]
+    # TODO: revisit this when we have model parallel training
+    name_run += f"_{params['timestamp']}"
+    name_run += f"_bs{params['batch_size'] * params['cnt_workers']}"
+    name_run += f"_lr{params['max_lr']}"
+    name_run += f"_wd{params['weight_decay']}"
+    name_run += f"_stp{params['num_training_steps']}"
+    print(name_run)
+    exit(0)
     model = build_model(params)
     data_module = TextDataModule(
         tokenizer=model.tokenizer,

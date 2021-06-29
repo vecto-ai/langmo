@@ -8,10 +8,10 @@ import yaml
 from protonn.utils import get_time_str, load_json
 
 
-def get_unique_results_path(base, model_name):
+def get_unique_results_path(base, model_name, timestamp):
     hostname = platform.node().split(".")[0]
     short_name = model_name.split("/")[-1]
-    new_path = os.path.join(base, f"{get_time_str()}_{short_name}_{hostname}")
+    new_path = os.path.join(base, f"{timestamp}_{short_name}_{hostname}")
     # TODO: make this trully unique
     return new_path
 
@@ -69,16 +69,23 @@ def load_yaml_config_with_defaults(path, name_task):
     name_project = f"{name_task}{'_test' if params['test'] else ''}"
     params["name_project"] = name_project
     params["path_results"] = os.path.join(params["path_results"], name_project)
+    params["timestamp"] = get_time_str()
     if params["create_unique_path"]:
         params["path_results"] = get_unique_results_path(
             params["path_results"],
             params["model_name"],
+            params["timestamp"]
         )
     if hvd.rank() == 0:
         (Path(params["path_results"]) / "wandb").mkdir(parents=True, exist_ok=True)
     # Convert to "FP16" to (int) 16
     if isinstance(params["precision"], str):
         params["precision"] = int(params["precision"].lower().replace("fp", ""))
+    # TODO: we put it here for now for simplicitly
+    # this needs to be revisited when we do model parallel
+    # TODO: also we whould think what we do when we resume with different number of workers
+    params["cnt_workers"] = hvd.size()
+    params["batch_size_effective"] = params["batch_size"] * params["cnt_workers"]
     return params
 
 
