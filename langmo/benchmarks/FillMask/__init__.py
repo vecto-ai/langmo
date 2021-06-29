@@ -1,6 +1,8 @@
+import json
+import sys
+
 from transformers import pipeline
 from vecto.benchmarks.base import Benchmark as BaseBenchmark
-import json
 from vecto.utils.data import print_json
 
 
@@ -46,7 +48,7 @@ class Benchmark(BaseBenchmark):
 def main():
     from transformers import AutoModelForMaskedLM
     from transformers import AutoTokenizer
-    name_model = "albert-base-v2"
+    name_model = sys.argv[1]
     model = AutoModelForMaskedLM.from_pretrained(name_model)
     tokenizer = AutoTokenizer.from_pretrained(name_model)
     benchmark = Benchmark(model, tokenizer)
