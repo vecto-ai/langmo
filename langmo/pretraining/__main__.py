@@ -8,7 +8,7 @@ from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
-from transformers import AutoModelForMaskedLM, AutoTokenizer
+from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
 
 from .data import TextDataModule
@@ -25,6 +25,14 @@ class PLModel(PLBase):
         token_type_ids = encoded.token_type_ids
         attention_mask = encoded.attention_mask
         labels = encoded.labels
+        if self.hparams["test"]:
+            print(self.tokenizer.decode(input_ids[0]))
+            print()
+            print(self.tokenizer.decode(labels[0]))
+            print(token_type_ids[0])
+            print(attention_mask[0])
+            print()
+            print()
         result = self.net(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -87,8 +95,9 @@ def build_model(params):
         )
     else:
         tokenizer = AutoTokenizer.from_pretrained(params["model_name"])
-        net = AutoModelForMaskedLM.from_pretrained(params["model_name"])
-        reinit_model(net)
+        config = AutoConfig.from_pretrained(params["model_name"])
+        net = AutoModelForMaskedLM.from_config(config)
+        # reinit_model(net)
         net.train()
         model = PLModel(
             net=net,
@@ -110,9 +119,7 @@ def main():
     name_run += f"_bs{params['batch_size'] * params['cnt_workers']}"
     name_run += f"_lr{params['max_lr']}"
     name_run += f"_wd{params['weight_decay']}"
-    name_run += f"_stp{params['num_training_steps']}"
-    print(name_run)
-    exit(0)
+    name_run += f"_stp{params['cnt_training_steps']}"
     model = build_model(params)
     data_module = TextDataModule(
         tokenizer=model.tokenizer,
