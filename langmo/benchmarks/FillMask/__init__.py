@@ -50,6 +50,7 @@ def main():
     from transformers import AutoTokenizer
     name_model = sys.argv[1]
     model = AutoModelForMaskedLM.from_pretrained(name_model)
+    model.eval()
     tokenizer = AutoTokenizer.from_pretrained(name_model)
     benchmark = Benchmark(model, tokenizer)
     result = benchmark.run()
