@@ -1,0 +1,14 @@
+# path_embeddings: "/groups2/gcb50300/embeddings/glove.6B.300d/glove.6B.300d.txt"
+# path_embeddings: "/groups2/gcb50300/data/NLP/embeddings/glove.6B.300d/"
+# model_name: "/groups/gcb50300/DL_outs/NLP/pretrain/21.06.29_23.28.27_bert-base-uncased_a0009/checkpoints/epoch12_step50000/hf/"
+batch_size: 32
+cnt_epochs: 4
+test: false
+uncase: false
+randomize: false
+path_results: /groups/gcb50300/DL_outs/NLP/MNLI
+max_lr: 0.00005
+siamese: false
+freeze_encoder: true
+cnt_warmup_steps: 10
+shuffle: false
