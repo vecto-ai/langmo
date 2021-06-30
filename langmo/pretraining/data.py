@@ -18,15 +18,23 @@ def shuffle_tensor(tensor, generator):
     return tensor[perm]
 
 
-def mask_line(line, mask_id, generator=None):
+def mask_line(line, tokenizer, generator=None):
     # TODO: move to config
     proba_masking = 0.15
-    ids_nonzero = line.nonzero(as_tuple=True)[0][1:-1]
-    ids_nonzero = shuffle_tensor(ids_nonzero, generator=generator)
-    cnt_masked = int(len(ids_nonzero) * proba_masking)
-    ids_nonzero = ids_nonzero[:cnt_masked]
-    line[ids_nonzero] = mask_id
-    return line
+    rolls = torch.rand(line.shape, generator=generator)
+    # TODO: doing this with broadcast should be more elegant
+    mask_non_special = torch.tensor([i not in tokenizer.all_special_ids for i in line])
+    mask_good_rolls = rolls < proba_masking
+    mask_mask = mask_good_rolls & mask_non_special
+    line[mask_mask] = tokenizer.mask_token_id
+    # print(mask_mask)
+    # the way with fixed count of masked tokens each time
+    # ids_nonzero = line.nonzero(as_tuple=True)[0][1:-1]
+    # ids_nonzero = shuffle_tensor(ids_nonzero, generator=generator)
+    # cnt_masked = int(len(ids_nonzero) * proba_masking)
+    # ids_nonzero = ids_nonzero[:cnt_masked]
+    # line[ids_nonzero] = mask_id
+    return line, mask_mask
 
 
 class BatchIter:
@@ -72,18 +80,17 @@ class BatchIter:
         )
         # TODO: for languages which can be tokenated - add support of word-level masking
         # that is before sequences are converted to IDS
-
-        # consider masking or not masking special tokens like SEP and CLS
-
-        encoded["labels"] = encoded["input_ids"].clone()
+        labels = encoded["input_ids"].clone()
         ids = encoded["input_ids"]
         for i in range(len(encoded["input_ids"])):
-            ids[i] = mask_line(ids[i], self.tokenizer.mask_token_id)
+            ids[i], mask = mask_line(ids[i], self.tokenizer)
+            # TODO: check if this number is model-specific
+            labels[i][~mask] = -100
         return TBatch(
             input_ids=ids,
             token_type_ids=encoded["token_type_ids"],
             attention_mask=encoded["attention_mask"],
-            labels=encoded["labels"],
+            labels=labels,
         )
 
     def read_next_batch(self):
@@ -172,7 +179,7 @@ class TextDataModule(pl.LightningDataModule):
         encoded["labels"] = encoded["input_ids"].clone()
         ids = encoded["input_ids"]
         for i in range(len(encoded["input_ids"])):
-            ids[i] = mask_line(ids[i], self.tokenizer.mask_token_id, self.val_gen)
+            ids[i], _ = mask_line(ids[i], tokenizer=self.tokenizer, generator=self.val_gen)
         return TBatch(
             input_ids=ids,
             token_type_ids=encoded["token_type_ids"],

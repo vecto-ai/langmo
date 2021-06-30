@@ -28,7 +28,7 @@ class PLModel(PLBase):
         if self.hparams["test"]:
             print(self.tokenizer.decode(input_ids[0]))
             print()
-            print(self.tokenizer.decode(labels[0]))
+            print(labels[0])
             print(token_type_ids[0])
             print(attention_mask[0])
             print()
