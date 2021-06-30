@@ -1,10 +1,12 @@
+# from langmo.nn.utils import reinit_model
+from time import sleep
+
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
 from langmo.base import PLBase
 from langmo.callbacks.perf import PerfMonitor
 from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
-from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
@@ -70,6 +72,17 @@ class PLModel(PLBase):
             self.add_epoch_id_to_metrics(metrics)
             self.append_metrics_to_train_logs(metrics)
             print(f" ########### training epoch {metrics['epoch']} end ###############")
+        # FIXIN double borrow for tokenizers which is currently not working in threads
+        # assume it will be ok as long as we don't access tokenizer simultaneously
+        # so let's wait here till the queue of training samples is repopulated
+        # TODO: this .loaders is kinda strange
+        dataloader = self.trainer.train_dataloader.loaders
+        while dataloader._queue.qsize() < dataloader._queue.maxsize:
+            sleep(1)
+        # well this would not block us while queue is full but train loader still preparing the next batch
+        # which will be blocked on queue.put() :-\
+        # this is beyound ugly but shikata nai
+        sleep(5)
 
     def validation_step(self, batch, batch_idx):
         result = self.forward(batch)
