@@ -1,4 +1,4 @@
-cnt_epochs: 3
+cnt_epochs: 4
 uncase: False
 batch_size: 32
 max_length: 128

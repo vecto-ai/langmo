@@ -109,6 +109,10 @@ class BatchIter:
             self._queue.put(batch)
         self._queue.put(None)
 
+    @property
+    def cnt_restarts(self):
+        return self.line_iter.cnt_restarts
+
 
 class TextDataModule(pl.LightningDataModule):
     def __init__(self, tokenizer, params):  # , vocab, batch_size, params):
