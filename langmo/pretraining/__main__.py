@@ -7,6 +7,7 @@ import torch
 from langmo.base import PLBase
 from langmo.callbacks.perf import PerfMonitor
 from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
+# from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
@@ -21,6 +22,8 @@ class PLModel(PLBase):
         super().__init__(net, tokenizer, params)
         # TODO: add corpus metadata
         self.hparams.update(params)
+        if "cnt_samples_processed" not in self.hparams:
+            self.hparams["cnt_samples_processed"] = 0
 
     def forward(self, encoded):
         input_ids = encoded.input_ids
@@ -62,6 +65,10 @@ class PLModel(PLBase):
         self.log("loss", loss)
         # TODO: move this to train_epoch_end when it is fixed
         # self.log("epoch", self.current_epoch)
+        cnt_epochs = self.trainer.train_dataloader.loaders.cnt_restarts
+        self.hparams["cnt_samples_processed"] += self.hparams["batch_size"] * self.hparams["cnt_workers"]
+        self.log("true_epochs", cnt_epochs)
+        self.log("samples_processed", self.hparams["cnt_samples_processed"])
         return loss
 
     def training_epoch_end(self, *args, **kwargs):
