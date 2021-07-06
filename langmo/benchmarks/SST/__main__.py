@@ -31,7 +31,7 @@ class ClassificationModel(BaseClassificationModel):
         cnt_correct = aggregate_batch_stats(outputs, "cnt_correct")
         cnt_questions = aggregate_batch_stats(outputs, "cnt_questions")
         metrics["val_acc"] = cnt_correct / cnt_questions
-        metrics["loss"] = loss
+        metrics["val_loss"] = loss
         self.save_metrics_and_model(metrics)
 
 

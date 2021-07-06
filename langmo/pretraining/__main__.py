@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 import torch
 from langmo.base import PLBase
 from langmo.callbacks.perf import PerfMonitor
-from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
+# from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 # from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
 from pytorch_lightning.callbacks import LearningRateMonitor
@@ -96,11 +96,17 @@ class PLModel(PLBase):
         result = self.forward(batch)
         loss = result["loss"]
         self.log("val_loss", loss)
-        return loss
+        # TODO: add MLM accuracy here
+        metrics = {
+            f"val_loss": loss,
+        }
+        return metrics
 
     def validation_epoch_end(self, outputs):
         # TODO: aggregate validation loss to per epoch metric, icnl metadata
         self.trainer.datamodule.val_rng_reset()
+        loss = torch.stack([x["val_loss"] for x in outputs]).mean()
+        loss = hvd.allreduce(loss)
         if hvd.rank() == 0:
             if self.hparams["cnt_samples_per_epoch"] >= 1000000:
                 str_cnt_sampels = f"smpl_{self.hparams['cnt_samples_processed'] // 1000000}M"
@@ -115,8 +121,8 @@ class PLModel(PLBase):
             self.trainer.save_checkpoint(path_checkpoint / "PL_model.ckpt")
             path_hf = path_checkpoint / "hf"
             self.trainer.model.save_as_hf(path_hf)
+            self.hparams["train_logs"][-1]["val_loss"] = loss.item()
             self.save_metadata(path_checkpoint)
-
     # def save_metadata(self, corpus_metadata, path=None):
     #     # default `save_path` is `hparam["path_results"]`
     #     if path is None:
