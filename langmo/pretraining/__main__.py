@@ -1,4 +1,5 @@
 # from langmo.nn.utils import reinit_model
+from pathlib import Path
 from time import sleep
 
 import horovod.torch as hvd
@@ -30,14 +31,6 @@ class PLModel(PLBase):
         token_type_ids = encoded.token_type_ids
         attention_mask = encoded.attention_mask
         labels = encoded.labels
-        if self.hparams["test"]:
-            print(self.tokenizer.decode(input_ids[0]))
-            print()
-            print(labels[0])
-            print(token_type_ids[0])
-            print(attention_mask[0])
-            print()
-            print()
         result = self.net(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -47,6 +40,14 @@ class PLModel(PLBase):
         return result
 
     def training_step(self, batch, batch_idx):
+        if self.hparams["test"] and batch_idx == 0:
+            print(self.tokenizer.decode(batch.input_ids[0]))
+            print()
+            print(batch.labels[0])
+            print(batch.token_type_ids[0])
+            print(batch.attention_mask[0])
+            print()
+            print()
         result = self.forward(batch)
         # TODO: how about loss only / more loss for masked tokens?
         loss = result["loss"]
@@ -98,7 +99,23 @@ class PLModel(PLBase):
         return loss
 
     def validation_epoch_end(self, outputs):
+        # TODO: aggregate validation loss to per epoch metric, icnl metadata
         self.trainer.datamodule.val_rng_reset()
+        if hvd.rank() == 0:
+            if self.hparams["cnt_samples_per_epoch"] >= 1000000:
+                str_cnt_sampels = f"smpl_{self.hparams['cnt_samples_processed'] // 1000000}M"
+            else:
+                str_cnt_sampels = f"smpl_{self.hparams['cnt_samples_processed'] // 1000}K"
+            path_checkpoint = (
+                Path(self.hparams["path_results"])
+                / "checkpoints"
+                / str_cnt_sampels
+            )
+            print("saving to ", path_checkpoint)
+            self.trainer.save_checkpoint(path_checkpoint / "PL_model.ckpt")
+            path_hf = path_checkpoint / "hf"
+            self.trainer.model.save_as_hf(path_hf)
+            self.save_metadata(path_checkpoint)
 
     # def save_metadata(self, corpus_metadata, path=None):
     #     # default `save_path` is `hparam["path_results"]`
@@ -157,8 +174,8 @@ def main():
     )
     model.hparams["corpus"] = data_module.corpus.metadata
 
-    n_steps_checkpoint = 10000  # TODO: should this go to params?
-    on_n_step_checkpoint = CheckpointEveryNSteps(n_steps_checkpoint)
+    # n_steps_checkpoint = 10000  # TODO: should this go to params?
+    # on_n_step_checkpoint = CheckpointEveryNSteps(n_steps_checkpoint)
     # scheudle_eval_callback = ScheduleEval(n_step)
     lr_monitor = LearningRateMonitor(logging_interval="step")
     if params["use_gpu"]:
@@ -184,7 +201,7 @@ def main():
         # TODO: is this ok?
         # theirs samples do like you did
         # but there is special checkpoint_callback param too....
-        callbacks=[on_n_step_checkpoint, lr_monitor, PerfMonitor()],
+        callbacks=[lr_monitor, PerfMonitor()],
         checkpoint_callback=False,
         gradient_clip_val=1.0,
         # TODO: figure out what is this
