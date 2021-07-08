@@ -54,6 +54,7 @@ def apply_defaults_to_params(params_user):
         cnt_training_steps=500000,
         siamese=False,
         shuffle=False,
+        gradient_clip_val=0.0,
     )
     params.update(params_user)
     return params
