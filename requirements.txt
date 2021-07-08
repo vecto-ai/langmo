@@ -1,2 +1,7 @@
 torch
 vecto
+pytorch_lightning
+datasets
+transformers
+protonn
+wandb
