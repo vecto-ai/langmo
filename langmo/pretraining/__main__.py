@@ -25,6 +25,7 @@ class PLModel(PLBase):
         self.hparams.update(params)
         if "cnt_samples_processed" not in self.hparams:
             self.hparams["cnt_samples_processed"] = 0
+        self.hparams["train_logs"].append({"epoch": -1, "epoch_time": 0.0})
 
     def forward(self, encoded):
         input_ids = encoded.input_ids
