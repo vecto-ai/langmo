@@ -210,7 +210,7 @@ def main():
         # but there is special checkpoint_callback param too....
         callbacks=[lr_monitor, PerfMonitor()],
         checkpoint_callback=False,
-        gradient_clip_val=1.0,
+        gradient_clip_val=params["gradient_clip_val"],
         # TODO: figure out what is this
         progress_bar_refresh_rate=0,
         track_grad_norm=2,
