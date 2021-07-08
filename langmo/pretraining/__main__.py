@@ -192,7 +192,7 @@ def main():
         default_root_dir=params["path_results"],
         weights_save_path=params["path_results"],
         gpus=gpus,
-        num_sanity_val_steps=0,
+        num_sanity_val_steps=-1,
         max_epochs=params["cnt_epochs"],
         accelerator="horovod",
         precision=params["precision"],
