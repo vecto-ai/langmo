@@ -1,3 +1,4 @@
+import random
 from collections import namedtuple
 from queue import Queue
 from threading import Thread
@@ -93,11 +94,21 @@ class BatchIter:
             labels=labels,
         )
 
+    def randomly_shoren_line(self, line):
+        proba_shortening = 0.1
+        min_length = 10
+        if random.random() < proba_shortening:
+            line = line[: random.randint(min_length, len(line))]
+        else:
+            # this it temp hack to remove aretifacts of tokenization-detokenization
+            line = line[: -random.randint(0, 2)]
+        return line
+
     def read_next_batch(self):
         batch = []
         for line in self.line_iter:
-            if len(line) > 10:
-                batch.append(line)
+            line = self.randomly_shoren_line(line)
+            batch.append(line)
             if len(batch) == self.batch_size:
                 ret = self.encode_batch(batch)
                 yield ret
@@ -155,6 +166,7 @@ class TextDataModule(pl.LightningDataModule):
             tokenizer=self.tokenizer.tokenize,
             rank=hvd.rank(),
             size=hvd.size(),
+            min_length=10,
         )
         # print("created line iter")
         batch_iter = BatchIter(line_iter, self.tokenizer, self.params)
