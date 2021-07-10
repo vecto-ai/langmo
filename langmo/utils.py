@@ -67,7 +67,11 @@ def is_yaml_config(path):
 def load_yaml_config_with_defaults(path, name_task):
     params_user = load_yaml_config(path)
     params = apply_defaults_to_params(params_user)
-    name_project = f"{name_task}{'_test' if params['test'] else ''}"
+    name_project = name_task
+    if "suffix" in params:
+        name_project += f"_{params['suffix']}"
+    if params['test']:
+        name_project += "_test"
     params["name_project"] = name_project
     params["path_results"] = os.path.join(params["path_results"], name_project)
     params["timestamp"] = get_time_str()

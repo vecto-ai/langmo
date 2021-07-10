@@ -1,6 +1,7 @@
 import os
 import stat
-import sys
+
+# import sys
 
 # TODO: allow user to provide paltform-specific headers
 # TODO: this will be probably done though protonn
@@ -44,6 +45,7 @@ def create_config_file(path, path_config):
         file_config.write(f"model_name: {path / 'hf'}\n")
         file_config.write(f"path_results: {path / 'eval'}\n")
         file_config.write(f"cnt_epochs: 10\n")
+        file_config.write(f"suffix: auto\n")
 
 
 def create_job_files(path):
