@@ -9,15 +9,15 @@ import stat
 header_ABCI = (
     "#!/bin/bash\n"
     "#$ -cwd\n"
-    "#$ -l rt_F=1\n"
-    "#$ -l h_rt=04:00:00\n"
+    "#$ -l rt_AF=1\n"
+    "#$ -l h_rt=00:20:00\n"
     "#$ -N NLP\n"
     "#$ -j y\n"
     "#$ -o $JOB_NAME.o$JOB_ID\n\n"
     "source /etc/profile.d/modules.sh\n"
     "source /home/aca10027xu/projects/langmo/modules.sh\n\n"
     "NUM_NODES=${NHOSTS}\n"
-    "NUM_GPUS_PER_NODE=4\n"
+    "NUM_GPUS_PER_NODE=8\n"
     "NUM_GPUS_PER_SOCKET=$(expr ${NUM_GPUS_PER_NODE} / 2)\n"
     "NUM_PROCS=$(expr ${NUM_NODES} \\* ${NUM_GPUS_PER_NODE})\n"
     "MPIOPTS=\"-np ${NUM_PROCS} -map-by ppr:${NUM_GPUS_PER_NODE}:node -mca pml ob1 -mca btl ^openib -mca btl_tcp_if_include bond0\"\n"
@@ -44,7 +44,8 @@ def create_config_file(path, path_config):
     with open(path_config, "w") as file_config:
         file_config.write(f"model_name: {path / 'hf'}\n")
         file_config.write(f"path_results: {path / 'eval'}\n")
-        file_config.write(f"cnt_epochs: 10\n")
+        file_config.write(f"cnt_epochs: 4\n")
+        file_config.write(f"batch_size: 128\n")
 
 
 def create_job_files(path):
