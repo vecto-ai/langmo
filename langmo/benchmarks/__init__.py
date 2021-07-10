@@ -1,7 +1,6 @@
 import os
-import sys
 import stat
-
+import sys
 
 # TODO: allow user to provide paltform-specific headers
 # TODO: this will be probably done though protonn
@@ -59,7 +58,9 @@ def create_job_files(path):
         # TODO: use "schedule all" API
         file_jobscript.write(header_ABCI)
         file_jobscript.write("mpirun ${MPIOPTS} \\\n\t")
-        cmd = f"{sys.executable} -m langmo.benchmarks.NLI {path_config}\n"
+        # TODO: this failes if python on login node is different
+        # cmd = f"{sys.executable} -m langmo.benchmarks.NLI {path_config}\n"
+        cmd = f"python3 -m langmo.benchmarks.NLI {path_config}\n"
         file_jobscript.write(cmd)
     # TODO: this is not gonna scale to multiple benchmarks - use some defaults
     schedule_eval_run(path_jobscript)
