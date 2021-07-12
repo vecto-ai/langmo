@@ -213,7 +213,7 @@ def main():
         gradient_clip_val=params["gradient_clip_val"],
         # TODO: figure out what is this
         progress_bar_refresh_rate=0,
-        track_grad_norm=2,
+        track_grad_norm=0,
         # profiler="simple",
         resume_from_checkpoint=checkpoint,
     )
