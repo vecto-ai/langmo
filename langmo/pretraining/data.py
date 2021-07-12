@@ -96,14 +96,12 @@ class BatchIter:
 
     def randomly_shoren_line(self, line):
         proba_shortening = 0.1
-        min_length = 6
+        min_length = 5
         if random.random() < proba_shortening:
-            # print("shorten")
             line = line[: random.randint(min_length, len(line))]
         else:
             # this it temp hack to remove aretifacts of tokenization-detokenization
-            #print("not shorten")
-            line = line[: -random.randint(0, 2)]
+            line = line[: -random.randint(1, 2)]
         return line
 
     def read_next_batch(self):
