@@ -96,11 +96,13 @@ class BatchIter:
 
     def randomly_shoren_line(self, line):
         proba_shortening = 0.1
-        min_length = 10
+        min_length = 6
         if random.random() < proba_shortening:
+            # print("shorten")
             line = line[: random.randint(min_length, len(line))]
         else:
             # this it temp hack to remove aretifacts of tokenization-detokenization
+            #print("not shorten")
             line = line[: -random.randint(0, 2)]
         return line
 
@@ -158,7 +160,6 @@ class TextDataModule(pl.LightningDataModule):
         # return [[mlm_ids, sent1_ids, sent2_ids, sent3_ids]  x for batch_size] y for cnt_batches]
 
         # TODO: implement some proper logger
-        # print("created view corpus")
         # TODO: add an option to skip short lines to line iter
         # print("loaded dir structure")
         line_iter = self.corpus.get_looped_sequence_iterator(
@@ -167,6 +168,7 @@ class TextDataModule(pl.LightningDataModule):
             rank=hvd.rank(),
             size=hvd.size(),
             min_length=10,
+            reset_on_new_line=False
         )
         # print("created line iter")
         batch_iter = BatchIter(line_iter, self.tokenizer, self.params)

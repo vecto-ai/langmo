@@ -42,11 +42,11 @@ class PLModel(PLBase):
 
     def training_step(self, batch, batch_idx):
         if self.hparams["test"] and batch_idx == 0:
-            print(self.tokenizer.decode(batch.input_ids[0]))
+            print("inpts", self.tokenizer.decode(batch.input_ids[0]))
             print()
-            print(batch.labels[0])
-            print(batch.token_type_ids[0])
-            print(batch.attention_mask[0])
+            print("lbls", batch.labels[0])
+            print("type ids", batch.token_type_ids[0])
+            print("mask", batch.attention_mask[0])
             print()
             print()
         result = self.forward(batch)
