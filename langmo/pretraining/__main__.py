@@ -22,10 +22,12 @@ class PLModel(PLBase):
     def __init__(self, net, tokenizer, params):
         super().__init__(net, tokenizer, params)
         # TODO: add corpus metadata
+        print("")
         self.hparams.update(params)
         if "cnt_samples_processed" not in self.hparams:
             self.hparams["cnt_samples_processed"] = 0
-        self.hparams["train_logs"].append({"epoch": -1, "epoch_time": 0.0})
+        if len(self.hparams["train_logs"]) == 0:
+            self.hparams["train_logs"].append({"epoch": -1, "epoch_time": 0.0})
 
     def forward(self, encoded):
         input_ids = encoded.input_ids
@@ -124,6 +126,7 @@ class PLModel(PLBase):
             self.trainer.model.save_as_hf(path_hf)
             self.hparams["train_logs"][-1]["val_loss"] = loss.item()
             self.save_metadata(path_checkpoint)
+
     # def save_metadata(self, corpus_metadata, path=None):
     #     # default `save_path` is `hparam["path_results"]`
     #     if path is None:
@@ -140,6 +143,9 @@ def build_model(params):
         tokenizer = AutoTokenizer.from_pretrained(resume["hf"])
         net = AutoModelForMaskedLM.from_pretrained(resume["hf"])
         net.train()
+        # TODO: hm... why this not overwhiting params set in __init__ :-\
+        print("RESUMING FROM PARAMS")
+        print(params["train_logs"])
         model = PLModel.load_from_checkpoint(
             resume["checkpoint"],
             net=net,
@@ -193,7 +199,7 @@ def main():
         default_root_dir=params["path_results"],
         weights_save_path=params["path_results"],
         gpus=gpus,
-        num_sanity_val_steps=-1,
+        num_sanity_val_steps=0 if "resume" in params else -1,
         max_epochs=params["cnt_epochs"],
         accelerator="horovod",
         precision=params["precision"],
