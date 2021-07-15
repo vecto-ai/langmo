@@ -13,9 +13,9 @@ class PLBase(pl.LightningModule):
         super().__init__()
         self.net = net
         self.tokenizer = tokenizer
-        params["train_logs"] = []
-        self.save_hyperparameters(params)
+        self.hparams["train_logs"] = []
         self.hparams.update(params)
+        self.save_hyperparameters(params)
 
     def configure_optimizers(self):
         optimizer = transformers.optimization.AdamW(
