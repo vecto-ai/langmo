@@ -76,8 +76,12 @@ class BaseFinetuner:
             reinit_model(net)
             name_run += "_RND"
         name_run += f"_{'↓' if self.params['uncase'] else '◯'}_{timestamp[:-3]}"
+        if "suffix" in self.params:
+            name_wandb_project = self.params["name_project"] + f"_{self.params['suffix']}"
+        else:
+            name_wandb_project = self.params["name_project"]
         self.wandb_logger = WandbLogger(
-            project=self.params["name_project"],
+            project=name_wandb_project,
             name=name_run,
             save_dir=self.params["path_results"],
         )

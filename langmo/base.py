@@ -5,6 +5,7 @@ import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
 import transformers
+# from apex.optimizers import FusedLAMB
 from protonn.utils import save_data_json
 
 
@@ -18,13 +19,29 @@ class PLBase(pl.LightningModule):
         self.save_hyperparameters(params)
 
     def configure_optimizers(self):
+        # param_optimizer = list(self.net.named_parameters())
+        param_optimizer = [param for param in self.net.named_parameters() if param[1].requires_grad]
+
+        no_decay = ['bias', 'gamma', 'beta', 'LayerNorm']
+
+        optimizer_grouped_parameters = [
+            {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': self.hparams["weight_decay"]},
+            {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}]
+
         optimizer = transformers.optimization.AdamW(
-            [param for param in self.net.parameters() if param.requires_grad],
+            optimizer_grouped_parameters,
             lr=self.hparams["initial_lr"],
             eps=self.hparams["eps"],
-            weight_decay=self.hparams["weight_decay"],
+            # weight_decay=self.hparams["weight_decay"],
             betas=(self.hparams["beta1"], self.hparams["beta2"]),
         )
+        # optimizer = FusedLAMB(
+        #     optimizer_grouped_parameters,
+        #     lr=self.hparams["initial_lr"],
+        #     eps=self.hparams["eps"],
+        #     # weight_decay=self.hparams["weight_decay"],
+        #     betas=(self.hparams["beta1"], self.hparams["beta2"]),
+        # )
         # optimizer.clip_grad_norm(1.0)
         cnt_epochs = self.hparams["cnt_epochs"]
         batch_size = self.hparams["batch_size"]

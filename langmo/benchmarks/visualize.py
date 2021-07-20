@@ -1,56 +1,92 @@
 #!/usr/bin/env python
 
 import argparse
+# import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import cm
+from protonn.utils import load_json
 
 
-def gen_pretrain_paths(path):
+def gen_checkpoint_paths(path):
     for ckpt in Path(path).joinpath("checkpoints").glob("*"):
         yield ckpt
 
 
-def gen_finetune_paths(path, task):
-    for ckpt in gen_pretrain_paths(path):
-        eval_runs = ckpt.joinpath("eval").joinpath(task).glob("*")
-        for eval_run in eval_runs:
-            metadata_path = eval_run / "metadata.json"
-            if metadata_path.exists():
-                yield metadata_path
+def read_finetunes(path, name_metric="val_acc_matched"):
+    task_runs = path.glob("**/metadata.json")
+    for path_run in task_runs:
+        data_run = load_json(path_run)
+        # print(data_run["train_logs"])
+        keys = ["epoch", name_metric]
+        # logs_clean = [{key: d[key] for key in keys} for d in data_run["train_logs"]][1:]
+        # logs_clean = [{d["epoch"]: d[name_metric]} for d in data_run["train_logs"][1:]]
+        logs_clean = [d[name_metric] for d in data_run["train_logs"][1:]]
+        # print(logs_clean)
+        df = pd.Series(logs_clean)
+        #df.set_index("epoch", inplace=True)
+        # TODO: returning just the first one for the time being
+        # print(df.T)
+        return df
+        #[0][name_metric]
+
+# def get_pretrain_samples_per_batch(path):
+#     pretrain_paths = map(
+#         lambda path: path / "metadata.json",
+#         gen_pretrain_paths(path),
+#     )
+#     df = pd.DataFrame([pd.read_json(path, typ="series") for path in pretrain_paths])
+#     df = df.join(pd.json_normalize(df["corpus"]))
+#     df = df.drop(["corpus"], axis=1)
+#     df = df.drop_duplicates()
+#     return df["batch_size"][0] * df["cnt_workers"][0]
 
 
-def get_pretrain_samples_per_batch(path):
-    pretrain_paths = map(
-        lambda path: path / "metadata.json",
-        gen_pretrain_paths(path),
-    )
-    df = pd.DataFrame([pd.read_json(path, typ="series") for path in pretrain_paths])
-    df = df.join(pd.json_normalize(df["corpus"]))
-    df = df.drop(["corpus"], axis=1)
-    df = df.drop_duplicates()
-    return df["batch_size"][0] * df["cnt_workers"][0]
-
-
-def get_all_finetunes_as_df(path, task):
-    samples_per_batch = get_pretrain_samples_per_batch(path)
+def read_checkpoints(path, task):
+    data = []
+    index = []
+    for path_checkpoint in gen_checkpoint_paths(path):
+        print("reading", path_checkpoint)
+        meta_checkpoint = load_json(path_checkpoint / "metadata.json")
+        # print(meta_checkpoint["cnt_samples_processed"])
+        logs_finetune = read_finetunes(path_checkpoint / "eval" / task)
+        index.append(int(meta_checkpoint["cnt_samples_processed"]))
+        data.append(logs_finetune)
+        # data_checkpoiunt = {
+        #     "cnt_samples_processed": int(meta_checkpoint["cnt_samples_processed"]),
+        #     "acc": logs_finetune#["val_acc_matched"]
+        # }
+        # data.append(data_checkpoiunt)
+    #paths = list(gen_finetune_paths(path, task))
+    #for path_metadata in paths:
+    #    with open(path_metadata) as f:
+    #        data = json.load(f)
+    #        print(data["train_logs"])
+    df = pd.DataFrame(data, index=index)
+    # df.set_index("cnt_samples_processed", inplace=True)
+    df.sort_index(inplace=True)
+    return df
+    # samples_per_batch = get_pretrain_samples_per_batch(path)
 
     df = pd.concat(
-        [pd.read_json(path) for path in gen_finetune_paths(path, task)],
+        [pd.read_json(path) for path in paths],
         ignore_index=True,
     )
+    print(df)
     df = df.join(pd.json_normalize(df["train_logs"]))
     df = df.drop(["train_logs"], axis=1)
     df["step"] = df["path_results"].str.extract(r".*step(\d*)/.*")
     df["step"] = df["step"].astype(int)
-    df["cnt_samples"] = df["step"] * samples_per_batch
+    # df["cnt_samples"] = df["step"] * samples_per_batch
     return df
 
 
 def plot_colormesh(df, metric, aggfunc, filename):
+    print(df)
+    return
     df = pd.pivot_table(
         data=df,
         values=metric,
@@ -76,6 +112,15 @@ def plot_colormesh(df, metric, aggfunc, filename):
 
 
 def plot_2d(df, task, metric, aggfunc, filename):
+    epoch_zero = df[0]
+    epoch_max = df.max(axis=1)
+    plt.fill_between(df.index / 1000000, epoch_zero, epoch_max, alpha=0.9)
+    # df[0].plot()
+    plt.ylabel("accuracy")
+    plt.xlabel("samples processed, million")
+    plt.savefig("plot.pdf")
+    # exit(0)
+    return
     df = pd.pivot_table(
         data=df,
         values=metric,
@@ -127,7 +172,7 @@ def main(args):
     colormesh_path, plot2d_path = get_plot_paths(args)
     aggfunc = get_aggfunc(args)
 
-    df = get_all_finetunes_as_df(args.path, args.task)
+    df = read_checkpoints(args.path, args.task)
 
     if args.colormesh:
         plot_colormesh(df, args.metric, aggfunc, colormesh_path)
