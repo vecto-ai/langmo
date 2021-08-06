@@ -29,11 +29,8 @@ class PLModel(PLBase):
         if len(self.hparams["train_logs"]) == 0:
             self.hparams["train_logs"].append({"epoch": -1, "epoch_time": 0.0})
 
-    def forward(self, encoded):
-        # print(encoded)
-        # dic_encoded = dict(encoded)
-        # print(dic_encoded)
-        result = self.net(** encoded._asdict())
+    def forward(self, batch):
+        result = self.net(** batch._asdict())
         return result
 
     def training_step(self, batch, batch_idx):
