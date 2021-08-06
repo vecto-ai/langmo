@@ -9,8 +9,10 @@ import torch
 from torch.utils.data import DataLoader, DistributedSampler
 from vecto.corpus import Corpus, DirCorpus
 
+IGNORE_TOKEN_ID = -100
+
 TBatch = namedtuple(
-    "TBatch", ["input_ids", "token_type_ids", "attention_mask", "labels"]
+    "TBatch", ["input_ids", "attention_mask", "labels"]
 )
 
 
@@ -19,15 +21,24 @@ def shuffle_tensor(tensor, generator):
     return tensor[perm]
 
 
-def mask_line(line, tokenizer, generator=None):
+def mask_line(line, tokenizer, ignore_token_id, generator=None):
     # TODO: move to config
     proba_masking = 0.15
-    rolls = torch.rand(line.shape, generator=generator)
-    # TODO: doing this with broadcast should be more elegant
+    token_ids = torch.LongTensor(line)
+    labels = token_ids.clone()
+    rolls = torch.rand(token_ids.shape, generator=generator)
     mask_non_special = torch.tensor([i not in tokenizer.all_special_ids for i in line])
     mask_good_rolls = rolls < proba_masking
     mask_mask = mask_good_rolls & mask_non_special
-    line[mask_mask] = tokenizer.mask_token_id
+    # TODO: check if we have too few or too many masks?
+    # wasn't constant number if mask positions better?
+    # TODO: with 0.1 proba mask not with [MASK] but with original token
+    # TODO: with same proba mask with random token
+    # for time being let's just mask with mask
+    # how usefull is it to combine
+    # TODO: why not set attention mask to 0 in these positions??
+    token_ids[mask_mask] = tokenizer.mask_token_id
+    labels[~mask_mask] = ignore_token_id
     # print(mask_mask)
     # the way with fixed count of masked tokens each time
     # ids_nonzero = line.nonzero(as_tuple=True)[0][1:-1]
@@ -35,7 +46,7 @@ def mask_line(line, tokenizer, generator=None):
     # cnt_masked = int(len(ids_nonzero) * proba_masking)
     # ids_nonzero = ids_nonzero[:cnt_masked]
     # line[ids_nonzero] = mask_id
-    return line, mask_mask
+    return token_ids, labels
 
 
 class BatchIter:
@@ -51,6 +62,8 @@ class BatchIter:
         cnt_batches_per_epoch = params["cnt_samples_per_epoch"] / params["batch_size"]
         self.batches_per_epoch = cnt_batches_per_epoch / hvd.size()
         self.cnt_batches_produced = 0
+        # this is not well documented but seems to apply to all HF models
+        self.ignore_token_id = IGNORE_TOKEN_ID
 
     def __iter__(self):
         return self
@@ -69,29 +82,53 @@ class BatchIter:
         # return next(self.__gen__)
 
     def encode_batch(self, batch):
-        lines = [self.tokenizer.convert_tokens_to_string(line) for line in batch]
-        encoded = self.tokenizer(
-            lines,
-            # is_split_into_words=True,
-            max_length=self.max_length,
-            # TODO: consider padding to the max length of the batch
-            padding="max_length",
-            truncation=True,
-            return_tensors="pt",
-        )
+        batch_input_ids = []
+        batch_attention_mask = []
+        batch_labels = []
+        for line in batch:
+            assert len(line) < self.max_length
+            # TODO: why not do it in vecto?
+            input_ids = self.tokenizer.convert_tokens_to_ids(line)
+            input_ids = [self.tokenizer.cls_token_id] + input_ids
+            masked_ids, labels = mask_line(input_ids, self.tokenizer, self.ignore_token_id)
+            attention_mask = torch.ones_like(masked_ids)
+            if len(masked_ids) < self.max_length:
+                pad = torch.ones(self.max_length - len(masked_ids), dtype=torch.int64)
+                pad_ids = pad * self.tokenizer.pad_token_id
+                pad_label = pad * self.ignore_token_id
+                masked_ids = torch.hstack([masked_ids, pad_ids])
+                labels = torch.hstack([labels, pad_label])
+                attention_mask = torch.hstack([attention_mask, torch.zeros_like(pad)])
+            batch_input_ids.append(masked_ids)
+            batch_attention_mask.append(attention_mask)
+            batch_labels.append(labels)
+            # ROBERTA does not seam to shorten lines
+            # but if the input is read by sentence, we bight want to trim by nearest sentence end
+            # input_ids = self.randomly_shoren_line(input_ids)
+            # at this stage we do not expect any special characters, so masking should not care
+            # masking
+        # encoded = self.tokenizer(
+        #     lines,
+        #     # is_split_into_words=True,
+        #     max_length=self.max_length,
+        #     # TODO: consider padding to the max length of the batch
+        #     padding="max_length",
+        #     truncation=True,
+        #     return_tensors="pt",
+        # )
         # TODO: for languages which can be tokenated - add support of word-level masking
         # that is before sequences are converted to IDS
-        labels = encoded["input_ids"].clone()
-        ids = encoded["input_ids"]
-        for i in range(len(encoded["input_ids"])):
-            ids[i], mask = mask_line(ids[i], self.tokenizer)
-            # TODO: check if this number is model-specific
-            labels[i][~mask] = -100
+        # # labels = encoded["input_ids"].clone()
+        # ids = encoded["input_ids"]
+        # for i in range(len(encoded["input_ids"])):
+        #     ids[i], mask #mask_line(ids[i], self.tokenizer)
+        #     # TODO: check if this number is model-specific
+        #     labels[i][~mask] = -100
         return TBatch(
-            input_ids=ids,
-            token_type_ids=encoded["token_type_ids"],
-            attention_mask=encoded["attention_mask"],
-            labels=labels,
+            input_ids=torch.stack(batch_input_ids),
+            # token_type_ids=encoded["token_type_ids"],
+            attention_mask=torch.stack(batch_attention_mask),
+            labels=torch.stack(batch_labels),
         )
 
     def randomly_shoren_line(self, line):
@@ -99,15 +136,12 @@ class BatchIter:
         min_length = 5
         if random.random() < proba_shortening:
             line = line[: random.randint(min_length, len(line))]
-        else:
-            # this it temp hack to remove aretifacts of tokenization-detokenization
-            line = line[: -random.randint(1, 2)]
         return line
 
     def read_next_batch(self):
         batch = []
         for line in self.line_iter:
-            line = self.randomly_shoren_line(line)
+            # line = self.randomly_shoren_line(line)
             batch.append(line)
             if len(batch) == self.batch_size:
                 ret = self.encode_batch(batch)
@@ -161,7 +195,8 @@ class TextDataModule(pl.LightningDataModule):
         # TODO: add an option to skip short lines to line iter
         # print("loaded dir structure")
         line_iter = self.corpus.get_looped_sequence_iterator(
-            sequence_length=self.params["max_length"] - 2,
+            # -1 is there to append CLS later
+            sequence_length=self.params["max_length"] - 1,
             tokenizer=self.tokenizer.tokenize,
             rank=hvd.rank(),
             size=hvd.size(),
@@ -175,7 +210,7 @@ class TextDataModule(pl.LightningDataModule):
     def val_setup(self):
         self.val_data = list(
             self.val_corpus.get_sequence_iterator(
-                self.params["max_length"] - 2,
+                self.params["max_length"] - 1,
                 self.tokenizer.tokenize,
             )
         )
@@ -195,10 +230,13 @@ class TextDataModule(pl.LightningDataModule):
         encoded["labels"] = encoded["input_ids"].clone()
         ids = encoded["input_ids"]
         for i in range(len(encoded["input_ids"])):
-            ids[i], _ = mask_line(ids[i], tokenizer=self.tokenizer, generator=self.val_gen)
+            ids[i], _ = mask_line(ids[i],
+                                  tokenizer=self.tokenizer,
+                                  ignore_token_id=IGNORE_TOKEN_ID,
+                                  generator=self.val_gen)
         return TBatch(
             input_ids=ids,
-            token_type_ids=encoded["token_type_ids"],
+            # token_type_ids=encoded["token_type_ids"],
             attention_mask=encoded["attention_mask"],
             labels=encoded["labels"],
         )

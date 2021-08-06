@@ -31,13 +31,13 @@ class PLModel(PLBase):
 
     def forward(self, encoded):
         input_ids = encoded.input_ids
-        token_type_ids = encoded.token_type_ids
+        # token_type_ids = encoded.token_type_ids
         attention_mask = encoded.attention_mask
         labels = encoded.labels
         result = self.net(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
+            # token_type_ids=token_type_ids,
             labels=labels,
         )
         return result
