@@ -30,16 +30,10 @@ class PLModel(PLBase):
             self.hparams["train_logs"].append({"epoch": -1, "epoch_time": 0.0})
 
     def forward(self, encoded):
-        input_ids = encoded.input_ids
-        # token_type_ids = encoded.token_type_ids
-        attention_mask = encoded.attention_mask
-        labels = encoded.labels
-        result = self.net(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            # token_type_ids=token_type_ids,
-            labels=labels,
-        )
+        # print(encoded)
+        # dic_encoded = dict(encoded)
+        # print(dic_encoded)
+        result = self.net(** encoded._asdict())
         return result
 
     def training_step(self, batch, batch_idx):

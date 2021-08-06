@@ -12,7 +12,7 @@ from vecto.corpus import Corpus, DirCorpus
 IGNORE_TOKEN_ID = -100
 
 TBatch = namedtuple(
-    "TBatch", ["input_ids", "attention_mask", "labels"]
+    "TBatch", ["input_ids", "token_type_ids", "attention_mask", "labels"]
 )
 
 
@@ -126,7 +126,7 @@ class BatchIter:
         #     labels[i][~mask] = -100
         return TBatch(
             input_ids=torch.stack(batch_input_ids),
-            # token_type_ids=encoded["token_type_ids"],
+            token_type_ids=None,
             attention_mask=torch.stack(batch_attention_mask),
             labels=torch.stack(batch_labels),
         )
@@ -236,7 +236,7 @@ class TextDataModule(pl.LightningDataModule):
                                   generator=self.val_gen)
         return TBatch(
             input_ids=ids,
-            # token_type_ids=encoded["token_type_ids"],
+            token_type_ids=encoded["token_type_ids"] if "token_type_ids in encoded" else None,
             attention_mask=encoded["attention_mask"],
             labels=encoded["labels"],
         )
