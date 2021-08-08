@@ -5,8 +5,8 @@ import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 from langmo.base import PLBase
-from langmo.benchmarks.NLI.model import (BertWithLSTM, Siamese, TopMLP2,
-                                         get_hidden_size)
+from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
+                                         TopMLP2)
 from langmo.nn.utils import reinit_model
 from langmo.utils import load_config
 from protonn.utils import get_time_str
@@ -56,11 +56,13 @@ class BaseFinetuner:
         timestamp = get_time_str()
         name_model = self.params["model_name"]
         if self.params["siamese"]:
-            name_run = f"siam_rnn_{'fr_' if self.params['freeze_encoder'] else ''}" + name_model
+            name_run = "siam_" + self.params['encoder_wrapper'] + "_"
+            if self.params["freeze_encoder"]:
+                name_run += "fr_"
+            name_run += name_model
             encoder = AutoModel.from_pretrained(name_model, num_labels=3)
-            hidden_size = get_hidden_size(encoder)
-            encoder = BertWithLSTM(encoder, freeze=self.params["freeze_encoder"])
-            net = Siamese(encoder, TopMLP2(in_size=hidden_size * 8))
+            encoder = BertWithCLS(encoder, freeze=self.params["freeze_encoder"])
+            net = Siamese(encoder, TopMLP2(in_size=encoder.get_output_size() * 4))
         else:
             net = AutoModelForSequenceClassification.from_pretrained(
                 name_model, num_labels=3
