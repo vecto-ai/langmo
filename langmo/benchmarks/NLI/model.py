@@ -3,15 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def get_hidden_size(model):
-    if hasattr(model, "pooler"):
-        if hasattr(model.pooler, "out_features"):
-            return model.pooler.out_features
-        if hasattr(model.pooler, "dense"):
-            return (model.pooler.dense.out_features)
-    raise RuntimeError("can't estimate encoder output size")
-
-
 class SiameseBase(nn.Module):
     def __init__(self, bottom, top, freeze_bottom=True):
         super().__init__()
@@ -26,14 +17,45 @@ class SiameseBase(nn.Module):
         print("save poretrained not impolemented")
 
 
-class BertWithLSTM(nn.Module):
+class BaseBERTWrapper(nn.Module):
     def __init__(self, net, freeze):
         super().__init__()
         self.net = net
         if freeze:
             for param in self.net.parameters():
                 param.requires_grad = False
-        size_hidden = get_hidden_size(self.net)
+
+    def get_output_size(self):
+        if hasattr(self.net, "pooler"):
+            if hasattr(self.net.pooler, "out_features"):
+                return self.net.pooler.out_features
+            if hasattr(self.net.pooler, "dense"):
+                return (self.net.pooler.dense.out_features)
+        raise RuntimeError("can't estimate encoder output size")
+
+
+class BertWithCLS(BaseBERTWrapper):
+    def forward(self, **x):
+        res = self.net(**x)["last_hidden_state"][:, 0, :]
+        return res
+
+
+class BertWithPooler(BaseBERTWrapper):
+    def forward(self, **x):
+        res = self.net(**x)["last_hidden_state"]["pooler_output"]
+        return res
+
+
+def get_encoder_wrapper(name):
+    name = name.lower()
+    wrappers = {"cls": BertWithCLS, "pooler": BertWithPooler, "lstm": BertWithLSTM}
+    return wrappers[name]
+
+
+class BertWithLSTM(BaseBERTWrapper):
+    def __init__(self, net, freeze):
+        super().__init__(net, freeze)
+        size_hidden = super().get_output_size()
         self.rnn = nn.LSTM(input_size=size_hidden,
                            hidden_size=size_hidden,
                            num_layers=2,
@@ -46,21 +68,12 @@ class BertWithLSTM(nn.Module):
 
     def forward(self, **x):
         h = self.net(**x)["last_hidden_state"]
-        # [:, 0, :]
-        # ["pooler_output"]
         h = self.rnn(h)
         return self.lstm_out_to_tensor(h)
 
-
-class SiameseLSTM(SiameseBase):
-    def forward(self, left, right):
-        self.bottom.hidden = None
-        h_left = self.bottom(left)[-1]
-        self.bottom.hidden = None
-        h_right = self.bottom(right)[-1]
-        cnc = self.combine(h_left, h_right)
-        h = self.top(cnc)
-        return h
+    def get_output_size(self):
+        cnt_rnn_directions = 2
+        return super().get_output_size() * cnt_rnn_directions
 
 
 class Siamese(SiameseBase):
@@ -73,7 +86,7 @@ class Siamese(SiameseBase):
 
 
 class TopMLP2(nn.Module):
-    def __init__(self, in_size=512, hidden_size=768, cnt_classes=3):
+    def __init__(self, in_size=512, hidden_size=128, cnt_classes=3):
         super().__init__()
         self.l1 = nn.Linear(in_size, hidden_size)
         self.l2 = nn.Linear(hidden_size, cnt_classes)
