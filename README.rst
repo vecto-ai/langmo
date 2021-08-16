@@ -15,7 +15,7 @@ Supported features:
 
 to perfrorm fibetuning on a task, e.g. NLI run as::
 
-    python -m langmo.benchmarks.NLI config.yaml
+    horovodrun -np N python -m langmo.benchmarks.NLI config.yaml
 
 example cofig file:
 
