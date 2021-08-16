@@ -86,7 +86,7 @@ class Siamese(SiameseBase):
 
 
 class TopMLP2(nn.Module):
-    def __init__(self, in_size=512, hidden_size=128, cnt_classes=3):
+    def __init__(self, in_size=512, hidden_size=512, cnt_classes=3):
         super().__init__()
         self.l1 = nn.Linear(in_size, hidden_size)
         self.l2 = nn.Linear(hidden_size, cnt_classes)
