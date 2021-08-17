@@ -4,11 +4,6 @@ import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
-from langmo.base import PLBase
-from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
-                                         TopMLP2)
-from langmo.nn.utils import reinit_model
-from langmo.utils import load_config
 from protonn.utils import get_time_str
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
@@ -16,6 +11,12 @@ from torchmetrics.functional import accuracy
 from transformers import (AutoModel, AutoModelForSequenceClassification,
                           AutoTokenizer)
 from transformers import logging as tr_logging
+
+from langmo.base import PLBase
+from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
+                                         TopMLP2)
+from langmo.nn.utils import reinit_model, reinit_tensor
+from langmo.utils import load_config
 
 
 class BaseClassificationModel(PLBase):
@@ -56,7 +57,7 @@ class BaseFinetuner:
         timestamp = get_time_str()
         name_model = self.params["model_name"]
         if self.params["siamese"]:
-            name_run = "siam_" + self.params['encoder_wrapper'] + "_"
+            name_run = "siam_" + self.params["encoder_wrapper"] + "_"
             if self.params["freeze_encoder"]:
                 name_run += "fr_"
             name_run += name_model
@@ -79,7 +80,9 @@ class BaseFinetuner:
             name_run += "_RND"
         name_run += f"_{'↓' if self.params['uncase'] else '◯'}_{timestamp[:-3]}"
         if "suffix" in self.params:
-            name_wandb_project = self.params["name_project"] + f"_{self.params['suffix']}"
+            name_wandb_project = (
+                self.params["name_project"] + f"_{self.params['suffix']}"
+            )
         else:
             name_wandb_project = self.params["name_project"]
         self.wandb_logger = WandbLogger(
@@ -88,6 +91,9 @@ class BaseFinetuner:
             save_dir=self.params["path_results"],
         )
         self.net = net
+
+        self.randomize_tokens()
+
         if self.params["test"]:
             self.params["cnt_epochs"] = 3
         self.data_module = class_data_module(
@@ -116,6 +122,19 @@ class BaseFinetuner:
             gradient_clip_val=0.5,
             track_grad_norm=2,
         )
+
+    def randomize_tokens(self):
+        if "rand_tok" in self.params:
+            rand_tok = self.params["rand_tok"]
+            id_dict = {
+                "cls": self.tokenizer.cls_token_id,
+                "sep": self.tokenizer.sep_token_id,
+            }
+            for tok in rand_tok:
+                tok_id = id_dict[tok]
+                # with torch.no_grad:
+                tok_emb = self.net.get_input_embeddings().weight[tok_id]
+                reinit_tensor(tok_emb)
 
     def run(self):
         self.trainer.fit(self.model, self.data_module)
