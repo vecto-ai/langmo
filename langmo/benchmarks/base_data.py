@@ -31,7 +31,8 @@ class BaseDataModule(pl.LightningDataModule):
                 split,
                 from_=self.percent_start,
                 to=self.percent_end,
-                unit="%")
+                unit="%",
+            )
             dataset = datasets.load_dataset(dataset_name, split=split)
             sampler = None
         return DataLoader(
@@ -50,5 +51,5 @@ class BaseCollator:
             "padding": "max_length",
             "truncation": True,
             "return_tensors": "pt",
-            "max_length": 128,
+            "max_length": params["max_length"],
         }

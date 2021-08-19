@@ -39,6 +39,7 @@ def apply_defaults_to_params(params_user):
         use_gpu=True,
         precision=32,
         batch_size=32,
+        max_length=128,
         randomize=False,
         path_results="./logs",
         create_unique_path=True,
@@ -70,7 +71,7 @@ def load_yaml_config_with_defaults(path, name_task):
     name_project = name_task
     # if "suffix" in params:
     #     name_project += f"_{params['suffix']}"
-    if params['test']:
+    if params["test"]:
         name_project += "_test"
     params["name_project"] = name_project
     params["path_results"] = os.path.join(params["path_results"], name_project)
@@ -79,7 +80,7 @@ def load_yaml_config_with_defaults(path, name_task):
         params["path_results"] = get_unique_results_path(
             params["path_results"],
             params["model_name"],
-            params["timestamp"]
+            params["timestamp"],
         )
     if hvd.rank() == 0:
         (Path(params["path_results"]) / "wandb").mkdir(parents=True, exist_ok=True)
