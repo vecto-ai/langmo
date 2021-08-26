@@ -1,8 +1,10 @@
 # import numpy as np
+
 import datasets
 import horovod.torch as hvd
 import torch
-from langmo.benchmarks.base_data import BaseDataModule, BaseCollator
+
+from langmo.benchmarks.base_data import BaseCollator, BaseDataModule
 
 dic_heuristics = {"lexical_overlap": 0, "constituent": 1, "subsequence": 2}
 
@@ -11,6 +13,73 @@ labels_entail = ["entail", "nonentail"]
 
 
 class Collator(BaseCollator):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        empty_tokenized = self.tokenizer(text=[""], text_pair=[""])
+        self.has_token_type_ids = "token_type_ids" in empty_tokenized
+        cls_sep_end = empty_tokenized["input_ids"][0]
+        self.cls, self.mid_seps, self.end_sep = (
+            cls_sep_end[:1],
+            cls_sep_end[1:-1],
+            cls_sep_end[-1:],
+        )
+        if "sep_cnt" in self.params:
+            self.mid_seps = self.params["sep_cnt"] * [self.tokenizer.sep_token_id]
+
+    def truncate(self, seq1, seq2, target_len):
+        len1 = len(seq1)
+        len2 = len(seq2)
+        if self.tokenizer_params["truncation"] and len1 + len2 > target_len:
+            new_len1 = 0
+            new_len2 = 0
+            total_len = 0
+            while True:
+                if new_len1 < len1:
+                    new_len1 += 1
+                    total_len += 1
+                if total_len == target_len:
+                    break
+                if new_len2 < len2:
+                    new_len2 += 1
+                    total_len += 1
+                if total_len == target_len:
+                    break
+            seq1 = seq1[:new_len1]
+            seq2 = seq2[:new_len2]
+        return seq1, seq2
+
+    def tokenize(self, text, text_pair):
+        sent1 = self.tokenizer(text, add_special_tokens=False)["input_ids"]
+        sent2 = self.tokenizer(text_pair, add_special_tokens=False)["input_ids"]
+        extra_len = len(self.cls) + len(self.mid_seps) + len(self.end_sep)
+        max_length = self.tokenizer_params["max_length"]
+        target_len = max_length - extra_len
+        result = {"input_ids": [], "attention_mask": []}
+        if self.has_token_type_ids:
+            result["token_type_ids"] = []
+        assert len(sent1) == len(sent2)
+        for seq1, seq2 in zip(sent1, sent2):
+            seq1, seq2 = self.truncate(seq1, seq2, target_len)
+            input_ids = self.cls + seq1 + self.mid_seps + seq2 + self.end_sep
+            attention_mask = [1] * len(input_ids)
+            if self.has_token_type_ids:
+                len1 = len(self.cls) + len(seq1) + len(self.mid_seps)
+                len2 = len(seq2) + len(self.end_sep)
+                token_type_ids = [0] * len1 + [1] * len2
+            if self.tokenizer_params["padding"] == "max_length":
+                missing = max_length - len(input_ids)
+                pad_id = self.tokenizer.pad_token_id
+                input_ids += [pad_id] * missing
+                attention_mask += [0] * missing
+                if self.has_token_type_ids:
+                    token_type_ids += [0] * missing
+            result["input_ids"].append(input_ids)
+            result["attention_mask"].append(attention_mask)
+            if self.has_token_type_ids:
+                result["token_type_ids"].append(token_type_ids)
+        return {k: torch.LongTensor(v) for k, v in result.items()}
+
     def __call__(self, x):
         sent1 = [i["premise"] for i in x]
         sent2 = [i["hypothesis"] for i in x]
@@ -22,7 +91,7 @@ class Collator(BaseCollator):
         else:
             heuristic = None
         if not self.params["siamese"]:
-            features = self.tokenizer(text=sent1, text_pair=sent2, **self.tokenizer_params)
+            features = self.tokenize(text=sent1, text_pair=sent2)
         else:
             sent1 = self.tokenizer(text=sent1, **self.tokenizer_params)
             sent2 = self.tokenizer(text=sent2, **self.tokenizer_params)
