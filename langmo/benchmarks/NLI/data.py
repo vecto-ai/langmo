@@ -49,15 +49,32 @@ class Collator(BaseCollator):
             seq2 = seq2[:new_len2]
         return seq1, seq2
 
+    def padding(self, results):
+        params = self.tokenizer_params
+        if "padding" not in params:
+            return
+        padding = params["padding"]
+        if not padding:
+            return
+        if padding == "max_length":
+            target_length = params["max_length"]
+        elif padding == "longest":
+            target_length = max(map(len, results["input_ids"]))
+        for key, data in results.items():
+            for ri, row in enumerate(data):
+                missing = target_length - len(row)
+                pad = self.tokenizer.pad_token_id if key == "input_ids" else 0
+                data[ri] += [pad] * missing
+
     def tokenize(self, text, text_pair):
         sent1 = self.tokenizer(text, add_special_tokens=False)["input_ids"]
         sent2 = self.tokenizer(text_pair, add_special_tokens=False)["input_ids"]
         extra_len = len(self.cls) + len(self.mid_seps) + len(self.end_sep)
         max_length = self.tokenizer_params["max_length"]
         target_len = max_length - extra_len
-        result = {"input_ids": [], "attention_mask": []}
+        results = {"input_ids": [], "attention_mask": []}
         if self.has_token_type_ids:
-            result["token_type_ids"] = []
+            results["token_type_ids"] = []
         assert len(sent1) == len(sent2)
         for seq1, seq2 in zip(sent1, sent2):
             seq1, seq2 = self.truncate(seq1, seq2, target_len)
@@ -67,18 +84,12 @@ class Collator(BaseCollator):
                 len1 = len(self.cls) + len(seq1) + len(self.mid_seps)
                 len2 = len(seq2) + len(self.end_sep)
                 token_type_ids = [0] * len1 + [1] * len2
-            if self.tokenizer_params["padding"] == "max_length":
-                missing = max_length - len(input_ids)
-                pad_id = self.tokenizer.pad_token_id
-                input_ids += [pad_id] * missing
-                attention_mask += [0] * missing
-                if self.has_token_type_ids:
-                    token_type_ids += [0] * missing
-            result["input_ids"].append(input_ids)
-            result["attention_mask"].append(attention_mask)
+            results["input_ids"].append(input_ids)
+            results["attention_mask"].append(attention_mask)
             if self.has_token_type_ids:
-                result["token_type_ids"].append(token_type_ids)
-        return {k: torch.LongTensor(v) for k, v in result.items()}
+                results["token_type_ids"].append(token_type_ids)
+        self.padding(results)
+        return {k: torch.LongTensor(v) for k, v in results.items()}
 
     def __call__(self, x):
         sent1 = [i["premise"] for i in x]
