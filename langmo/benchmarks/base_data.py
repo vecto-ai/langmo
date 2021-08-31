@@ -48,7 +48,7 @@ class BaseCollator:
         self.tokenizer = tokenizer
         self.params = params
         self.tokenizer_params = {
-            "padding": "max_length",
+            "padding": params["padding"],
             "truncation": True,
             "return_tensors": "pt",
             "max_length": params["max_length"],

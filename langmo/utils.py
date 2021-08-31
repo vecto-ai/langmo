@@ -39,6 +39,7 @@ def apply_defaults_to_params(params_user):
         use_gpu=True,
         precision=32,
         batch_size=32,
+        padding="max_length",
         max_length=128,
         randomize=False,
         path_results="./logs",
