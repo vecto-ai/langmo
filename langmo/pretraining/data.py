@@ -1,3 +1,4 @@
+import json
 import random
 from collections import namedtuple
 from queue import Queue
@@ -56,14 +57,14 @@ class BatchIter:
         self.batch_size = params["batch_size"]
         self.max_length = params["max_length"]
         self.tokenizer = tokenizer
+        self.ignore_token_id = IGNORE_TOKEN_ID
+        self.cnt_batches_produced = 0
+        cnt_batches_per_epoch = params["cnt_samples_per_epoch"] / params["batch_size"]
+        self.batches_per_epoch = cnt_batches_per_epoch / hvd.size()
         self._queue = Queue(maxsize=5)
         self._thread = Thread(target=self.thread, args=(), daemon=True)
         self._thread.start()
-        cnt_batches_per_epoch = params["cnt_samples_per_epoch"] / params["batch_size"]
-        self.batches_per_epoch = cnt_batches_per_epoch / hvd.size()
-        self.cnt_batches_produced = 0
         # this is not well documented but seems to apply to all HF models
-        self.ignore_token_id = IGNORE_TOKEN_ID
 
     def __iter__(self):
         return self
@@ -86,10 +87,10 @@ class BatchIter:
         batch_attention_mask = []
         batch_labels = []
         for line in batch:
-            assert len(line) < self.max_length
-            # TODO: why not do it in vecto?
-            input_ids = self.tokenizer.convert_tokens_to_ids(line)
-            input_ids = [self.tokenizer.cls_token_id] + input_ids
+            # input_ids = self.tokenizer.convert_tokens_to_ids(line)
+            input_ids = json.loads(line)
+            assert len(input_ids) <= self.max_length
+            # input_ids = [self.tokenizer.cls_token_id] + input_ids
             masked_ids, labels = mask_line(input_ids, self.tokenizer, self.ignore_token_id)
             attention_mask = torch.ones_like(masked_ids)
             if len(masked_ids) < self.max_length:
@@ -194,15 +195,16 @@ class TextDataModule(pl.LightningDataModule):
         # TODO: implement some proper logger
         # TODO: add an option to skip short lines to line iter
         # print("loaded dir structure")
-        line_iter = self.corpus.get_looped_sequence_iterator(
-            # -1 is there to append CLS later
-            sequence_length=self.params["max_length"] - 1,
-            tokenizer=self.tokenizer.tokenize,
-            rank=hvd.rank(),
-            size=hvd.size(),
-            min_length=10,
-            reset_on_new_line=False
-        )
+        # line_iter = self.corpus.get_looped_sequence_iterator(
+        #     # -1 is there to append CLS later
+        #     sequence_length=self.params["max_length"] - 1,
+        #     tokenizer=self.tokenizer.tokenize,
+        #     rank=hvd.rank(),
+        #     size=hvd.size(),
+        #     min_length=10,
+        #     reset_on_new_line=False
+        # )
+        line_iter = self.corpus.get_looped_line_iterator(rank=hvd.rank(), size=hvd.size())
         # print("created line iter")
         batch_iter = BatchIter(line_iter, self.tokenizer, self.params)
         return batch_iter
@@ -236,7 +238,7 @@ class TextDataModule(pl.LightningDataModule):
                                   generator=self.val_gen)
         return TBatch(
             input_ids=ids,
-            token_type_ids=encoded["token_type_ids"] if "token_type_ids in encoded" else None,
+            token_type_ids=encoded["token_type_ids"] if "token_type_ids" in encoded else None,
             attention_mask=encoded["attention_mask"],
             labels=encoded["labels"],
         )
