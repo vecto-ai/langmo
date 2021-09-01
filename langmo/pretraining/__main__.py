@@ -112,7 +112,7 @@ class PLModel(PLBase):
                 / str_cnt_sampels
             )
             print("saving to ", path_checkpoint)
-            self.trainer.save_checkpoint(path_checkpoint / "PL_model.ckpt")
+            # self.trainer.save_checkpoint(path_checkpoint / "PL_model.ckpt")
             path_hf = path_checkpoint / "hf"
             self.trainer.model.save_as_hf(path_hf)
             self.hparams["train_logs"][-1]["val_loss"] = loss.item()
@@ -211,7 +211,7 @@ def main():
         # TODO: figure out what is this
         progress_bar_refresh_rate=0,
         track_grad_norm=0,
-        # profiler="simple",
+        profiler="simple",
         resume_from_checkpoint=checkpoint,
     )
     trainer.fit(model, data_module)
