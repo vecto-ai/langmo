@@ -57,13 +57,13 @@ class PLModel(PLBase):
         # print(
         #     f"ep {self.current_epoch}, step {self.global_step}, loss: {loss.item()}, lr {lr}"
         # )
-        self.log("loss", loss, sync_dist=True)
         # TODO: move this to train_epoch_end when it is fixed
-        # self.log("epoch", self.current_epoch)
-        # cnt_epochs = self.trainer.train_dataloader.loaders.cnt_restarts
+        self.log("epoch", self.current_epoch)
+        cnt_epochs = self.trainer.train_dataloader.loaders.cnt_restarts
         self.hparams["cnt_samples_processed"] += self.hparams["batch_size"] * self.hparams["cnt_workers"]
-        # self.log("true_epochs", cnt_epochs)
-        # self.log("samples_processed", self.hparams["cnt_samples_processed"])
+        self.log("loss", loss, sync_dist=True)
+        self.log("true_epochs", cnt_epochs)
+        self.log("samples_processed", self.hparams["cnt_samples_processed"])
         return loss
 
     def training_epoch_end(self, *args, **kwargs):
