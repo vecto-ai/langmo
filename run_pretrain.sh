@@ -13,7 +13,7 @@ source modules.sh
 NUM_NODES=${NHOSTS}
 NUM_GPUS_PER_NODE=8
 NUM_PROCS=$(expr ${NUM_NODES} \* ${NUM_GPUS_PER_NODE})
-export WANDB_MODE=offline
+# export WANDB_MODE=offline
 export TOKENIZERS_PARALLELISM=true
 
 
@@ -26,8 +26,8 @@ MPIOPTS="-np ${NUM_PROCS} -map-by ppr:${NUM_GPUS_PER_NODE}:node -mca pml ob1 -mc
 WANDB_MODE=offline
 mpirun ${MPIOPTS} \
     -x TOKENIZERS_PARALLELISM \
-    -x WANDB_MODE \
     python3 -m langmo.pretraining pretrain.yaml
+#    -x WANDB_MODE \
 
 
 # horovodrun -np 4 python3 main.py
