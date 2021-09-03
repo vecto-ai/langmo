@@ -57,10 +57,16 @@ class BatchIter:
         self.batch_size = params["batch_size"]
         self.max_length = params["max_length"]
         self.tokenizer = tokenizer
-        self.ignore_token_id = IGNORE_TOKEN_ID
-        self.cnt_batches_produced = 0
         cnt_batches_per_epoch = params["cnt_samples_per_epoch"] / params["batch_size"]
-        self.batches_per_epoch = cnt_batches_per_epoch / hvd.size()
+        self.batches_per_epoch = cnt_batches_per_epoch / params["cnt_workers"]
+        self.cnt_batches_produced = 0
+        self.dummy_batch = TBatch(
+            input_ids=torch.zeros((self.batch_size, self.max_length), dtype=torch.int64),
+            token_type_ids=None,
+            attention_mask=torch.ones((self.batch_size, self.max_length), dtype=torch.int64),
+            labels=torch.zeros((self.batch_size, self.max_length), dtype=torch.int64),
+        )
+        self.ignore_token_id = IGNORE_TOKEN_ID
         self._queue = Queue(maxsize=5)
         self._thread = Thread(target=self.thread, args=(), daemon=True)
         self._thread.start()
@@ -75,12 +81,11 @@ class BatchIter:
             raise StopIteration()
         batch = self._queue.get()
         # print(self._queue.qsize())
-        # if batch is None:
-        #    self._thread.join()
-        # raise StopIteration()
+        if batch is None:
+            self._thread.join()
+            raise StopIteration()
         self.cnt_batches_produced += 1
         return batch
-        # return next(self.__gen__)
 
     def encode_batch(self, batch):
         batch_input_ids = []
