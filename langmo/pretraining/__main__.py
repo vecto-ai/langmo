@@ -22,7 +22,6 @@ class PLModel(PLBase):
     def __init__(self, net, tokenizer, params):
         super().__init__(net, tokenizer, params)
         # TODO: add corpus metadata
-        print("")
         self.hparams.update(params)
         if "cnt_samples_processed" not in self.hparams:
             self.hparams["cnt_samples_processed"] = 0
@@ -35,6 +34,7 @@ class PLModel(PLBase):
 
     def training_step(self, batch, batch_idx):
         if self.hparams["test"] and batch_idx < 5:
+            print(f"proc {self.global_rank}/{self.local_rank}, model on {self.device}, batch on {batch[0].device}")
             print("inpts", self.tokenizer.decode(batch.input_ids[0]))
             print()
             print("lbls", batch.labels[0])
@@ -45,7 +45,7 @@ class PLModel(PLBase):
         result = self.forward(batch)
         # TODO: how about loss only / more loss for masked tokens?
         loss = result["loss"]
-        assert not torch.isnan(loss).item(), "loss is nan, can't train"
+        # assert not torch.isnan(loss).item(), "loss is nan, can't train"
         # if torch.isnan(loss):
         #     print(">> loss is NaN\n")
         #     return None
@@ -57,17 +57,17 @@ class PLModel(PLBase):
         # print(
         #     f"ep {self.current_epoch}, step {self.global_step}, loss: {loss.item()}, lr {lr}"
         # )
-        self.log("loss", loss)
+        # self.log("loss", loss)
         # TODO: move this to train_epoch_end when it is fixed
         # self.log("epoch", self.current_epoch)
-        cnt_epochs = self.trainer.train_dataloader.loaders.cnt_restarts
+        # cnt_epochs = self.trainer.train_dataloader.loaders.cnt_restarts
         self.hparams["cnt_samples_processed"] += self.hparams["batch_size"] * self.hparams["cnt_workers"]
-        self.log("true_epochs", cnt_epochs)
-        self.log("samples_processed", self.hparams["cnt_samples_processed"])
+        # self.log("true_epochs", cnt_epochs)
+        # self.log("samples_processed", self.hparams["cnt_samples_processed"])
         return loss
 
     def training_epoch_end(self, *args, **kwargs):
-        if hvd.rank() == 0:
+        if self.global_rank == 0:
             # print("args:", args)
             # print("kwargs:", kwargs)
             metrics = {}
@@ -79,17 +79,17 @@ class PLModel(PLBase):
         # so let's wait here till the queue of training samples is repopulated
         # TODO: this .loaders is kinda strange
         dataloader = self.trainer.train_dataloader.loaders
-        while dataloader._queue.qsize() < dataloader._queue.maxsize:
-            sleep(1)
+        #while dataloader._queue.qsize() < dataloader._queue.maxsize:
+         #   sleep(1)
         # well this would not block us while queue is full but train loader still preparing the next batch
         # which will be blocked on queue.put() :-\
         # this is beyound ugly but shikata nai
-        sleep(5)
+        sleep(1)
 
     def validation_step(self, batch, batch_idx):
         result = self.forward(batch)
         loss = result["loss"]
-        self.log("val_loss", loss)
+        self.log("val_loss", loss, sync_dist=True)
         # TODO: add MLM accuracy here
         metrics = {
             f"val_loss": loss,
@@ -101,7 +101,7 @@ class PLModel(PLBase):
         self.trainer.datamodule.val_rng_reset()
         loss = torch.stack([x["val_loss"] for x in outputs]).mean()
         loss = hvd.allreduce(loss)
-        if hvd.rank() == 0:
+        if self.global_rank == 0:
             if self.hparams["cnt_samples_per_epoch"] >= 1000000:
                 str_cnt_sampels = f"smpl_{self.hparams['cnt_samples_processed'] // 1000000}M"
             else:
@@ -157,35 +157,29 @@ def build_model(params):
     return model
 
 
-def main():
-    hvd.init()
-    if hvd.rank() != 0:
-        tr_logging.set_verbosity_error()  # to reduce warning of unused weights
-    name_task = "pretrain"
-    params = load_config(name_task=name_task)
+def get_run_name(params):
     name_run = params["model_name"]
     # TODO: revisit this when we have model parallel training
     name_run += f"_{params['timestamp']}"
-    name_run += f"_bs{params['batch_size'] * params['cnt_workers']}"
+    # name_run += f"_bs{params['batch_size'] * params['cnt_workers']}"
     name_run += f"_lr{params['max_lr']}"
     name_run += f"_wd{params['weight_decay']}"
     name_run += f"_stp{params['cnt_training_steps']}"
-    model = build_model(params)
-    data_module = TextDataModule(
-        tokenizer=model.tokenizer,
-        params=params,
-        # embs.vocabulary,
-    )
-    model.hparams["corpus"] = data_module.corpus.metadata
+    return name_run
 
-    # n_steps_checkpoint = 10000  # TODO: should this go to params?
-    # on_n_step_checkpoint = CheckpointEveryNSteps(n_steps_checkpoint)
-    # scheudle_eval_callback = ScheduleEval(n_step)
-    lr_monitor = LearningRateMonitor(logging_interval="step")
+
+def main():
+    hvd.init()
+    # if self.global_rank != 0:
+    tr_logging.set_verbosity_error()  # to reduce warning of unused weights
+    name_task = "pretrain"
+    params = load_config(name_task=name_task)
+    name_run = get_run_name(params)
     if params["use_gpu"]:
         assert torch.cuda.device_count() > 0, "Asked for `use_gpu` but no gpu detected"
     gpus = 1 if params["use_gpu"] else 0
     checkpoint = params["resume"]["checkpoint"] if "resume" in params else None
+    lr_monitor = LearningRateMonitor(logging_interval="step")
     trainer = pl.Trainer(
         default_root_dir=params["path_results"],
         weights_save_path=params["path_results"],
@@ -211,9 +205,28 @@ def main():
         # TODO: figure out what is this
         progress_bar_refresh_rate=0,
         track_grad_norm=0,
-        profiler="simple",
+        # profiler="simple",
         resume_from_checkpoint=checkpoint,
+        # plugins="deepspeed_stage_2",
+        accumulate_grad_batches=params["accumulate_batches"],
     )
+    if trainer.global_rank == 0:
+        (Path(params["path_results"]) / "wandb").mkdir(parents=True, exist_ok=True)
+
+    params["cnt_workers"] = trainer.world_size
+    params["batch_size_effective"] = params["batch_size"] * params["cnt_workers"] * params["accumulate_batches"]
+    model = build_model(params)
+    data_module = TextDataModule(
+        tokenizer=model.tokenizer,
+        params=params,
+        # embs.vocabulary,
+    )
+    model.hparams["corpus"] = data_module.corpus.metadata
+
+    # n_steps_checkpoint = 10000  # TODO: should this go to params?
+    # on_n_step_checkpoint = CheckpointEveryNSteps(n_steps_checkpoint)
+    # scheudle_eval_callback = ScheduleEval(n_step)
+
     trainer.fit(model, data_module)
     print("All done")
 

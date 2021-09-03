@@ -3,7 +3,6 @@ import platform
 import sys
 from pathlib import Path
 
-import horovod.torch as hvd
 import yaml
 from protonn.utils import get_time_str, load_json
 
@@ -57,6 +56,7 @@ def apply_defaults_to_params(params_user):
         siamese=False,
         shuffle=False,
         gradient_clip_val=0.0,
+        accumulate_batches=1,
     )
     params.update(params_user)
     return params
@@ -83,16 +83,12 @@ def load_yaml_config_with_defaults(path, name_task):
             params["model_name"],
             params["timestamp"],
         )
-    if hvd.rank() == 0:
-        (Path(params["path_results"]) / "wandb").mkdir(parents=True, exist_ok=True)
     # Convert to "FP16" to (int) 16
     if isinstance(params["precision"], str):
         params["precision"] = int(params["precision"].lower().replace("fp", ""))
     # TODO: we put it here for now for simplicitly
     # this needs to be revisited when we do model parallel
     # TODO: also we whould think what we do when we resume with different number of workers
-    params["cnt_workers"] = hvd.size()
-    params["batch_size_effective"] = params["batch_size"] * params["cnt_workers"]
     return params
 
 
