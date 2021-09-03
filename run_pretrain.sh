@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd
 #$ -l rt_AF=1
-#$ -l h_rt=1:20:00
+#$ -l h_rt=30:20:00
 #$ -N Pretrain
 #$ -j y
 #$ -o $JOB_NAME.o$JOB_ID
@@ -27,7 +27,7 @@ WANDB_MODE=offline
 mpirun ${MPIOPTS} \
     -x TOKENIZERS_PARALLELISM \
     -x WANDB_MODE \
-    python3 -m langmo.pretraining pretrain_perf.yaml
+    python3 -m langmo.pretraining pretrain.yaml
 
 
 # horovodrun -np 4 python3 main.py
