@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd
 #$ -l rt_AF=1
-#$ -l h_rt=30:20:00
+#$ -l h_rt=20:00:00
 #$ -N Pretrain
 #$ -j y
 #$ -o $JOB_NAME.o$JOB_ID
@@ -23,7 +23,7 @@ MPIOPTS="-np ${NUM_PROCS} -map-by ppr:${NUM_GPUS_PER_NODE}:node -mca pml ob1 -mc
 
 
 # ======== Main ===========
-WANDB_MODE=offline
+# WANDB_MODE=offline
 mpirun ${MPIOPTS} \
     -x TOKENIZERS_PARALLELISM \
     python3 -m langmo.pretraining pretrain.yaml
