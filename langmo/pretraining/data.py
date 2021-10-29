@@ -79,7 +79,7 @@ class BatchIter:
         if self.cnt_batches_produced >= self.batches_per_epoch:
             self.cnt_batches_produced = 0
             raise StopIteration()
-        batch = self._queue.get()
+        batch = self._queue.get(block=True, timeout=300)
         # print(self._queue.qsize())
         if batch is None:
             self._thread.join()
