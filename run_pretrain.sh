@@ -1,10 +1,10 @@
 #!/bin/bash
 #$ -cwd
-#$ -l rt_AF=1
-#$ -l h_rt=20:00:00
+#$ -l rt_AF=4
+#$ -l h_rt=24:00:00
 #$ -N Pretrain
 #$ -j y
-#$ -o $JOB_NAME.o$JOB_ID
+#$ -o ./logs/pretrain/$JOB_NAME.o$JOB_ID
 
 # ======== Modules ========
 source /etc/profile.d/modules.sh
@@ -13,6 +13,7 @@ source modules.sh
 NUM_NODES=${NHOSTS}
 NUM_GPUS_PER_NODE=8
 NUM_PROCS=$(expr ${NUM_NODES} \* ${NUM_GPUS_PER_NODE})
+export HOROVOD_CACHE_CAPACITY=4096
 # export WANDB_MODE=offline
 export TOKENIZERS_PARALLELISM=true
 

@@ -94,7 +94,7 @@ class BatchIter:
         for line in batch:
             # input_ids = self.tokenizer.convert_tokens_to_ids(line)
             input_ids = json.loads(line)
-            assert len(input_ids) <= self.max_length
+            assert len(input_ids) <= self.max_length, f"got seq of len {len(input_ids)}"
             # input_ids = [self.tokenizer.cls_token_id] + input_ids
             masked_ids, labels = mask_line(input_ids, self.tokenizer, self.ignore_token_id)
             attention_mask = torch.ones_like(masked_ids)

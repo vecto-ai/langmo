@@ -1,7 +1,8 @@
 import horovod.torch as hvd
 import torch
 import torch.nn.functional as F
-from langmo.benchmarks.base import (BaseClassificationModel, BaseFinetuner,
+from langmo.benchmarks.base import (BaseClassificationModel,
+                                    ClassificationFinetuner,
                                     aggregate_batch_stats)
 
 from .data import SSTDataModule
@@ -37,7 +38,7 @@ class ClassificationModel(BaseClassificationModel):
 
 def main():
     name_task = "SST"
-    finetuner = BaseFinetuner(name_task, SSTDataModule, ClassificationModel)
+    finetuner = ClassificationFinetuner(name_task, SSTDataModule, ClassificationModel)
     finetuner.run()
 
 

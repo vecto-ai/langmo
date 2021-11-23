@@ -1,7 +1,8 @@
 import horovod.torch as hvd
 import torch
 import torch.nn.functional as F
-from langmo.benchmarks.base import (BaseClassificationModel, BaseFinetuner,
+from langmo.benchmarks.base import (BaseClassificationModel,
+                                    ClassificationFinetuner,
                                     aggregate_batch_stats)
 # import vecto
 # import vecto.embeddings
@@ -104,7 +105,7 @@ class PLModel(BaseClassificationModel):
 
 def main():
     name_task = "NLI"
-    finetuner = BaseFinetuner(name_task, NLIDataModule, PLModel)
+    finetuner = ClassificationFinetuner(name_task, NLIDataModule, PLModel)
     finetuner.run()
 
 
