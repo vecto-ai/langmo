@@ -33,11 +33,13 @@ class PLModel(PLBase):
         return result
 
     def training_step(self, batch, batch_idx):
+        assert self.hparams["batch_size"] == len(batch.input_ids)
         if self.hparams["test"] and batch_idx < 5:
             print(f"proc {self.global_rank}/{self.local_rank}, model on {self.device}, batch on {batch[0].device}")
             print("inpts", self.tokenizer.decode(batch.input_ids[0]))
             print()
             print("lbls", batch.labels[0])
+            print("mask", batch.attention_mask[0])
             # print("type ids", batch.token_type_ids[0])
             # print("mask", batch.attention_mask[0])
             # print()
@@ -63,6 +65,7 @@ class PLModel(PLBase):
         self.hparams["cnt_samples_processed"] += self.hparams["batch_size"] * self.hparams["cnt_workers"]
         self.log("loss", loss, sync_dist=True)
         self.log("true_epochs", cnt_epochs)
+        # print("logging samples processed as", self.hparams["cnt_samples_processed"])
         self.log("samples_processed", self.hparams["cnt_samples_processed"])
         return loss
 
@@ -182,11 +185,11 @@ def main():
     lr_monitor = LearningRateMonitor(logging_interval="step")
     trainer = pl.Trainer(
         default_root_dir=params["path_results"],
-        weights_save_path=params["path_results"],
+        # weights_save_path=params["path_results"],
         gpus=gpus,
         num_sanity_val_steps=0 if "resume" in params else -1,
         max_epochs=params["cnt_epochs"],
-        accelerator="horovod",
+        strategy="horovod",
         precision=params["precision"],
         replace_sampler_ddp=False,
         # early_stop_callback=early_stop_callback,
@@ -204,7 +207,8 @@ def main():
         gradient_clip_val=params["gradient_clip_val"],
         # TODO: figure out what is this
         progress_bar_refresh_rate=0,
-        track_grad_norm=0,
+        track_grad_norm=1,
+        terminate_on_nan=True,
         # profiler="simple",
         resume_from_checkpoint=checkpoint,
         # plugins="deepspeed_stage_2",

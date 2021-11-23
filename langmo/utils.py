@@ -12,6 +12,7 @@ def get_unique_results_path(base, model_name, timestamp):
     short_name = model_name.split("/")[-1]
     new_path = os.path.join(base, f"{timestamp}_{short_name}_{hostname}")
     # TODO: make this trully unique
+
     return new_path
 
 
