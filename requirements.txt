@@ -1,4 +1,3 @@
-torch
 vecto
 pytorch_lightning
 datasets
