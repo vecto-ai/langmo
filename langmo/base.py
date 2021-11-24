@@ -56,11 +56,11 @@ class PLBase(pl.LightningModule):
             num_samples = self.hparams["cnt_train_samples"]
             training_steps = int((10 + num_samples / batch_size) * cnt_epochs / hvd.size())
         else:
-            training_steps = self.hparams["cnt_training_steps"]
+            training_steps = self.hparams["cnt_epochs"] * self.hparams["cnt_samples_per_epoch"]
 
         # TODO: get rough estimation of training steps here
         # maybe after first epoch is trained - reset iterators?
-        pct_start = self.hparams["cnt_warmup_steps"] / training_steps
+        pct_start = self.hparams["percent_warmup"] / 100.0
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer,
             max_lr=self.hparams["max_lr"],

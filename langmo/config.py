@@ -62,7 +62,7 @@ class Config(dict):
         user_config = load_yaml_config(path)
         for key, value in user_config.items():
             if key not in self.defaults and key not in self.required_options and key != "suffix":
-                raise RuntimeError(f"got unexpected key in user config {key}:{value}")
+                raise RuntimeError(f"got unexpected key in user config {key}: {value}")
             # print(key, value)
         for key, value in self.defaults.items():
             if key not in user_config:
@@ -113,11 +113,10 @@ class Config(dict):
             beta2=0.999,
             max_lr=5e-5,
             initial_lr=0.0,
-            cnt_warmup_steps=500,
-            cnt_training_steps=500000,
             shuffle=False,
             gradient_clip_val=0.0,
             accumulate_batches=1,
+            percent_warmup=6.0,
         )
         self.required_options = set()
         self.required_options.add("model_name")
@@ -129,7 +128,6 @@ class ConfigPretrain(Config):
         super().set_defaults()
         self.required_options.add("path_corpus")
         self.required_options.add("path_val_corpus")
-        # TODO: remove this one
         self.required_options.add("cnt_samples_per_epoch")
 
 
