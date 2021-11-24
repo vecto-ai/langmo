@@ -164,8 +164,9 @@ def get_run_name(params):
     name_run += f"_{params['timestamp']}"
     # name_run += f"_bs{params['batch_size'] * params['cnt_workers']}"
     name_run += f"_lr{params['max_lr']}"
-    name_run += f"_wd{params['weight_decay']}"
-    name_run += f"_stp{params['cnt_training_steps']}"
+    # TODO: add batch size
+    # name_run += f"_wd{params['weight_decay']}"
+    # name_run += f"_bs{params['batch_size_effective']}"
     return name_run
 
 # TODO:
