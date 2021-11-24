@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
@@ -7,8 +5,8 @@ import torch.nn.functional as F
 from langmo.base import PLBase
 from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
                                          TopMLP2)
+from langmo.config import ConfigFinetune as Config
 from langmo.nn.utils import reinit_model, reinit_tensor
-from langmo.utils import load_config
 from protonn.utils import get_time_str
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
@@ -43,7 +41,7 @@ class BaseFinetuner:
         hvd.init()
         if hvd.rank() != 0:
             tr_logging.set_verbosity_error()  # to reduce warning of unused weights
-        self.params = load_config(name_task)
+        self.params = Config(name_task=name_task, is_master=(hvd.rank() == 0))
         timestamp = get_time_str()
         self.tokenizer = AutoTokenizer.from_pretrained(self.params["model_name"])
 

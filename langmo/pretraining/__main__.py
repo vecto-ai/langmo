@@ -9,7 +9,8 @@ from langmo.base import PLBase
 from langmo.callbacks.perf import PerfMonitor
 # from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 # from langmo.nn.utils import reinit_model
-from langmo.utils import load_config
+from langmo.config import ConfigPretrain as Config
+from protonn.utils import num_to_str_with_suffix
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
@@ -105,10 +106,7 @@ class PLModel(PLBase):
         loss = torch.stack([x["val_loss"] for x in outputs]).mean()
         loss = hvd.allreduce(loss)
         if self.global_rank == 0:
-            if self.hparams["cnt_samples_per_epoch"] >= 1000000:
-                str_cnt_sampels = f"smpl_{self.hparams['cnt_samples_processed'] // 1000000}M"
-            else:
-                str_cnt_sampels = f"smpl_{self.hparams['cnt_samples_processed'] // 1000}K"
+            str_cnt_sampels = f"smpl_{num_to_str_with_suffix(self.hparams['cnt_samples_processed'])}"
             path_checkpoint = (
                 Path(self.hparams["path_results"])
                 / "checkpoints"
@@ -170,13 +168,19 @@ def get_run_name(params):
     name_run += f"_stp{params['cnt_training_steps']}"
     return name_run
 
+# TODO:
+# differetn configs for finetune and pretrain
+# add samples to process to config
+# checkpoint in terms of samples
+# calc LR scheduling in terms of steps
+
 
 def main():
     hvd.init()
     # if self.global_rank != 0:
     tr_logging.set_verbosity_error()  # to reduce warning of unused weights
     name_task = "pretrain"
-    params = load_config(name_task=name_task)
+    params = Config(name_task=name_task, is_master=(hvd.rank() == 0))
     name_run = get_run_name(params)
     if params["use_gpu"]:
         assert torch.cuda.device_count() > 0, "Asked for `use_gpu` but no gpu detected"
@@ -217,6 +221,7 @@ def main():
     if trainer.global_rank == 0:
         (Path(params["path_results"]) / "wandb").mkdir(parents=True, exist_ok=True)
 
+    # TODO: move this to parent
     params["cnt_workers"] = trainer.world_size
     params["batch_size_effective"] = params["batch_size"] * params["cnt_workers"] * params["accumulate_batches"]
     model = build_model(params)

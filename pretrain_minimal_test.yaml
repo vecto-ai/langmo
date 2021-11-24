@@ -2,7 +2,6 @@ cnt_epochs: 4
 uncase: False
 batch_size: 32
 max_length: 128
-num_training_steps: 500
 path_corpus: "./data/sense"
 path_val_corpus: "./data/sense_small"
 model_name: "prajjwal1/bert-mini"
