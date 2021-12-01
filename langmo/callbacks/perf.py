@@ -35,8 +35,8 @@ class PerfMonitor(pl.Callback):
         # then val epoch ends, then train epoch ends
         # so we are placing "end training epoch" hook at start of val epoch
         self.time_end = timer()
-        epoch = -1 if trainer.sanity_checking else trainer.current_epoch
-        pl_module.hparams["train_logs"][-1]["epoch"] = epoch
+        self.epoch = -1 if trainer.sanity_checking else trainer.current_epoch
+        pl_module.hparams["train_logs"][-1]["epoch"] = self.epoch
         if trainer.global_rank == 0:
             print(f"@@@@ perf callback: validation epoch {pl_module.current_epoch} started @@@@")
 
@@ -49,12 +49,13 @@ class PerfMonitor(pl.Callback):
                 pl_module.hparams["train_logs"][-1]["samples_per_second"] = pl_module.hparams["cnt_samples_per_epoch"] / epoch_time
                 pl_module.hparams["train_logs"][-1]["samples_per_second_worker"] = pl_module.hparams["train_logs"][-1]["samples_per_second"] / pl_module.hparams["cnt_workers"]
             # pl_module.save_metadata()
-            str_cnt_sampels = f"smpl_{num_to_str_with_suffix(pl_module.hparams['cnt_samples_processed'])}"
-            path_checkpoint = (
-                Path(pl_module.hparams["path_results"])
-                / "checkpoints"
-                / str_cnt_sampels
-            )
+            # str_cnt_sampels = f"smpl_{num_to_str_with_suffix(pl_module.hparams['cnt_samples_processed'])}"
+            # path_checkpoint = (
+            #     Path(pl_module.hparams["path_results"])
+            #     / "checkpoints"
+            #     / str_cnt_sampels
+            # )
+            path_checkpoint = Path(pl_module.hparams["path_results"]) / "checkpoints" / f"ep_{self.epoch:03d}"
             print("saving to ", path_checkpoint)
             # self.trainer.save_checkpoint(path_checkpoint / "PL_model.ckpt")
             path_hf = path_checkpoint / "hf"

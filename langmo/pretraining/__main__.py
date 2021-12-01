@@ -4,12 +4,6 @@ from time import sleep
 
 import pytorch_lightning as pl
 import torch
-from protonn.distributed import dist_adapter as da
-from pytorch_lightning.callbacks import LearningRateMonitor
-from pytorch_lightning.loggers import WandbLogger
-from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
-from transformers import logging as tr_logging
-
 from langmo.base import PLBase
 from langmo.callbacks.perf import PerfMonitor
 # from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
@@ -17,6 +11,11 @@ from langmo.callbacks.perf import PerfMonitor
 # from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 # from langmo.nn.utils import reinit_model
 from langmo.config import ConfigPretrain as Config
+from protonn.distributed import dist_adapter as da
+from pytorch_lightning.callbacks import LearningRateMonitor
+from pytorch_lightning.loggers import WandbLogger
+from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
+from transformers import logging as tr_logging
 
 from .data import TextDataModule
 
@@ -25,11 +24,8 @@ class PLModel(PLBase):
     def __init__(self, net, tokenizer, params):
         super().__init__(net, tokenizer, params)
         # TODO: add corpus metadata
-        self.hparams.update(params)
         if "cnt_samples_processed" not in self.hparams:
             self.hparams["cnt_samples_processed"] = 0
-        if len(self.hparams["train_logs"]) == 0:
-            self.hparams["train_logs"].append({"epoch": -1, "epoch_time": 0.0})
 
     def forward(self, batch):
         result = self.net(**batch._asdict())
@@ -206,11 +202,6 @@ def main():
     if trainer.global_rank == 0:
         (Path(params["path_results"]) / "wandb").mkdir(parents=True, exist_ok=True)
 
-    # TODO: move this to parent
-    params["cnt_workers"] = trainer.world_size
-    params["batch_size_effective"] = (
-        params["batch_size"] * params["cnt_workers"] * params["accumulate_batches"]
-    )
     model = build_model(params)
     data_module = TextDataModule(
         tokenizer=model.tokenizer,

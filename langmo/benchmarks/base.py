@@ -1,6 +1,12 @@
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
+from langmo.base import PLBase
+from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
+                                         TopMLP2)
+from langmo.callbacks.perf import PerfMonitor
+from langmo.config import ConfigFinetune as Config
+from langmo.nn.utils import reinit_model, reinit_tensor
 from protonn.distributed import dist_adapter as da
 from protonn.utils import get_time_str
 from pytorch_lightning.callbacks import LearningRateMonitor
@@ -9,12 +15,6 @@ from torchmetrics.functional import accuracy
 from transformers import (AutoModel, AutoModelForQuestionAnswering,
                           AutoModelForSequenceClassification, AutoTokenizer)
 from transformers import logging as tr_logging
-
-from langmo.base import PLBase
-from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
-                                         TopMLP2)
-from langmo.config import ConfigFinetune as Config
-from langmo.nn.utils import reinit_model, reinit_tensor
 
 
 class BaseClassificationModel(PLBase):
@@ -89,7 +89,7 @@ class BaseFinetuner:
             replace_sampler_ddp=False,
             # early_stop_callback=early_stop_callback,
             # we probably don't need to checkpoint eval - but can make this optional
-            callbacks=[lr_monitor],  # on_n_step_callback
+            callbacks=[lr_monitor, PerfMonitor()],  # on_n_step_callback
             checkpoint_callback=False,
             logger=self.wandb_logger,
             progress_bar_refresh_rate=0,

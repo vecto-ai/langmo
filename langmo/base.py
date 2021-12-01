@@ -18,6 +18,8 @@ class PLBase(pl.LightningModule):
         self.net = net
         self.tokenizer = tokenizer
         self.hparams["train_logs"] = []
+        if len(self.hparams["train_logs"]) == 0:
+            self.hparams["train_logs"].append({"epoch": -1, "epoch_time": 0.0})
         self.hparams.update(params)
         self.save_hyperparameters(params)
         if self.global_rank == 0:
@@ -53,10 +55,8 @@ class PLBase(pl.LightningModule):
         cnt_epochs = self.hparams["cnt_epochs"]
         batch_size = self.hparams["batch_size_effective"]
         if hasattr(self.trainer.datamodule, "cnt_train_samples"):
-            self.hparams["cnt_train_samples"] = self.trainer.datamodule.cnt_train_samples
-            samples_per_epoch = self.hparams["cnt_train_samples"]
-        else:
-            samples_per_epoch = self.hparams["cnt_samples_per_epoch"]
+            self.hparams["cnt_samples_per_epoch"] = self.trainer.datamodule.cnt_train_samples
+        samples_per_epoch = self.hparams["cnt_samples_per_epoch"]
         print(f"!!!!!!!! samples per epoch: {samples_per_epoch}")
         training_steps = int(samples_per_epoch * cnt_epochs / batch_size) + 1
         print(f"!!!!!!!! expected steps: {training_steps}")
@@ -83,11 +83,12 @@ class PLBase(pl.LightningModule):
         path = Path(path) / "metadata.json"
         save_data_json(self.hparams, path)
 
-    # def save_metrics_and_model(self, metrics):
-    #     if hvd.rank() == 0:
-    #         self.logger.log_metrics(metrics, step=self.global_step)
-    #         # self.append_metrics_to_train_logs(metrics)
-    #         self.save_metadata()
-    #         if metrics["epoch"] >= 0:
-    #             path_hf = Path(self.hparams["path_results"]) / f"ep{metrics['epoch']}"
-    #             self.save_as_hf(path_hf)
+    def save_metrics_and_model(self, metrics):
+        if da.rank() == 0:
+            print("TODO: save_metrics_and_model shoudl be done in callback")
+            self.logger.log_metrics(metrics, step=self.global_step)
+            # self.append_metrics_to_train_logs(metrics)
+            self.save_metadata()
+            if metrics["epoch"] >= 0:
+                path_hf = Path(self.hparams["path_results"]) / f"ep{metrics['epoch']}"
+                self.save_as_hf(path_hf)

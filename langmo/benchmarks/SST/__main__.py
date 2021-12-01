@@ -1,10 +1,9 @@
 import torch
 import torch.nn.functional as F
-from protonn.distributed import dist_adapter as da
-
 from langmo.benchmarks.base import (BaseClassificationModel,
                                     ClassificationFinetuner,
                                     aggregate_batch_stats)
+from protonn.distributed import dist_adapter as da
 
 from .data import SSTDataModule
 
@@ -26,14 +25,15 @@ class ClassificationModel(BaseClassificationModel):
     def validation_epoch_end(self, outputs):
         print("### validation epoch end")
         metrics = {}
-        self.add_epoch_id_to_metrics(metrics)
+        # self.add_epoch_id_to_metrics(metrics)
         loss = torch.stack([x["val_loss"] for x in outputs]).mean()
         loss = da.allreduce(loss)
         cnt_correct = aggregate_batch_stats(outputs, "cnt_correct")
         cnt_questions = aggregate_batch_stats(outputs, "cnt_questions")
         metrics["val_acc"] = cnt_correct / cnt_questions
         metrics["val_loss"] = loss
-        self.save_metrics_and_model(metrics)
+        # TODO: make sure metrics are logged
+        # self.save_metrics_and_model(metrics)
 
 
 def main():

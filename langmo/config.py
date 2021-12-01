@@ -5,6 +5,7 @@ from pathlib import Path
 
 import yaml
 from langmo.utils import get_unique_results_path, parse_float
+from protonn.distributed import dist_adapter as da
 from protonn.utils import get_time_str, load_json
 
 
@@ -53,9 +54,15 @@ class Config(dict):
 
         if is_yaml_config(path):
             self.read_from_yaml_and_set_default(path, name_task)
+            self.add_distributes_info()
 
         if is_resume_run(path):
+            # TODO: decide what to do when e.g. cnt_workers changed
             self.update(load_resume_run_params(path))
+
+    def add_distributes_info(self, ):
+        self["cnt_workers"] = da.world_size()
+        self["batch_size_effective"] = self["batch_size"] * self["cnt_workers"] * self["accumulate_batches"]
 
     def read_from_yaml_and_set_default(self, path, name_task):
         _logger = logging.getLogger(__name__)
