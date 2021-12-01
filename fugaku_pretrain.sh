@@ -11,5 +11,7 @@
 export PATH=/home/apps/oss/PyTorch-1.7.0/bin:$PATH
 export LD_LIBRARY_PATH=/home/apps/oss/PyTorch-1.7.0/lib:$LD_LIBRARY_PATH
 
-WANDB_MODE=dryrun LD_PRELOAD=libtcmalloc.so mpirun -n $PJM_MPI_PROC python3 -m langmo.pretraining pretrain.yaml
+# WANDB_MODE=offline
+WANDB_MODE=disabled \
+LD_PRELOAD=libtcmalloc.so mpirun -n $PJM_MPI_PROC python3 -m langmo.pretraining pretrain.yaml
 
