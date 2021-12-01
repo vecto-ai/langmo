@@ -268,8 +268,8 @@ class TextDataModule(pl.LightningDataModule):
         # self.val_rng_reset()
         sampler = DistributedSampler(
             dataset=self.val_data,
-            num_replicas=hvd.size(),
-            rank=hvd.rank(),
+            num_replicas=da.world_size(),
+            rank=da.rank(),
             shuffle=False,
             seed=42,
         )

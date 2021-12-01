@@ -1,10 +1,14 @@
-cnt_epochs: 4
+cnt_epochs: 2
 uncase: False
-batch_size: 32
+batch_size: 8
 max_length: 128
-path_corpus: "./data/sense"
-path_val_corpus: "./data/sense_small"
-model_name: "prajjwal1/bert-mini"
+# model_name: "prajjwal1/bert-mini"
+# path_corpus: "./data/sense"
+# path_val_corpus: "./data/sense_small"
+path_corpus: "./data/sense_roberta_base_preprocessed"
+path_val_corpus: "./data/sense_small_roberta_base_preprocessed"
+model_name: "roberta-base"
 test: True
 initial_lr: 1e-5
 cnt_samples_per_epoch: 10000
+# use_gpu: False

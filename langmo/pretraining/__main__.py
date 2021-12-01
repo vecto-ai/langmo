@@ -4,6 +4,7 @@ from time import sleep
 
 import pytorch_lightning as pl
 import torch
+from protonn.distributed import dist_adapter as da
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
@@ -105,7 +106,7 @@ class PLModel(PLBase):
             print(f"########### main: validation epoch end ###############")
         self.trainer.datamodule.val_rng_reset()
         loss = torch.stack([x["val_loss"] for x in outputs]).mean()
-        loss = hvd.allreduce(loss)
+        loss = da.allreduce(loss)
         self.hparams["train_logs"][-1]["val_loss"] = loss.item()
 
     # def save_metadata(self, corpus_metadata, path=None):
