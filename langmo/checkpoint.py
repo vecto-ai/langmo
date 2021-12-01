@@ -1,7 +1,7 @@
 from pathlib import Path
 
-import horovod.torch as hvd
 import pytorch_lightning as pl
+from protonn.distributed import dist_adapter as da
 
 
 class BaseNStepCallback(pl.Callback):
@@ -26,7 +26,7 @@ class BaseNStepCallback(pl.Callback):
 
 class CheckpointEveryNSteps(BaseNStepCallback):
     def on_batch_end(self, trainer: pl.Trainer, _):
-        if hvd.rank() != 0:
+        if da.rank() != 0:
             return
         global_step = trainer.global_step
         if global_step % self.save_step_frequency == 0:
@@ -41,7 +41,7 @@ class CheckpointEveryNSteps(BaseNStepCallback):
 # TODO: this moves to CLI. but we can create something like .doit file here
 class ScheduleEval(BaseNStepCallback):
     def on_batch_end(self, trainer: pl.Trainer, _):
-        if hvd.rank() != 0:
+        if da.rank() != 0:
             return
         global_step = trainer.global_step
         if global_step % self.save_step_frequency == 0:

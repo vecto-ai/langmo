@@ -2,18 +2,20 @@
 from pathlib import Path
 from time import sleep
 
-import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
-from langmo.base import PLBase
-from langmo.callbacks.perf import PerfMonitor
-# from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
-# from langmo.nn.utils import reinit_model
-from langmo.config import ConfigPretrain as Config
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
+
+from langmo.base import PLBase
+from langmo.callbacks.perf import PerfMonitor
+# from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
+# from langmo.nn.utils import reinit_model
+# from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
+# from langmo.nn.utils import reinit_model
+from langmo.config import ConfigPretrain as Config
 
 from .data import TextDataModule
 
@@ -29,14 +31,16 @@ class PLModel(PLBase):
             self.hparams["train_logs"].append({"epoch": -1, "epoch_time": 0.0})
 
     def forward(self, batch):
-        result = self.net(** batch._asdict())
+        result = self.net(**batch._asdict())
         return result
 
     def training_step(self, batch, batch_idx):
         # print("train step start")
         assert self.hparams["batch_size"] == len(batch.input_ids)
         if self.hparams["test"] and batch_idx < 5:
-            print(f"proc {self.global_rank}/{self.local_rank}, model on {self.device}, batch on {batch[0].device}")
+            print(
+                f"proc {self.global_rank}/{self.local_rank}, model on {self.device}, batch on {batch[0].device}"
+            )
             print("inpts", self.tokenizer.decode(batch.input_ids[0]))
             print()
             print("lbls", batch.labels[0])
@@ -63,7 +67,9 @@ class PLModel(PLBase):
         # TODO: move this to train_epoch_end when it is fixed
         # self.log("epoch", self.current_epoch)
         cnt_epochs = float(self.trainer.train_dataloader.loaders.cnt_restarts)
-        self.hparams["cnt_samples_processed"] += self.hparams["batch_size"] * self.hparams["cnt_workers"]
+        self.hparams["cnt_samples_processed"] += (
+            self.hparams["batch_size"] * self.hparams["cnt_workers"]
+        )
         self.log("loss", loss, sync_dist=True)
         self.log("true_epochs", float(cnt_epochs))
         # print("logging samples processed as", self.hparams["cnt_samples_processed"])
@@ -77,8 +83,8 @@ class PLModel(PLBase):
             # print("args:", args)
             # print("kwargs:", kwargs)
             # metrics = {}
-            #self.add_epoch_id_to_metrics(metrics)
-            #self.append_metrics_to_train_logs(metrics)
+            # self.add_epoch_id_to_metrics(metrics)
+            # self.append_metrics_to_train_logs(metrics)
             print(f"########### main: training epoch end ###############")
         sleep(0.1)
 
@@ -154,11 +160,11 @@ def get_run_name(params):
 
 
 def main():
-    hvd.init()
+    da.init("horovod")
     # if self.global_rank != 0:
     tr_logging.set_verbosity_error()  # to reduce warning of unused weights
     name_task = "pretrain"
-    params = Config(name_task=name_task, is_master=(hvd.rank() == 0))
+    params = Config(name_task=name_task, is_master=(da.rank() == 0))
     name_run = get_run_name(params)
     if params["use_gpu"]:
         assert torch.cuda.device_count() > 0, "Asked for `use_gpu` but no gpu detected"
@@ -201,7 +207,9 @@ def main():
 
     # TODO: move this to parent
     params["cnt_workers"] = trainer.world_size
-    params["batch_size_effective"] = params["batch_size"] * params["cnt_workers"] * params["accumulate_batches"]
+    params["batch_size_effective"] = (
+        params["batch_size"] * params["cnt_workers"] * params["accumulate_batches"]
+    )
     model = build_model(params)
     data_module = TextDataModule(
         tokenizer=model.tokenizer,
