@@ -10,7 +10,6 @@ from langmo.callbacks.perf import PerfMonitor
 # from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 # from langmo.nn.utils import reinit_model
 from langmo.config import ConfigPretrain as Config
-from protonn.utils import num_to_str_with_suffix
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
@@ -34,6 +33,7 @@ class PLModel(PLBase):
         return result
 
     def training_step(self, batch, batch_idx):
+        # print("train step start")
         assert self.hparams["batch_size"] == len(batch.input_ids)
         if self.hparams["test"] and batch_idx < 5:
             print(f"proc {self.global_rank}/{self.local_rank}, model on {self.device}, batch on {batch[0].device}")
@@ -61,63 +61,46 @@ class PLModel(PLBase):
         #     f"ep {self.current_epoch}, step {self.global_step}, loss: {loss.item()}, lr {lr}"
         # )
         # TODO: move this to train_epoch_end when it is fixed
-        self.log("epoch", self.current_epoch)
-        cnt_epochs = self.trainer.train_dataloader.loaders.cnt_restarts
+        # self.log("epoch", self.current_epoch)
+        cnt_epochs = float(self.trainer.train_dataloader.loaders.cnt_restarts)
         self.hparams["cnt_samples_processed"] += self.hparams["batch_size"] * self.hparams["cnt_workers"]
         self.log("loss", loss, sync_dist=True)
-        self.log("true_epochs", cnt_epochs)
+        self.log("true_epochs", float(cnt_epochs))
         # print("logging samples processed as", self.hparams["cnt_samples_processed"])
-        self.log("samples_processed", self.hparams["cnt_samples_processed"])
+        self.log("samples_processed", float(self.hparams["cnt_samples_processed"]))
+        # print("train step done")
+        # print(loss.shape)
         return loss
 
     def training_epoch_end(self, *args, **kwargs):
         if self.global_rank == 0:
             # print("args:", args)
             # print("kwargs:", kwargs)
-            metrics = {}
-            self.add_epoch_id_to_metrics(metrics)
-            self.append_metrics_to_train_logs(metrics)
-            print(f" ########### training epoch {metrics['epoch']} end ###############")
-        # FIXIN double borrow for tokenizers which is currently not working in threads
-        # assume it will be ok as long as we don't access tokenizer simultaneously
-        # so let's wait here till the queue of training samples is repopulated
-        # TODO: this .loaders is kinda strange
-        dataloader = self.trainer.train_dataloader.loaders
-        #while dataloader._queue.qsize() < dataloader._queue.maxsize:
-         #   sleep(1)
-        # well this would not block us while queue is full but train loader still preparing the next batch
-        # which will be blocked on queue.put() :-\
-        # this is beyound ugly but shikata nai
-        sleep(1)
+            # metrics = {}
+            #self.add_epoch_id_to_metrics(metrics)
+            #self.append_metrics_to_train_logs(metrics)
+            print(f"########### main: training epoch end ###############")
+        sleep(0.1)
 
     def validation_step(self, batch, batch_idx):
+        # print("val step start")
         result = self.forward(batch)
         loss = result["loss"]
-        self.log("val_loss", loss, sync_dist=True)
+        # self.log("val_loss", loss, sync_dist=True)
         # TODO: add MLM accuracy here
         metrics = {
             f"val_loss": loss,
         }
+        # print("val step done")
         return metrics
 
     def validation_epoch_end(self, outputs):
-        # TODO: aggregate validation loss to per epoch metric, icnl metadata
+        if self.global_rank == 0:
+            print(f"########### main: validation epoch end ###############")
         self.trainer.datamodule.val_rng_reset()
         loss = torch.stack([x["val_loss"] for x in outputs]).mean()
         loss = hvd.allreduce(loss)
-        if self.global_rank == 0:
-            str_cnt_sampels = f"smpl_{num_to_str_with_suffix(self.hparams['cnt_samples_processed'])}"
-            path_checkpoint = (
-                Path(self.hparams["path_results"])
-                / "checkpoints"
-                / str_cnt_sampels
-            )
-            print("saving to ", path_checkpoint)
-            # self.trainer.save_checkpoint(path_checkpoint / "PL_model.ckpt")
-            path_hf = path_checkpoint / "hf"
-            self.trainer.model.save_as_hf(path_hf)
-            self.hparams["train_logs"][-1]["val_loss"] = loss.item()
-            self.save_metadata(path_checkpoint)
+        self.hparams["train_logs"][-1]["val_loss"] = loss.item()
 
     # def save_metadata(self, corpus_metadata, path=None):
     #     # default `save_path` is `hparam["path_results"]`
@@ -169,12 +152,6 @@ def get_run_name(params):
     # name_run += f"_bs{params['batch_size_effective']}"
     return name_run
 
-# TODO:
-# differetn configs for finetune and pretrain
-# add samples to process to config
-# checkpoint in terms of samples
-# calc LR scheduling in terms of steps
-
 
 def main():
     hvd.init()
@@ -190,30 +167,30 @@ def main():
     lr_monitor = LearningRateMonitor(logging_interval="step")
     trainer = pl.Trainer(
         default_root_dir=params["path_results"],
-        # weights_save_path=params["path_results"],
+        weights_save_path=params["path_results"],
         gpus=gpus,
         num_sanity_val_steps=0 if "resume" in params else -1,
         max_epochs=params["cnt_epochs"],
         strategy="horovod",
         precision=params["precision"],
         replace_sampler_ddp=False,
-        # early_stop_callback=early_stop_callback,
         logger=WandbLogger(
             project=params["name_project"],
             name=name_run,
             save_dir=params["path_results"],
         ),
-        reload_dataloaders_every_epoch=False,
+        log_every_n_steps=params["log_every_n_steps"],
+        reload_dataloaders_every_n_epochs=0,
         # TODO: is this ok?
         # theirs samples do like you did
         # but there is special checkpoint_callback param too....
         callbacks=[lr_monitor, PerfMonitor()],
-        checkpoint_callback=False,
         gradient_clip_val=params["gradient_clip_val"],
+        enable_progress_bar=False,
+        enable_checkpointing=False,
         # TODO: figure out what is this
-        progress_bar_refresh_rate=0,
         track_grad_norm=1,
-        terminate_on_nan=True,
+        detect_anomaly=True,
         # profiler="simple",
         resume_from_checkpoint=checkpoint,
         # plugins="deepspeed_stage_2",
@@ -236,7 +213,7 @@ def main():
     # n_steps_checkpoint = 10000  # TODO: should this go to params?
     # on_n_step_checkpoint = CheckpointEveryNSteps(n_steps_checkpoint)
     # scheudle_eval_callback = ScheduleEval(n_step)
-
+    # listen()
     trainer.fit(model, data_module)
     print("All done")
 

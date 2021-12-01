@@ -224,6 +224,9 @@ class TextDataModule(pl.LightningDataModule):
         self.val_gen = torch.Generator()
         self.val_rng_reset()
 
+    def val_rng_reset(self):
+        self.val_gen.manual_seed(42)
+
     def val_collator(self, batch, generator=None):
         # THIS IS A BLATANT COPY! of the logic of `BatchIter` -- Emil
         lines = [self.tokenizer.convert_tokens_to_string(line) for line in batch]
@@ -248,15 +251,19 @@ class TextDataModule(pl.LightningDataModule):
             labels=encoded["labels"],
         )
 
-    def val_rng_reset(self):
-        self.val_gen.manual_seed(42)
-
     def val_dataloader(self):
-        self.val_rng_reset()
-        sampler = DistributedSampler(self.val_data, hvd.size(), hvd.rank(), False)
+        # self.val_rng_reset()
+        sampler = DistributedSampler(
+            dataset=self.val_data,
+            num_replicas=hvd.size(),
+            rank=hvd.rank(),
+            shuffle=False,
+            seed=42)
         return DataLoader(
             self.val_data,
             batch_size=self.params["batch_size"],
             collate_fn=self.val_collator,
             sampler=sampler,
+            num_workers=0,
+            shuffle=False,
         )

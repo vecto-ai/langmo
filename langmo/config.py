@@ -117,6 +117,7 @@ class Config(dict):
             gradient_clip_val=0.0,
             accumulate_batches=1,
             percent_warmup=6.0,
+            log_every_n_steps=50,
         )
         self.required_options = set()
         self.required_options.add("model_name")
