@@ -14,8 +14,9 @@ number of words in the ground truth
 
 """
 
-import horovod.torch as hvd
 import torch
+from protonn.distributed import dist_adapter as da
+
 # import torch.nn.functional as F
 from langmo.base import PLBase
 from langmo.benchmarks.base import QAFinetuner, aggregate_batch_stats
@@ -63,7 +64,6 @@ class QAModel(PLBase):
             if str_pred_answer in answers[i]:
                 cnt_correct += 1
 
-
         # loss = F.cross_entropy(logits, targets)
         # mask_correct = torch.argmax(logits, axis=1) == targets
         # cnt_correct = mask_correct.sum()
@@ -79,7 +79,7 @@ class QAModel(PLBase):
         metrics = {}
         self.add_epoch_id_to_metrics(metrics)
         loss = torch.stack([x["val_loss"] for x in outputs]).mean()
-        loss = hvd.allreduce(loss)
+        loss = da.allreduce(loss)
         cnt_correct = aggregate_batch_stats(outputs, "cnt_correct")
         cnt_questions = aggregate_batch_stats(outputs, "cnt_questions")
         metrics["val_EM"] = cnt_correct / cnt_questions

@@ -1,12 +1,13 @@
-import horovod.torch as hvd
 import torch
 import torch.nn.functional as F
-from langmo.benchmarks.base import (BaseClassificationModel,
-                                    ClassificationFinetuner,
-                                    aggregate_batch_stats)
+from protonn.distributed import dist_adapter as da
 # import vecto
 # import vecto.embeddings
 from torchmetrics.functional import accuracy
+
+from langmo.benchmarks.base import (BaseClassificationModel,
+                                    ClassificationFinetuner,
+                                    aggregate_batch_stats)
 
 from .data import NLIDataModule, labels_entail, labels_heuristics
 
@@ -50,7 +51,7 @@ class PLModel(BaseClassificationModel):
         cnt_correct = mask_correct.sum()
         # if self.hparams["test"] and dataloader_idx == 2:
         #     print(
-        #         f"worker {hvd.rank()} of {hvd.size()}\n"
+        #         f"worker {da.rank()} of {da.world_size()}\n"
         #         f"\tval batch {batch_idx} ({logits.size()}) of dloader {dataloader_idx}\n"
         #         f"\ttargets: {targets.sum()}, acc is {acc}"
         #     )
@@ -78,7 +79,7 @@ class PLModel(BaseClassificationModel):
             name_dataset = self.ds_prefixes[id_dataloader]
             loss = torch.stack([x["val_loss"] for x in lst_split]).mean()  # .item()
             # TODO: refactor this reduction an logging in one helper function
-            loss = hvd.allreduce(loss)
+            loss = da.allreduce(loss)
             cnt_correct = aggregate_batch_stats(lst_split, "cnt_correct")
             cnt_questions = aggregate_batch_stats(lst_split, "cnt_questions")
             metrics[f"val_acc_{name_dataset}"] = cnt_correct / cnt_questions

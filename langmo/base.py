@@ -2,9 +2,9 @@
 import os
 from pathlib import Path
 
-# import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
+from protonn.distributed import dist_adapter as da
 # from apex.optimizers import FusedLAMB
 from protonn.utils import save_data_json
 from torch.optim import AdamW

@@ -31,3 +31,13 @@ example cofig file:
     encoder_wrapper: pooler
     shuffle: true
 
+
+Fugaku notes
+------------
+
+Add these lines before the :code:`return` of :code:`_compare_version`
+statement of :code:`pytorch_lightning/utilities/imports.py`.::
+
+    if str(pkg_version).startswith(version):
+        return True
+

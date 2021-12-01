@@ -1,6 +1,7 @@
-import horovod.torch as hvd
 import torch
 import torch.nn.functional as F
+from protonn.distributed import dist_adapter as da
+
 from langmo.benchmarks.base import (BaseClassificationModel,
                                     ClassificationFinetuner,
                                     aggregate_batch_stats)
@@ -9,7 +10,6 @@ from .data import SSTDataModule
 
 
 class ClassificationModel(BaseClassificationModel):
-
     def validation_step(self, batch, batch_idx):
         inputs, targets = batch
         logits = self(inputs)
@@ -28,7 +28,7 @@ class ClassificationModel(BaseClassificationModel):
         metrics = {}
         self.add_epoch_id_to_metrics(metrics)
         loss = torch.stack([x["val_loss"] for x in outputs]).mean()
-        loss = hvd.allreduce(loss)
+        loss = da.allreduce(loss)
         cnt_correct = aggregate_batch_stats(outputs, "cnt_correct")
         cnt_questions = aggregate_batch_stats(outputs, "cnt_questions")
         metrics["val_acc"] = cnt_correct / cnt_questions

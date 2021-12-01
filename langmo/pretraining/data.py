@@ -4,9 +4,9 @@ from collections import namedtuple
 from queue import Queue
 from threading import Thread
 
-import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
+from protonn.distributed import dist_adapter as da
 from torch.utils.data import DataLoader, DistributedSampler
 from vecto.corpus import Corpus, DirCorpus
 
@@ -61,9 +61,13 @@ class BatchIter:
         self.batches_per_epoch = cnt_batches_per_epoch / params["cnt_workers"]
         self.cnt_batches_produced = 0
         self.dummy_batch = TBatch(
-            input_ids=torch.zeros((self.batch_size, self.max_length), dtype=torch.int64),
+            input_ids=torch.zeros(
+                (self.batch_size, self.max_length), dtype=torch.int64
+            ),
             token_type_ids=None,
-            attention_mask=torch.ones((self.batch_size, self.max_length), dtype=torch.int64),
+            attention_mask=torch.ones(
+                (self.batch_size, self.max_length), dtype=torch.int64
+            ),
             labels=torch.zeros((self.batch_size, self.max_length), dtype=torch.int64),
         )
         self.ignore_token_id = IGNORE_TOKEN_ID
@@ -96,7 +100,9 @@ class BatchIter:
             input_ids = json.loads(line)
             assert len(input_ids) <= self.max_length, f"got seq of len {len(input_ids)}"
             # input_ids = [self.tokenizer.cls_token_id] + input_ids
-            masked_ids, labels = mask_line(input_ids, self.tokenizer, self.ignore_token_id)
+            masked_ids, labels = mask_line(
+                input_ids, self.tokenizer, self.ignore_token_id
+            )
             attention_mask = torch.ones_like(masked_ids)
             if len(masked_ids) < self.max_length:
                 pad = torch.ones(self.max_length - len(masked_ids), dtype=torch.int64)
@@ -179,8 +185,8 @@ class TextDataModule(pl.LightningDataModule):
         self.corpus.load_dir_strucute()
         print("loaded corpus of size", self.corpus.total_bytes)
         # self.corpus_view = CorpusView(self.corpus,
-        #                              rank=hvd.rank(),
-        #                              size=hvd.size())
+        #                              rank=da.rank(),
+        #                              size=da.size())
         self.val_setup()
 
     def train_dataloader(self):
@@ -204,12 +210,15 @@ class TextDataModule(pl.LightningDataModule):
         #     # -1 is there to append CLS later
         #     sequence_length=self.params["max_length"] - 1,
         #     tokenizer=self.tokenizer.tokenize,
-        #     rank=hvd.rank(),
-        #     size=hvd.size(),
+        #     rank=da.rank(),
+        #     size=da.size(),
         #     min_length=10,
         #     reset_on_new_line=False
         # )
-        line_iter = self.corpus.get_looped_line_iterator(rank=hvd.rank(), size=hvd.size())
+        line_iter = self.corpus.get_looped_line_iterator(
+            rank=da.rank(),
+            size=da.world_size(),
+        )
         # print("created line iter")
         batch_iter = BatchIter(line_iter, self.tokenizer, self.params)
         return batch_iter
@@ -240,13 +249,17 @@ class TextDataModule(pl.LightningDataModule):
         encoded["labels"] = encoded["input_ids"].clone()
         ids = encoded["input_ids"]
         for i in range(len(encoded["input_ids"])):
-            ids[i], _ = mask_line(ids[i],
-                                  tokenizer=self.tokenizer,
-                                  ignore_token_id=IGNORE_TOKEN_ID,
-                                  generator=self.val_gen)
+            ids[i], _ = mask_line(
+                ids[i],
+                tokenizer=self.tokenizer,
+                ignore_token_id=IGNORE_TOKEN_ID,
+                generator=self.val_gen,
+            )
         return TBatch(
             input_ids=ids,
-            token_type_ids=encoded["token_type_ids"] if "token_type_ids" in encoded else None,
+            token_type_ids=encoded["token_type_ids"]
+            if "token_type_ids" in encoded
+            else None,
             attention_mask=encoded["attention_mask"],
             labels=encoded["labels"],
         )
@@ -258,7 +271,8 @@ class TextDataModule(pl.LightningDataModule):
             num_replicas=hvd.size(),
             rank=hvd.rank(),
             shuffle=False,
-            seed=42)
+            seed=42,
+        )
         return DataLoader(
             self.val_data,
             batch_size=self.params["batch_size"],

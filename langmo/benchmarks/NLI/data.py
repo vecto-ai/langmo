@@ -1,8 +1,8 @@
 # import numpy as np
 
 import datasets
-import horovod.torch as hvd
 import torch
+from protonn.distributed import dist_adapter as da
 
 from langmo.benchmarks.base_data import BaseCollator, BaseDataModule
 
@@ -121,7 +121,7 @@ class NLIDataModule(BaseDataModule):
         # local SSD")
 
         self.cnt_train_samples = 0
-        if hvd.rank() == 0:
+        if da.rank() == 0:
             # TODO: can we download without loading
             ds_hans = datasets.load_dataset("hans")
             print("preload hans", ds_hans)
@@ -129,7 +129,7 @@ class NLIDataModule(BaseDataModule):
             self.cnt_train_samples = len(ds["train"])
 
         num_samples_tensor = torch.LongTensor([self.cnt_train_samples])
-        self.cnt_train_samples = hvd.broadcast(num_samples_tensor, 0).item()
+        self.cnt_train_samples = da.broadcast(num_samples_tensor, 0).item()
 
     def train_dataloader(self):
         return [self.get_split_dataloader("multi_nli", "train")]
@@ -173,7 +173,7 @@ class NLIDataModule(BaseDataModule):
 # class MyDataLoader:
 #     def __init__(self, sent1, sent2, labels, batch_size):
 #         # optinally sort
-#         if hvd.rank() != 0:
+#         if da.rank() != 0:
 #             tr_logging.set_verbosity_error()
 #         tuples = list(zip(sent1, sent2, labels))
 #         cnt_batches = len(tuples) / batch_size
@@ -202,7 +202,7 @@ class NLIDataModule(BaseDataModule):
 #     sent2 = [i["hypothesis"] for i in dataset]
 #     labels = [i["label"] for i in dataset]
 #     if test:
-#         # TODO: use bs and hvd size
+#         # TODO: use bs and da size
 #         cnt_testrun_samples = batch_size * 2
 #         sent1 = sent1[:cnt_testrun_samples]
 #         sent2 = sent2[:cnt_testrun_samples]

@@ -1,6 +1,7 @@
 import datasets
-import horovod.torch as hvd
 import torch
+from protonn.distributed import dist_adapter as da
+
 from langmo.benchmarks.base_data import BaseCollator, BaseDataModule
 
 
@@ -58,12 +59,12 @@ class QADataModule(BaseDataModule):
 
     def setup(self, stage=None):
         self.cnt_train_samples = 0
-        if hvd.rank() == 0:
+        if da.rank() == 0:
             ds = datasets.load_dataset("squad_v2")
             self.cnt_train_samples = len(ds["train"])
 
         num_samples_tensor = torch.LongTensor([self.cnt_train_samples])
-        self.cnt_train_samples = hvd.broadcast(num_samples_tensor, 0).item()
+        self.cnt_train_samples = da.broadcast(num_samples_tensor, 0).item()
 
     def train_dataloader(self):
         return [self.get_split_dataloader("squad_v2", "train")]

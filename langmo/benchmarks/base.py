@@ -1,12 +1,7 @@
-import horovod.torch as hvd
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
-from langmo.base import PLBase
-from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
-                                         TopMLP2)
-from langmo.config import ConfigFinetune as Config
-from langmo.nn.utils import reinit_model, reinit_tensor
+from protonn.distributed import dist_adapter as da
 from protonn.utils import get_time_str
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
@@ -14,6 +9,12 @@ from torchmetrics.functional import accuracy
 from transformers import (AutoModel, AutoModelForQuestionAnswering,
                           AutoModelForSequenceClassification, AutoTokenizer)
 from transformers import logging as tr_logging
+
+from langmo.base import PLBase
+from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
+                                         TopMLP2)
+from langmo.config import ConfigFinetune as Config
+from langmo.nn.utils import reinit_model, reinit_tensor
 
 
 class BaseClassificationModel(PLBase):
@@ -38,10 +39,10 @@ class BaseClassificationModel(PLBase):
 class BaseFinetuner:
     def __init__(self, name_task, class_data_module, class_model):
         # TODO: refactor this into sub-methods
-        hvd.init()
-        if hvd.rank() != 0:
+        da.init("horovod")
+        if da.rank() != 0:
             tr_logging.set_verbosity_error()  # to reduce warning of unused weights
-        self.params = Config(name_task=name_task, is_master=(hvd.rank() == 0))
+        self.params = Config(name_task=name_task, is_master=(da.rank() == 0))
         timestamp = get_time_str()
         self.tokenizer = AutoTokenizer.from_pretrained(self.params["model_name"])
 
@@ -83,7 +84,7 @@ class BaseFinetuner:
             num_sanity_val_steps=-1,
             # num_sanity_val_steps=0,
             max_epochs=self.params["cnt_epochs"],
-            strategy="horovod",
+            strategy=da.get_backend_as_pl_strategy(),
             precision=self.params["precision"],
             replace_sampler_ddp=False,
             # early_stop_callback=early_stop_callback,
@@ -164,5 +165,5 @@ def aggregate_batch_stats(batch_stats, key):
     else:
         value = torch.tensor(0)
     # print("reducing", key, value)
-    value = hvd.allreduce(value, average=False)
+    value = da.allreduce(value, op=da.SUM)
     return value
