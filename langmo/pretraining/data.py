@@ -86,7 +86,7 @@ class BatchIter:
         batch = self._queue.get(block=True, timeout=300)
         # print(self._queue.qsize())
         if batch is None:
-            self._thread.join()
+            # self._thread.join()
             raise StopIteration()
         self.cnt_batches_produced += 1
         return batch
@@ -187,7 +187,7 @@ class TextDataModule(pl.LightningDataModule):
         # self.corpus_view = CorpusView(self.corpus,
         #                              rank=da.rank(),
         #                              size=da.size())
-        self.val_setup()
+        # self.val_setup()
 
     def train_dataloader(self):
         # sent3 options:
@@ -216,22 +216,22 @@ class TextDataModule(pl.LightningDataModule):
         #     reset_on_new_line=False
         # )
         line_iter = self.corpus.get_looped_line_iterator(
-            rank=da.rank(),
-            size=da.world_size(),
+            rank=self.trainer.global_rank,
+            size=self.trainer.world_size,
         )
         # print("created line iter")
         batch_iter = BatchIter(line_iter, self.tokenizer, self.params)
         return batch_iter
 
-    def val_setup(self):
-        self.val_data = list(
-            self.val_corpus.get_sequence_iterator(
-                self.params["max_length"] - 1,
-                self.tokenizer.tokenize,
-            )
-        )
-        self.val_gen = torch.Generator()
-        self.val_rng_reset()
+    # def val_setup(self):
+    #     self.val_data = list(
+    #         self.val_corpus.get_sequence_iterator(
+    #             self.params["max_length"] - 1,
+    #             self.tokenizer.tokenize,
+    #         )
+    #     )
+    #     self.val_gen = torch.Generator()
+    #     self.val_rng_reset()
 
     def val_rng_reset(self):
         self.val_gen.manual_seed(42)
@@ -264,20 +264,20 @@ class TextDataModule(pl.LightningDataModule):
             labels=encoded["labels"],
         )
 
-    def val_dataloader(self):
-        # self.val_rng_reset()
-        sampler = DistributedSampler(
-            dataset=self.val_data,
-            num_replicas=da.world_size(),
-            rank=da.rank(),
-            shuffle=False,
-            seed=42,
-        )
-        return DataLoader(
-            self.val_data,
-            batch_size=self.params["batch_size"],
-            collate_fn=self.val_collator,
-            sampler=sampler,
-            num_workers=0,
-            shuffle=False,
-        )
+    # def val_dataloader(self):
+    #     # self.val_rng_reset()
+    #     sampler = DistributedSampler(
+    #         dataset=self.val_data,
+    #         num_replicas=da.world_size(),
+    #         rank=da.rank(),
+    #         shuffle=False,
+    #         seed=42,
+    #     )
+    #     return DataLoader(
+    #         self.val_data,
+    #         batch_size=self.params["batch_size"],
+    #         collate_fn=self.val_collator,
+    #         sampler=sampler,
+    #         num_workers=0,
+    #         shuffle=False,
+    #     )

@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd
-#$ -l rt_AF=4
-#$ -l h_rt=24:00:00
+#$ -l rt_AF=2
+#$ -l h_rt=00:30:00
 #$ -N Pretrain
 #$ -j y
 #$ -o ./logs/pretrain/$JOB_NAME.o$JOB_ID
@@ -10,23 +10,28 @@
 source /etc/profile.d/modules.sh
 source modules.sh
 
+export NUM_GPUS_PER_NODE=8
 NUM_NODES=${NHOSTS}
-NUM_GPUS_PER_NODE=8
 NUM_PROCS=$(expr ${NUM_NODES} \* ${NUM_GPUS_PER_NODE})
-export HOROVOD_CACHE_CAPACITY=4096
-# export WANDB_MODE=offline
+# NUM_GPUS_PER_NODE=8
+export HOROVOD_CACHE_CAPACITY=0
+export WANDB_MODE=disabled
 export TOKENIZERS_PARALLELISM=true
-
-
+export PL_TORCH_DISTRIBUTED_BACKEND=MPI
+export NCCL_DEBUG=WARN
 
 # MPIOPTS="-np ${NUM_PROCS} -map-by ppr:${NUM_GPUS_PER_NODE}:node -mca pml ob1 -mca btl ^openib -mca btl_tcp_if_include bond0"
 MPIOPTS="-np ${NUM_PROCS} -map-by ppr:${NUM_GPUS_PER_NODE}:node -mca pml ob1 -mca btl self,tcp -mca btl_tcp_if_include bond0"
 
-
+echo ${MPIOPTS}
 # ======== Main ===========
 # WANDB_MODE=offline
 mpirun ${MPIOPTS} \
     -x TOKENIZERS_PARALLELISM \
+    -x WANDB_MODE \
+    -x NCCL_DEBUG \
+    -x NUM_GPUS_PER_NODE \
+    -x PL_TORCH_DISTRIBUTED_BACKEND \
     python3 -m langmo.pretraining pretrain.yaml
 #    -x WANDB_MODE \
 

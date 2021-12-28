@@ -1,17 +1,22 @@
 # from langmo.nn.utils import reinit_model
+# import os
+from logging import getLogger
 from pathlib import Path
 from time import sleep
 
 import pytorch_lightning as pl
 import torch
 from langmo.base import PLBase
-from langmo.callbacks.perf import PerfMonitor
+from langmo.callbacks.perf import Monitor
+# from langmo.cluster_mpi import MPIClusterEnvironment
 # from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 # from langmo.nn.utils import reinit_model
 # from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 # from langmo.nn.utils import reinit_model
 from langmo.config import ConfigPretrain as Config
-from protonn.distributed import dist_adapter as da
+from langmo.log_helper import set_root_logger
+# from protonn.distributed import dist_adapter as da
+from protonn.utils import get_time_str
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
@@ -24,8 +29,8 @@ class PLModel(PLBase):
     def __init__(self, net, tokenizer, params):
         super().__init__(net, tokenizer, params)
         # TODO: add corpus metadata
-        if "cnt_samples_processed" not in self.hparams:
-            self.hparams["cnt_samples_processed"] = 0
+        self.pylogger = getLogger(__name__)
+        self.hparams["cnt_samples_processed"] = 0
 
     def forward(self, batch):
         result = self.net(**batch._asdict())
@@ -49,7 +54,7 @@ class PLModel(PLBase):
         result = self.forward(batch)
         # TODO: how about loss only / more loss for masked tokens?
         loss = result["loss"]
-        # assert not torch.isnan(loss).item(), "loss is nan, can't train"
+        assert not torch.isnan(loss).item(), "loss is nan, can't train"
         # if torch.isnan(loss):
         #     print(">> loss is NaN\n")
         #     return None
@@ -73,37 +78,39 @@ class PLModel(PLBase):
         self.log("samples_processed", float(self.hparams["cnt_samples_processed"]))
         # print("train step done")
         # print(loss.shape)
+        if batch_idx % 100 == 0:
+            print(f"end train step {batch_idx} on worker {self.global_rank}, loss={loss.item()}, time={get_time_str()}")
         return loss
 
     def training_epoch_end(self, *args, **kwargs):
-        if self.global_rank == 0:
+        # if self.global_rank == 0:
             # print("args:", args)
             # print("kwargs:", kwargs)
             # metrics = {}
             # self.add_epoch_id_to_metrics(metrics)
             # self.append_metrics_to_train_logs(metrics)
-            print(f"########### main: training epoch end ###############")
-        sleep(0.1)
+        self.pylogger.info(f"training epoch end")
+        sleep(1)
 
-    def validation_step(self, batch, batch_idx):
-        # print("val step start")
-        result = self.forward(batch)
-        loss = result["loss"]
-        # self.log("val_loss", loss, sync_dist=True)
-        # TODO: add MLM accuracy here
-        metrics = {
-            f"val_loss": loss,
-        }
-        # print("val step done")
-        return metrics
+    # def validation_step(self, batch, batch_idx):
+    #     # print("val step start")
+    #     result = self.forward(batch)
+    #     loss = result["loss"]
+    #     # self.log("val_loss", loss, sync_dist=True)
+    #     # TODO: add MLM accuracy here
+    #     # metrics = {
+    #     #     f"val_loss": loss,
+    #     # }
+    #     # print("val step done")
+    #     return loss
 
     def validation_epoch_end(self, outputs):
         if self.global_rank == 0:
             print(f"########### main: validation epoch end ###############")
-        self.trainer.datamodule.val_rng_reset()
-        loss = torch.stack([x["val_loss"] for x in outputs]).mean()
-        loss = da.allreduce(loss)
-        self.hparams["train_logs"][-1]["val_loss"] = loss.item()
+        # self.trainer.datamodule.val_rng_reset()
+        # loss = torch.stack([x["val_loss"] for x in outputs]).mean()
+        # loss = da.allreduce(loss)
+        # self.hparams["train_logs"][-1]["val_loss"] = loss.item()
 
     # def save_metadata(self, corpus_metadata, path=None):
     #     # default `save_path` is `hparam["path_results"]`
@@ -157,21 +164,30 @@ def get_run_name(params):
 
 
 def main():
-    da.init("horovod")
-    # if self.global_rank != 0:
-    tr_logging.set_verbosity_error()  # to reduce warning of unused weights
+    set_root_logger()
+    # da.init("ddp")
+    # if da.rank() != 0:
+    #     tr_logging.set_verbosity_error()  # to reduce warning of unused weights
     name_task = "pretrain"
-    params = Config(name_task=name_task, is_master=(da.rank() == 0))
+    params = Config(name_task=name_task)
+    # params = Config(name_task=name_task, is_master=(da.rank() == 0))
+    # TODO: make logging report rank and size and use logging
     name_run = get_run_name(params)
     if params["use_gpu"]:
         assert torch.cuda.device_count() > 0, "Asked for `use_gpu` but no gpu detected"
-    gpus = 1 if params["use_gpu"] else 0
+    # use 1 GPU with horovod and -1 with DDP
     checkpoint = params["resume"]["checkpoint"] if "resume" in params else None
     lr_monitor = LearningRateMonitor(logging_interval="step")
+    # if (da.rank() != 0):
+    #     params["path_results"] = "/tmp"
+    # cluster_env = MPIClusterEnvironment()
+    # gpus = [cluster_env.local_rank()] if params["use_gpu"] else 0
+    gpus = 1 if params["use_gpu"] else 0
     trainer = pl.Trainer(
         default_root_dir=params["path_results"],
         weights_save_path=params["path_results"],
         gpus=gpus,
+        # num_nodes=cluster_env.cnt_nodes(),
         num_sanity_val_steps=0 if "resume" in params else -1,
         max_epochs=params["cnt_epochs"],
         strategy="horovod",
@@ -181,22 +197,23 @@ def main():
             project=params["name_project"],
             name=name_run,
             save_dir=params["path_results"],
-        ),
+            ),
         log_every_n_steps=params["log_every_n_steps"],
         reload_dataloaders_every_n_epochs=0,
         # TODO: is this ok?
         # theirs samples do like you did
         # but there is special checkpoint_callback param too....
-        callbacks=[lr_monitor, PerfMonitor()],
+        callbacks=[lr_monitor, Monitor()],
         gradient_clip_val=params["gradient_clip_val"],
         enable_progress_bar=False,
         enable_checkpointing=False,
         # TODO: figure out what is this
         track_grad_norm=1,
-        detect_anomaly=True,
+        # detect_anomaly=True, # This is very slow!
         # profiler="simple",
         resume_from_checkpoint=checkpoint,
         # plugins="deepspeed_stage_2",
+        # plugins=[cluster_env],
         accumulate_grad_batches=params["accumulate_batches"],
     )
     if trainer.global_rank == 0:
@@ -214,6 +231,7 @@ def main():
     # on_n_step_checkpoint = CheckpointEveryNSteps(n_steps_checkpoint)
     # scheudle_eval_callback = ScheduleEval(n_step)
     # listen()
+    model.pylogger.info("calling fit")
     trainer.fit(model, data_module)
     print("All done")
 

@@ -24,14 +24,14 @@ class ClassificationModel(BaseClassificationModel):
 
     def validation_epoch_end(self, outputs):
         print("### validation epoch end")
-        metrics = {}
+        metrics = self.hparams["train_logs"][-1]
         # self.add_epoch_id_to_metrics(metrics)
         loss = torch.stack([x["val_loss"] for x in outputs]).mean()
         loss = da.allreduce(loss)
         cnt_correct = aggregate_batch_stats(outputs, "cnt_correct")
         cnt_questions = aggregate_batch_stats(outputs, "cnt_questions")
-        metrics["val_acc"] = cnt_correct / cnt_questions
-        metrics["val_loss"] = loss
+        metrics["val_acc"] = (cnt_correct / cnt_questions).item()
+        metrics["val_loss"] = loss.item()
         # TODO: make sure metrics are logged
         # self.save_metrics_and_model(metrics)
 

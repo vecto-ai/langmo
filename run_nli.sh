@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd
 #$ -l rt_AF=1
-#$ -l h_rt=6:30:00
+#$ -l h_rt=20:30:00
 #$ -N NLI
 #$ -j y
 #$ -o ./logs/$JOB_NAME.o$JOB_ID
