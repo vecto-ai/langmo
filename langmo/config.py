@@ -4,8 +4,9 @@ import sys
 from pathlib import Path
 
 import yaml
+from langmo.log_helper import set_root_logger
 from langmo.utils import get_unique_results_path, parse_float
-from protonn.distributed import dist_adapter as da
+# from protonn.distributed import dist_adapter as da
 from protonn.utils import get_time_str, load_json
 
 
@@ -14,11 +15,14 @@ def is_yaml_config(path):
 
 
 def is_resume_run(path):
-    path = path / "metadata.json"
+    _logger = logging.getLogger(__name__)
+    _logger.info("starting new experiment")
+    path = Path(path) / "metadata.json"
     return path.is_file() and path.suffix == ".json"
 
 
 def load_resume_run_params(path):
+    path = Path(path)
     params = load_json(path / "metadata.json")
     paths = dict(
         metadata=str(path),
@@ -42,6 +46,8 @@ def load_yaml_config(path_config):
 
 class Config(dict):
     def __init__(self, name_task, is_master=False):
+        set_root_logger()
+        _logger = logging.getLogger(__name__)
         if len(sys.argv) < 2:
             print("run main.py config.yaml")
             print("or")
@@ -53,22 +59,37 @@ class Config(dict):
         self._is_master = is_master
 
         if is_yaml_config(path):
+            _logger.info("starting new experiment")
             self.read_from_yaml_and_set_default(path, name_task)
             self.add_distributes_info()
 
-        if is_resume_run(path):
-            # TODO: decide what to do when e.g. cnt_workers changed
-            self.update(load_resume_run_params(path))
+        # TODO: this breaks finetuning!
+        # TODO: not even makes sense, it's not about path corpus, it's about path model
+        # path_model = self["path_corpus"]
+        # if is_resume_run(path_model):
+        #     # TODO: decide what to do when e.g. cnt_workers changed
+        #     _logger.info("resuming from checkpoint")
+        #     self.update(load_resume_run_params(path_model))
+        # else:
+        #     _logger.info("not resuming")
 
-    def add_distributes_info(self, ):
-        self["cnt_workers"] = da.world_size()
-        self["batch_size_effective"] = self["batch_size"] * self["cnt_workers"] * self["accumulate_batches"]
+    def add_distributes_info(self):
+        cnt_workers = 4
+        # cnt_workers = da.world_size()
+        batch_size = self["batch_size"]
+        acc_batches = self["accumulate_batches"]
+        self["cnt_workers"] = cnt_workers
+        self["batch_size_effective"] = batch_size * cnt_workers * acc_batches
 
     def read_from_yaml_and_set_default(self, path, name_task):
         _logger = logging.getLogger(__name__)
         user_config = load_yaml_config(path)
         for key, value in user_config.items():
-            if key not in self.defaults and key not in self.required_options and key != "suffix":
+            if (
+                key not in self.defaults
+                and key not in self.required_options
+                and key != "suffix"
+            ):
                 raise RuntimeError(f"got unexpected key in user config {key}: {value}")
             # print(key, value)
         for key, value in self.defaults.items():
@@ -131,7 +152,6 @@ class Config(dict):
 
 
 class ConfigPretrain(Config):
-
     def set_defaults(self):
         super().set_defaults()
         self.required_options.add("path_corpus")
@@ -140,7 +160,6 @@ class ConfigPretrain(Config):
 
 
 class ConfigFinetune(Config):
-
     def set_defaults(self):
         super().set_defaults()
         self.defaults["siamese"] = False

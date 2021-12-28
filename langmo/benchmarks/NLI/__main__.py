@@ -1,13 +1,12 @@
 import torch
 import torch.nn.functional as F
+from langmo.benchmarks.base import (BaseClassificationModel,
+                                    ClassificationFinetuner,
+                                    aggregate_batch_stats)
 from protonn.distributed import dist_adapter as da
 # import vecto
 # import vecto.embeddings
 from torchmetrics.functional import accuracy
-
-from langmo.benchmarks.base import (BaseClassificationModel,
-                                    ClassificationFinetuner,
-                                    aggregate_batch_stats)
 
 from .data import NLIDataModule, labels_entail, labels_heuristics
 
@@ -73,8 +72,8 @@ class PLModel(BaseClassificationModel):
         return metrics
 
     def validation_epoch_end(self, outputs):
-        metrics = {}
-        self.add_epoch_id_to_metrics(metrics)
+        metrics = self.hparams["train_logs"][-1]
+        # self.add_epoch_id_to_metrics(metrics)
         for id_dataloader, lst_split in enumerate(outputs):
             name_dataset = self.ds_prefixes[id_dataloader]
             loss = torch.stack([x["val_loss"] for x in lst_split]).mean()  # .item()
@@ -101,7 +100,7 @@ class PLModel(BaseClassificationModel):
 
             # cnt_correct = aggregate_batch_stats(lst_split, "cnt_correct")
             metrics[f"val_loss_{name_dataset}"] = loss
-        self.save_metrics_and_model(metrics)
+        # self.save_metrics_and_model(metrics)
 
 
 def main():

@@ -41,3 +41,7 @@ statement of :code:`pytorch_lightning/utilities/imports.py`.::
     if str(pkg_version).startswith(version):
         return True
 
+This :code:`sed` command should do the trick::
+
+    sed -i -e '/pkg_version = Version(pkg_version.base_version/a\    if str(pkg_version).startswith(version):\n\        return True' \
+      ~/.local/lib/python3.8/site-packages/pytorch_lightning/utilities/imports.py

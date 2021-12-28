@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from langmo.base import PLBase
 from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
                                          TopMLP2)
-from langmo.callbacks.perf import PerfMonitor
+from langmo.callbacks.perf import Monitor
 from langmo.config import ConfigFinetune as Config
 from langmo.nn.utils import reinit_model, reinit_tensor
 from protonn.distributed import dist_adapter as da
@@ -39,6 +39,7 @@ class BaseClassificationModel(PLBase):
 class BaseFinetuner:
     def __init__(self, name_task, class_data_module, class_model):
         # TODO: refactor this into sub-methods
+        # TODO: and this da is over-complicated
         da.init("horovod")
         if da.rank() != 0:
             tr_logging.set_verbosity_error()  # to reduce warning of unused weights
@@ -84,16 +85,16 @@ class BaseFinetuner:
             num_sanity_val_steps=-1,
             # num_sanity_val_steps=0,
             max_epochs=self.params["cnt_epochs"],
-            strategy=da.get_backend_as_pl_strategy(),
+            strategy="horovod",  # da.get_backend_as_pl_strategy(),
             precision=self.params["precision"],
             replace_sampler_ddp=False,
             # early_stop_callback=early_stop_callback,
             # we probably don't need to checkpoint eval - but can make this optional
-            callbacks=[lr_monitor, PerfMonitor()],  # on_n_step_callback
+            callbacks=[lr_monitor, Monitor()],  # on_n_step_callback
             checkpoint_callback=False,
             logger=self.wandb_logger,
             progress_bar_refresh_rate=0,
-            gradient_clip_val=1.0,
+            gradient_clip_val=self.params["gradient_clip_val"],
             track_grad_norm=2,
             terminate_on_nan=True,
         )
