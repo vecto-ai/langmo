@@ -137,19 +137,6 @@ class ClassificationFinetuner(BaseFinetuner):
             # TODO: this should be done in pretraining!!!!!
             # net.bert.embeddings.token_type_embeddings.weight.data = torch.zeros_like(net.bert.embeddings.token_type_embeddings.weight)
 
-        if self.params["siamese"]:
-            name_run = "siam_" + self.params["encoder_wrapper"] + "_"
-            if self.params["freeze_encoder"]:
-                name_run += "fr_"
-            name_run += name_model
-            encoder = AutoModel.from_pretrained(name_model, num_labels=3)
-            encoder = BertWithCLS(encoder, freeze=self.params["freeze_encoder"])
-            net = Siamese(encoder, TopMLP2(in_size=encoder.get_output_size() * 4))
-        else:
-            net = AutoModelForSequenceClassification.from_pretrained(
-                name_model, num_labels=3
-            )
-            name_run = name_model.split("pretrain")[-1]
         return net, name_run
 
 
