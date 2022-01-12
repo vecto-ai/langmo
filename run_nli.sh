@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd
 #$ -l rt_AF=1
-#$ -l h_rt=20:30:00
+#$ -l h_rt=1:30:00
 #$ -N NLI
 #$ -j y
 #$ -o ./logs/$JOB_NAME.o$JOB_ID
@@ -17,9 +17,12 @@ NUM_PROCS=$(expr ${NUM_NODES} \* ${NUM_GPUS_PER_NODE})
 
 MPIOPTS="-np ${NUM_PROCS} -map-by ppr:${NUM_GPUS_PER_NODE}:node -mca pml ob1 -mca btl ^openib -mca btl_tcp_if_include bond0"
 
+export TOKENIZERS_PARALLELISM=true
+
 # ======== Main ===========
 
 mpirun ${MPIOPTS} \
+    -x TOKENIZERS_PARALLELISM \
     python3 -m langmo.benchmarks.NLI nli.yaml
 
 # horovodrun -np 4 python3 main.py
