@@ -78,7 +78,7 @@ class PLModel(BaseClassificationModel):
             name_dataset = self.ds_prefixes[id_dataloader]
             loss = torch.stack([x["val_loss"] for x in lst_split]).mean()  # .item()
             # TODO: refactor this reduction an logging in one helper function
-            loss = da.allreduce(loss)
+            metrics[f"val_loss_{name_dataset}"] = da.allreduce(loss).item()
             cnt_correct = aggregate_batch_stats(lst_split, "cnt_correct")
             cnt_questions = aggregate_batch_stats(lst_split, "cnt_questions")
             metrics[f"val_acc_{name_dataset}"] = cnt_correct / cnt_questions
@@ -96,10 +96,12 @@ class PLModel(BaseClassificationModel):
                     cnt_correct_label += cnt_correct
                     cnt_questions_label += cnt_questions
                 if cnt_questions_label > 0:
-                    metrics[f"val_acc_{name_dataset}_{labels_entail[entail]}"] = cnt_correct_label / cnt_questions_label
+                    metric_name = f"val_acc_{name_dataset}_{labels_entail[entail]}"
+                    metric_val = cnt_correct_label / cnt_questions_label
+                    metrics[metric_name] = metric_val
+                    self.log(metric_name, metric_val)
 
             # cnt_correct = aggregate_batch_stats(lst_split, "cnt_correct")
-            metrics[f"val_loss_{name_dataset}"] = loss
         # self.save_metrics_and_model(metrics)
 
 
