@@ -154,4 +154,4 @@ def aggregate_batch_stats(batch_stats, key):
         value = torch.tensor(0)
     # print("reducing", key, value)
     value = da.allreduce(value, op=da.SUM)
-    return value
+    return value.item()
