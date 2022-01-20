@@ -24,22 +24,40 @@ def shuffle_tensor(tensor, generator):
 
 def mask_line(line, tokenizer, ignore_token_id, generator=None):
     # TODO: move to config
-    proba_masking = 0.15
+    proba_masking = 0.12
+    proba_random = 0.015
+    proba_original = proba_random
     token_ids = torch.LongTensor(line)
     labels = token_ids.clone()
+    
     rolls = torch.rand(token_ids.shape, generator=generator)
+
+    ## NOTE this line makes ratio od masked tokens slightly lower
+    ## than each proba_ is set to, however it is a small amount
     mask_non_special = torch.tensor([i not in tokenizer.all_special_ids for i in line])
-    mask_good_rolls = rolls < proba_masking
-    mask_mask = mask_good_rolls & mask_non_special
+
+    mask_with_mask = (rolls < proba_masking) & mask_non_special
+    mask_with_random = (
+        (rolls < proba_masking + proba_random)
+        & (rolls > proba_masking)
+        & mask_non_special
+    )
+    mask_with_original = (
+        (rolls < proba_masking + proba_random + proba_original)
+        & (rolls > proba_masking + proba_random)
+        & mask_non_special
+    )
+
+    random_tokens = torch.randint(len(tokenizer), token_ids.shape, dtype=torch.long)
+
+    token_ids[mask_with_mask] = tokenizer.mask_token_id
+    token_ids[mask_with_random] = random_tokens[mask_with_random]
+    labels[~(mask_with_mask | mask_with_random | mask_with_original)] = ignore_token_id
+
     # TODO: check if we have too few or too many masks?
     # wasn't constant number if mask positions better?
-    # TODO: with 0.1 proba mask not with [MASK] but with original token
-    # TODO: with same proba mask with random token
-    # for time being let's just mask with mask
-    # how usefull is it to combine
     # TODO: why not set attention mask to 0 in these positions??
-    token_ids[mask_mask] = tokenizer.mask_token_id
-    labels[~mask_mask] = ignore_token_id
+
     # print(mask_mask)
     # the way with fixed count of masked tokens each time
     # ids_nonzero = line.nonzero(as_tuple=True)[0][1:-1]
