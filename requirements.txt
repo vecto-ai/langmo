@@ -1,3 +1,4 @@
+kapral>=0.0.2
 vecto
 pytorch_lightning
 datasets
