@@ -141,7 +141,6 @@ class Config(dict):
             beta2=0.999,
             max_lr=5e-5,
             initial_lr=0.0,
-            shuffle=False,
             gradient_clip_val=0.0,
             accumulate_batches=1,
             percent_warmup=6.0,
@@ -165,3 +164,4 @@ class ConfigFinetune(Config):
         self.defaults["siamese"] = False
         self.defaults["freeze_encoder"] = False
         self.defaults["encoder_wrapper"] = "pooler"
+        self.defaults["shuffle"] = False
