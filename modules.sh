@@ -1,4 +1,5 @@
 if [[ $(hostname) == *.abci.local ]]; then
+    source /etc/profile.d/modules.sh
     module load gcc/9.3.0
     module load cuda/11.1/11.1.1
     module load cudnn/8.1/8.1.1
