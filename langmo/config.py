@@ -6,7 +6,7 @@ from pathlib import Path
 import yaml
 from langmo.log_helper import set_root_logger
 from langmo.utils import get_unique_results_path, parse_float
-# from protonn.distributed import dist_adapter as da
+from protonn.distributed import dist_adapter as da
 from protonn.utils import get_time_str, load_json
 
 
@@ -74,8 +74,7 @@ class Config(dict):
         #     _logger.info("not resuming")
 
     def add_distributes_info(self):
-        cnt_workers = 4
-        # cnt_workers = da.world_size()
+        cnt_workers = da.world_size()
         batch_size = self["batch_size"]
         acc_batches = self["accumulate_batches"]
         self["cnt_workers"] = cnt_workers

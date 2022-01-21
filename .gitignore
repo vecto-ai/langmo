@@ -3,6 +3,7 @@ config.yaml
 pretrain.yaml
 out
 logs
+data/tokenized
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

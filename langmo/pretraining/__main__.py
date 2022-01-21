@@ -7,7 +7,7 @@ from time import sleep
 import pytorch_lightning as pl
 import torch
 from langmo.base import PLBase
-from langmo.callbacks.perf import Monitor
+from langmo.callbacks.monitor import Monitor
 # from langmo.cluster_mpi import MPIClusterEnvironment
 # from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 # from langmo.nn.utils import reinit_model
@@ -15,7 +15,7 @@ from langmo.callbacks.perf import Monitor
 # from langmo.nn.utils import reinit_model
 from langmo.config import ConfigPretrain as Config
 from langmo.log_helper import set_root_logger
-# from protonn.distributed import dist_adapter as da
+from protonn.distributed import dist_adapter as da
 from protonn.utils import get_time_str
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
@@ -165,7 +165,7 @@ def get_run_name(params):
 
 def main():
     set_root_logger()
-    # da.init("ddp")
+    da.init("horovod")
     # if da.rank() != 0:
     #     tr_logging.set_verbosity_error()  # to reduce warning of unused weights
     name_task = "pretrain"

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from langmo.base import PLBase
 from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
                                          TopMLP2)
-from langmo.callbacks.perf import Monitor
+from langmo.callbacks.monitor import Monitor
 from langmo.config import ConfigFinetune as Config
 from langmo.nn.utils import reinit_model, reinit_tensor
 from protonn.distributed import dist_adapter as da
