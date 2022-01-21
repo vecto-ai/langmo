@@ -30,7 +30,7 @@ class ClassificationModel(BaseClassificationModel):
         loss = da.allreduce(loss)
         cnt_correct = aggregate_batch_stats(outputs, "cnt_correct")
         cnt_questions = aggregate_batch_stats(outputs, "cnt_questions")
-        metrics["val_acc"] = (cnt_correct / cnt_questions).item()
+        metrics["val_acc"] = (cnt_correct / cnt_questions)
         metrics["val_loss"] = loss.item()
         # TODO: make sure metrics are logged
         # self.save_metrics_and_model(metrics)

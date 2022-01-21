@@ -75,8 +75,11 @@ class BatchIter:
         self.batch_size = params["batch_size"]
         self.max_length = params["max_length"]
         self.tokenizer = tokenizer
-        cnt_batches_per_epoch = params["cnt_samples_per_epoch"] / params["batch_size"]
-        self.batches_per_epoch = cnt_batches_per_epoch / params["cnt_workers"]
+        self.batches_per_epoch = params["cnt_samples_per_epoch"] / (params["batch_size"] * params["cnt_workers"])
+        print("required samples per epoch", params["cnt_samples_per_epoch"])
+        print("batch size", params["batch_size"])
+        print("cnt_workers", params["cnt_workers"])
+        print("batches per epoch", self.batches_per_epoch)
         self.cnt_batches_produced = 0
         self.dummy_batch = TBatch(
             input_ids=torch.zeros(

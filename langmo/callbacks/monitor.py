@@ -2,9 +2,7 @@ from pathlib import Path
 from timeit import default_timer as timer
 
 import pytorch_lightning as pl
-
-# from protonn.utils import num_to_str_with_suffix
-
+from protonn.utils import num_to_str_with_suffix
 
 # TODO: proper logging
 # TODO: processed samples per epoch
@@ -47,7 +45,7 @@ class Monitor(pl.Callback):
             self.log[-1]["samples_per_second_worker"] = self.hparams["train_logs"][-1]["samples_per_second"] / self.hparams["cnt_workers"]
             self.log[-1]["cnt_samples_processed"] = self.hparams["cnt_samples_processed"]
             # pl_module.save_metadata()
-            path_checkpoint = Path(pl_module.hparams["path_results"]) / "checkpoints" / f"ep_{self.epoch:03d}"
+            path_checkpoint = Path(pl_module.hparams["path_results"]) / "checkpoints" / f"ep_{self.epoch:03d}_smpl_{num_to_str_with_suffix(self.hparams['cnt_samples_processed'])}"
             print("saving to ", path_checkpoint)
             # trainer.save_checkpoint(path_checkpoint / "PL_model.ckpt")
             path_hf = path_checkpoint / "hf"
