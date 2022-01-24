@@ -78,7 +78,7 @@ class PLModel(PLBase):
         self.log("samples_processed", float(self.hparams["cnt_samples_processed"]))
         # print("train step done")
         # print(loss.shape)
-        if batch_idx % 100 == 0:
+        if batch_idx % 10000 == 0:
             print(f"end train step {batch_idx} on worker {self.global_rank}, loss={loss.item()}, time={get_time_str()}")
         return loss
 
