@@ -48,7 +48,7 @@ def main():
                     print(f"{cnt_lines_written} lines saved, last line len={len(line_buffer)}")
                     print(tokenizer.decode(line_buffer))
                 line_buffer = [tokenizer.cls_token_id]
-
+    print("Done!")
 
 if __name__ == "__main__":
     main()
