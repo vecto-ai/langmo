@@ -22,56 +22,11 @@ def shuffle_tensor(tensor, generator):
     return tensor[perm]
 
 
-def mask_line(line, tokenizer, ignore_token_id, generator=None):
-    # TODO: move to config
-    proba_masking = 0.12
-    proba_random = 0.015
-    proba_original = proba_random
-    token_ids = torch.LongTensor(line)
-    labels = token_ids.clone()
-    
-    rolls = torch.rand(token_ids.shape, generator=generator)
-
-    ## NOTE this line makes ratio od masked tokens slightly lower
-    ## than each proba_ is set to, however it is a small amount
-    mask_non_special = torch.tensor([i not in tokenizer.all_special_ids for i in line])
-
-    mask_with_mask = (rolls < proba_masking) & mask_non_special
-    mask_with_random = (
-        (rolls < proba_masking + proba_random)
-        & (rolls > proba_masking)
-        & mask_non_special
-    )
-    mask_with_original = (
-        (rolls < proba_masking + proba_random + proba_original)
-        & (rolls > proba_masking + proba_random)
-        & mask_non_special
-    )
-
-    random_tokens = torch.randint(len(tokenizer), token_ids.shape, dtype=torch.long)
-
-    token_ids[mask_with_mask] = tokenizer.mask_token_id
-    token_ids[mask_with_random] = random_tokens[mask_with_random]
-    labels[~(mask_with_mask | mask_with_random | mask_with_original)] = ignore_token_id
-
-    # TODO: check if we have too few or too many masks?
-    # wasn't constant number if mask positions better?
-    # TODO: why not set attention mask to 0 in these positions??
-
-    # print(mask_mask)
-    # the way with fixed count of masked tokens each time
-    # ids_nonzero = line.nonzero(as_tuple=True)[0][1:-1]
-    # ids_nonzero = shuffle_tensor(ids_nonzero, generator=generator)
-    # cnt_masked = int(len(ids_nonzero) * proba_masking)
-    # ids_nonzero = ids_nonzero[:cnt_masked]
-    # line[ids_nonzero] = mask_id
-    return token_ids, labels
-
-
 class BatchIter:
     def __init__(self, line_iter, tokenizer, params):
         print("### CREATING BATCH ITER")
         self.line_iter = line_iter
+        self.params = params
         self.batch_size = params["batch_size"]
         self.max_length = params["max_length"]
         self.tokenizer = tokenizer
@@ -112,6 +67,52 @@ class BatchIter:
         self.cnt_batches_produced += 1
         return batch
 
+    def mask_line(self, line, tokenizer, ignore_token_id, generator=None):
+        proba_masking = self.params["proba_masking"]
+        proba_random = self.params["proba_random"]
+        proba_original = proba_random
+        token_ids = torch.LongTensor(line)
+        labels = token_ids.clone()
+
+        rolls = torch.rand(token_ids.shape, generator=generator)
+        ## NOTE this line makes ratio of masked tokens slightly lower
+        ## than each proba_ is set to, however it is a small amount
+        if self.params["mask_special_tokens"]:
+            mask_non_special = line != tokenizer.pad_token_id
+        else:
+            mask_non_special = torch.tensor([i not in tokenizer.all_special_ids for i in line])
+
+        mask_with_mask = (rolls < proba_masking) & mask_non_special
+        mask_with_random = (
+            (rolls < proba_masking + proba_random)
+            & (rolls > proba_masking)
+            & mask_non_special
+        )
+        mask_with_original = (
+            (rolls < proba_masking + proba_random + proba_original)
+            & (rolls > proba_masking + proba_random)
+            & mask_non_special
+        )
+
+        random_tokens = torch.randint(len(tokenizer), token_ids.shape, dtype=torch.long)
+
+        token_ids[mask_with_mask] = tokenizer.mask_token_id
+        token_ids[mask_with_random] = random_tokens[mask_with_random]
+        labels[~(mask_with_mask | mask_with_random | mask_with_original)] = ignore_token_id
+
+        # TODO: check if we have too few or too many masks?
+        # wasn't constant number if mask positions better?
+        # TODO: why not set attention mask to 0 in these positions??
+
+        # print(mask_mask)
+        # the way with fixed count of masked tokens each time
+        # ids_nonzero = line.nonzero(as_tuple=True)[0][1:-1]
+        # ids_nonzero = shuffle_tensor(ids_nonzero, generator=generator)
+        # cnt_masked = int(len(ids_nonzero) * proba_masking)
+        # ids_nonzero = ids_nonzero[:cnt_masked]
+        # line[ids_nonzero] = mask_id
+        return token_ids, labels
+
     def encode_batch(self, batch):
         batch_input_ids = []
         batch_attention_mask = []
@@ -121,7 +122,7 @@ class BatchIter:
             input_ids = json.loads(line)
             assert len(input_ids) <= self.max_length, f"got seq of len {len(input_ids)}"
             # input_ids = [self.tokenizer.cls_token_id] + input_ids
-            masked_ids, labels = mask_line(
+            masked_ids, labels = self.mask_line(
                 input_ids, self.tokenizer, self.ignore_token_id
             )
             attention_mask = torch.ones_like(masked_ids)
@@ -270,7 +271,7 @@ class TextDataModule(pl.LightningDataModule):
         encoded["labels"] = encoded["input_ids"].clone()
         ids = encoded["input_ids"]
         for i in range(len(encoded["input_ids"])):
-            ids[i], _ = mask_line(
+            ids[i], _ = self.mask_line(
                 ids[i],
                 tokenizer=self.tokenizer,
                 ignore_token_id=IGNORE_TOKEN_ID,
