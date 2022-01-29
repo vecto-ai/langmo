@@ -31,6 +31,11 @@ class PLModel(PLBase):
         # TODO: add corpus metadata
         self.pylogger = getLogger(__name__)
         self.hparams["cnt_samples_processed"] = 0
+        path_checkpoint = Path(params["path_results"]) / "checkpoints" / "ep_-1_smpl_000" / "hf"
+        # TODO: we might not need this when we return validation
+        if self.global_rank == 0:
+            print("saving to ", path_checkpoint)
+            self.save_as_hf(path_checkpoint)
 
     def forward(self, batch):
         result = self.net(**batch._asdict())
