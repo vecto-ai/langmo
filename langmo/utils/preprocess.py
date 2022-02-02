@@ -2,7 +2,9 @@ import json
 import random
 import sys
 from pathlib import Path
+from timeit import default_timer as timer
 
+import humanfriendly
 from kapral.corpus import Corpus
 from transformers import AutoTokenizer
 
@@ -11,7 +13,7 @@ def main():
     # TODO: use argparse
     if len(sys.argv) < 4:
         print(f"usage: {sys.argv[0]} tokenizer max_length path_corpus path_output_base")
-        print(f"output directories corresponding to tokemnizer and sequence length will be created automatically")
+        print(f"output directories corresponding to tokemnizer and sequence length will be appended automatically")
         return -1
     name_tokenizer = sys.argv[1]
     max_length = int(sys.argv[2])
@@ -19,19 +21,19 @@ def main():
     path_out = Path(sys.argv[4]) / name_tokenizer / str(max_length)
     path_out.mkdir(parents=True, exist_ok=True)
     path_out = path_out / "tokenized.jsonl"
-
+    time_start = timer()
     tokenizer = AutoTokenizer.from_pretrained(name_tokenizer)
     corpus = Corpus(path)
     corpus.load_dir_strucute()
     sent_iter = corpus.get_sentence_iterator()
-    line_buffer = [tokenizer.cls_token_id]
+    line_buffer = []
     cnt_lines_written = 0
     proba_shortening = 0.1
     allowed_underfill = 10
     with open(path_out, "w") as f_out:
         for line in sent_iter:
             tokens = tokenizer(line,
-                               add_special_tokens=False,
+                               add_special_tokens=True,
                                return_attention_mask=False,)["input_ids"]
             line_buffer += tokens
             if len(line_buffer) > max_length - allowed_underfill:
@@ -47,8 +49,10 @@ def main():
                 if cnt_lines_written % 10000 == 0:
                     print(f"{cnt_lines_written} lines saved, last line len={len(line_buffer)}")
                     print(tokenizer.decode(line_buffer))
-                line_buffer = [tokenizer.cls_token_id]
-    print("Done!")
+                line_buffer = []
+    time_elapsed = timer() - time_start
+    print("Done in", humanfriendly.format_timespan(time_elapsed))
+
 
 if __name__ == "__main__":
     main()
