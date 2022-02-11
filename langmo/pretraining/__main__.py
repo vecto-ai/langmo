@@ -8,6 +8,8 @@ import pytorch_lightning as pl
 import torch
 from langmo.base import PLBase
 from langmo.callbacks.monitor import Monitor
+from langmo.callbacks.layernorm import LayerNormCallback
+
 # from langmo.cluster_mpi import MPIClusterEnvironment
 # from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 # from langmo.nn.utils import reinit_model
@@ -84,16 +86,18 @@ class PLModel(PLBase):
         # print("train step done")
         # print(loss.shape)
         if batch_idx % 10000 == 0:
-            print(f"end train step {batch_idx} on worker {self.global_rank}, loss={loss.item()}, time={get_time_str()}")
+            print(
+                f"end train step {batch_idx} on worker {self.global_rank}, loss={loss.item()}, time={get_time_str()}"
+            )
         return loss
 
     def training_epoch_end(self, *args, **kwargs):
         # if self.global_rank == 0:
-            # print("args:", args)
-            # print("kwargs:", kwargs)
-            # metrics = {}
-            # self.add_epoch_id_to_metrics(metrics)
-            # self.append_metrics_to_train_logs(metrics)
+        #     print("args:", args)
+        #     print("kwargs:", kwargs)
+        #     metrics = {}
+        #     self.add_epoch_id_to_metrics(metrics)
+        #     self.append_metrics_to_train_logs(metrics)
         self.pylogger.info(f"training epoch end")
         sleep(1)
 
@@ -202,13 +206,13 @@ def main():
             project=params["name_project"],
             name=name_run,
             save_dir=params["path_results"],
-            ),
+        ),
         log_every_n_steps=params["log_every_n_steps"],
         reload_dataloaders_every_n_epochs=0,
         # TODO: is this ok?
         # theirs samples do like you did
         # but there is special checkpoint_callback param too....
-        callbacks=[lr_monitor, Monitor()],
+        callbacks=[lr_monitor, LayerNormCallback(), Monitor()],
         gradient_clip_val=params["gradient_clip_val"],
         enable_progress_bar=False,
         enable_checkpointing=False,
