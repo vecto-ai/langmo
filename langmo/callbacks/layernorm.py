@@ -25,7 +25,7 @@ class LayerNormCallback(pl.Callback):
                 )
 
             layernorm_weight = (
-                layernorm_weight.data.clone().detach().cpu()  # .reshape(1, -1)
+                layernorm_weight.data.clone().detach().cpu()
             )
             layernorm_bias = layernorm_bias.data.clone().detach().cpu()
 
@@ -39,7 +39,7 @@ class LayerNormCallback(pl.Callback):
             pl_module.log_dict(
                 {
                     f"bias_layer_{layer}/val_{i}": val.item()
-                    for i, val in enumerate(layernorm_weight)
+                    for i, val in enumerate(layernorm_bias)
                 },
                 rank_zero_only=True,
             )
