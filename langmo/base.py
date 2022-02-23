@@ -12,11 +12,15 @@ from torch.optim import AdamW
 
 
 class PLBase(pl.LightningModule):
-    def __init__(self, net, tokenizer, params):
+    def __init__(self, net=None, tokenizer=None, params=None):
         super().__init__()
-        self.net = net
-        self.tokenizer = tokenizer
-        self.hparams.update(params)
+        # these None-s are for loading from checkpoint
+        if net is not None:
+            self.net = net
+        if tokenizer is not None:
+            self.tokenizer = tokenizer
+        if params is not None:
+            self.hparams.update(params)
 
     def setup(self, stage):
         if self.global_rank == 0:
@@ -85,6 +89,7 @@ class PLBase(pl.LightningModule):
         # TODO: get rough estimation of training steps here
         # maybe after first epoch is trained - reset iterators?
         pct_start = self.hparams["percent_warmup"] / 100.0
+        # print("setting training_steps as", training_steps)
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer,
             max_lr=self.hparams["max_lr"],

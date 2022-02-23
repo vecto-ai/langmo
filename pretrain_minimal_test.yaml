@@ -1,6 +1,6 @@
 cnt_epochs: 2
 uncase: False
-batch_size: 4
+batch_size: 2
 max_length: 128
 # model_name: "prajjwal1/bert-mini"
 # path_corpus: "./data/sense"
@@ -13,3 +13,5 @@ test: True
 initial_lr: 1e-5
 cnt_samples_per_epoch: 800
 # use_gpu: False
+suffix: test
+seconds_between_snapshots: 40

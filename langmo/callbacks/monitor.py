@@ -18,12 +18,17 @@ class Monitor(pl.Callback):
     def setup(self, trainer, pl_module, stage=None):
         self.hparams = pl_module.hparams
         # TODO: check what happens on resume
-        self.hparams["train_logs"] = []
-        if len(self.hparams["train_logs"]) == 0:
-            self.hparams["train_logs"].append({"epoch": -1, "epoch_time": 0.0})
-        if "cnt_samples_processed" not in self.hparams:
+        if "train_logs" not in self.hparams:
+            self.hparams["train_logs"] = []
             self.hparams["cnt_samples_processed"] = 0
+            self.hparams["train_logs"].append({"epoch": -1, "epoch_time": 0.0})
+            path_checkpoint = Path(self.hparams["path_results"]) / "checkpoints" / "ep_-1_smpl_000" / "hf"
+            if trainer.global_rank == 0:
+                pl_module.save_as_hf(path_checkpoint)
         self.log = self.hparams["train_logs"]
+        self.time_last_checkpoint = timer()
+        # check if we are not resuimg
+
 
     def on_train_epoch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
         pl_module.hparams["train_logs"].append({})
@@ -47,7 +52,6 @@ class Monitor(pl.Callback):
             # pl_module.save_metadata()
             path_checkpoint = Path(pl_module.hparams["path_results"]) / "checkpoints" / f"ep_{self.epoch:03d}_smpl_{num_to_str_with_suffix(self.hparams['cnt_samples_processed'])}"
             print("saving to ", path_checkpoint)
-            # trainer.save_checkpoint(path_checkpoint / "PL_model.ckpt")
             path_hf = path_checkpoint / "hf"
             pl_module.save_as_hf(path_hf)
             pl_module.save_metadata(path_checkpoint)
@@ -74,3 +78,13 @@ class Monitor(pl.Callback):
             #     / "checkpoints"
             #     / str_cnt_sampels
             # )
+
+    def on_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
+        # TODO: add this to config
+        checkpoint_interval = pl_module.hparams["seconds_between_snapshots"]
+        if timer() - self.time_last_checkpoint > checkpoint_interval:
+            self.time_last_checkpoint = timer()
+            if trainer.global_rank == 0:
+                path_save = Path(pl_module.hparams["path_results"])
+                trainer.save_checkpoint(path_save / "PL_model.ckpt")
+                pl_module.save_metadata(path_save)

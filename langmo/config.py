@@ -11,7 +11,7 @@ from protonn.utils import get_time_str, load_json
 
 
 def is_yaml_config(path):
-    return len(sys.argv) == 2 and path.is_file() and path.suffix in {".yaml", ".yml"}
+    return path.is_file() and path.suffix in {".yaml", ".yml"}
 
 
 def is_resume_run(path):
@@ -45,16 +45,19 @@ def load_yaml_config(path_config):
 
 
 class Config(dict):
-    def __init__(self, name_task, is_master=False):
+    def __init__(self, name_task, is_master=False, param_path=None):
         set_root_logger()
         _logger = logging.getLogger(__name__)
-        if len(sys.argv) < 2:
+        if len(sys.argv) < 2 and param_path == None:
             print("run main.py config.yaml")
             print("or")
             print("run main.py logs/path/to/snapshot/epoc10_step42000")
             exit(-1)
 
-        path = Path(sys.argv[1])
+        if param_path == None:
+            path = Path(sys.argv[1])
+        else:
+            path = Path(param_path)
         self.set_defaults()
         self._is_master = is_master
 
@@ -89,7 +92,7 @@ class Config(dict):
                 and key not in self.required_options
                 and key != "suffix"
             ):
-                raise RuntimeError(f"got unexpected key in user config {key}: {value}")
+                raise RuntimeError(f"got unexpected key in user config\t{key}: {value}")
             # print(key, value)
         for key, value in self.defaults.items():
             if key not in user_config:
@@ -101,10 +104,11 @@ class Config(dict):
                 raise RuntimeError(f"required key not in config {key}")
         self.update(user_config)
         name_project = name_task
-        # if "suffix" in params:
-        #     name_project += f"_{params['suffix']}"
-        if user_config["test"]:
-            name_project += "_test"
+        if "suffix" in user_config:
+            name_project += f"_{user_config['suffix']}"
+        else:
+            if user_config["test"]:
+                name_project += "_test"
         self["name_project"] = name_project
         self["path_results"] = os.path.join(self["path_results"], name_project)
         self["timestamp"] = get_time_str()
@@ -144,6 +148,7 @@ class Config(dict):
             accumulate_batches=1,
             percent_warmup=6.0,
             log_every_n_steps=50,
+            seconds_between_snapshots=3600,
         )
         self.required_options = set()
         self.required_options.add("model_name")
@@ -158,6 +163,16 @@ class ConfigPretrain(Config):
         self.required_options.add("path_corpus")
         self.required_options.add("path_val_corpus")
         self.required_options.add("cnt_samples_per_epoch")
+
+
+class ConfigResume(Config):
+    def __init__(self, name_task, old_params, is_master=False, param_path=None):
+        self.old_params = old_params
+        super().__init__(name_task, is_master=is_master, param_path=param_path)
+
+    def set_defaults(self):
+        self.defaults = self.old_params
+        self.required_options = set()
 
 
 class ConfigFinetune(Config):
