@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd
 #$ -l rt_AF=1
-#$ -l h_rt=60:00:00
+#$ -l h_rt=70:00:00
 #$ -N Pretrain
 #$ -j y
 #$ -o ./logs/pretrain/$JOB_NAME.o$JOB_ID

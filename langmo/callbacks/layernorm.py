@@ -6,7 +6,7 @@ class LayerNormCallback(pl.Callback):
         self.layernorm_storage = dict()
 
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
-        if not batch_idx % (10 * pl_module.hparams["log_every_n_steps"]) == 0:
+        if not batch_idx % (100 * pl_module.hparams["log_every_n_steps"]) == 0:
             return
         for layer in [1, 4, 8, 11]:
             if "roberta" in pl_module.hparams["model_name"]:
