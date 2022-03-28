@@ -6,7 +6,7 @@ from threading import Thread
 
 import pytorch_lightning as pl
 import torch
-from protonn.distributed import dist_adapter as da
+# from protonn.distributed import dist_adapter as da
 from torch.utils.data import DataLoader, DistributedSampler
 from vecto.corpus import Corpus, DirCorpus
 
