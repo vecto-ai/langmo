@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd
-#$ -l rt_AF=1
-#$ -l h_rt=70:00:00
+#$ -l rt_AF=6
+#$ -l h_rt=40:00:00
 #$ -N Pretrain
 #$ -j y
 #$ -o ./logs/pretrain/$JOB_NAME.o$JOB_ID
@@ -17,7 +17,7 @@ NUM_PROCS=$(expr ${NUM_NODES} \* ${NUM_GPUS_PER_NODE})
 export HOROVOD_CACHE_CAPACITY=0
 # export WANDB_MODE=disabled
 export TOKENIZERS_PARALLELISM=true
-export PL_TORCH_DISTRIBUTED_BACKEND=MPI
+export PL_TORCH_DISTRIBUTED_BACKEND=NCCL
 export NCCL_DEBUG=WARN
 
 # MPIOPTS="-np ${NUM_PROCS} -map-by ppr:${NUM_GPUS_PER_NODE}:node -mca pml ob1 -mca btl ^openib -mca btl_tcp_if_include bond0"

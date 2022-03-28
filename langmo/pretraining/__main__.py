@@ -1,8 +1,9 @@
+import socket
 from pathlib import Path
 
 from langmo.config import ConfigPretrain as Config
 from langmo.log_helper import set_root_logger
-from protonn.distributed import dist_adapter as da
+# from protonn.distributed import dist_adapter as da
 from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
 
 from .data import TextDataModule
@@ -46,7 +47,7 @@ def get_run_name(params):
 
 def main():
     set_root_logger()
-    da.init("horovod")
+    # da.init("ddp")
     # if da.rank() != 0:
     #     tr_logging.set_verbosity_error()  # to reduce warning of unused weights
     name_task = "pretrain"
@@ -58,7 +59,11 @@ def main():
     if trainer.global_rank == 0:
         (Path(params["path_results"]) / "wandb").mkdir(parents=True, exist_ok=True)
 
+    params["cnt_workers"] = trainer.world_size
+    params["batch_size_effective"] = params["batch_size"] * params["cnt_workers"] * params["accumulate_batches"]
+    print(f"!!! Starting on host {socket.gethostname()}, p {trainer.global_rank} of {trainer.world_size}")
     model = build_model(params)
+
     data_module = TextDataModule(
         tokenizer=model.tokenizer,
         params=params,
