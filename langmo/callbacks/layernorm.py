@@ -16,6 +16,7 @@ class LayerNormCallback(pl.Callback):
                 layernorm_bias = pl_module.net.get_parameter(
                     f"roberta.encoder.layer.{layer}.output.LayerNorm.bias"
                 )
+            # TODO: this breaks for e.g. albert model
             elif "bert" in pl_module.hparams["model_name"]:
                 layernorm_weight = pl_module.net.get_parameter(
                     f"bert.encoder.layer.{layer}.output.LayerNorm.weight"

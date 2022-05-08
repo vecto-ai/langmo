@@ -37,5 +37,5 @@ mpirun ${MPIOPTS} \
 
 #    -x WANDB_MODE \
 # horovodrun -np 4 python3 main.py
-    -x PL_TORCH_DISTRIBUTED_BACKEND \
+#    -x PL_TORCH_DISTRIBUTED_BACKEND \
 

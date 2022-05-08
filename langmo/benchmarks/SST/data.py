@@ -1,7 +1,6 @@
 import datasets
 import torch
-from protonn.distributed import dist_adapter as da
-
+import torch.distributed as dist
 from langmo.benchmarks.base_data import BaseCollator, BaseDataModule
 
 
@@ -21,12 +20,13 @@ class SSTDataModule(BaseDataModule):
 
     def setup(self, stage=None):
         self.cnt_train_samples = 0
-        if da.rank() == 0:
+        if self.trainer.global_rank == 0:
             ds = datasets.load_dataset("sst")
             self.cnt_train_samples = len(ds["train"])
 
-        num_samples_tensor = torch.LongTensor([self.cnt_train_samples])
-        self.cnt_train_samples = da.broadcast(num_samples_tensor, 0).item()
+        num_samples_tensor = torch.LongTensor([self.cnt_train_samples]).cuda()
+        dist.broadcast(num_samples_tensor, 0)
+        self.cnt_train_samples = num_samples_tensor.item()
 
     def train_dataloader(self):
         return [self.get_split_dataloader("sst", "train")]

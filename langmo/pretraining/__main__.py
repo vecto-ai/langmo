@@ -1,5 +1,6 @@
 import socket
 from pathlib import Path
+from langmo.cluster_mpi import MPIClusterEnvironment
 
 from langmo.config import ConfigPretrain as Config
 from langmo.log_helper import set_root_logger
@@ -8,7 +9,7 @@ from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
 
 from .data import TextDataModule
 from .plmodel import PLModel
-from .trainer import get_trainer
+from langmo.trainer import get_trainer
 
 # from langmo.cluster_mpi import MPIClusterEnvironment
 # from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
@@ -47,6 +48,7 @@ def get_run_name(params):
 
 def main():
     set_root_logger()
+    cluster_env = MPIClusterEnvironment()
     # da.init("ddp")
     # if da.rank() != 0:
     #     tr_logging.set_verbosity_error()  # to reduce warning of unused weights
@@ -55,10 +57,13 @@ def main():
     # params = Config(name_task=name_task, is_master=(da.rank() == 0))
     # TODO: make logging report rank and size and use logging
     params["name_run"] = get_run_name(params)
-    trainer = get_trainer(params)
-    if trainer.global_rank == 0:
-        (Path(params["path_results"]) / "wandb").mkdir(parents=True, exist_ok=True)
+    if cluster_env.global_rank() == 0:
+        path_wandb = Path(params["path_results"]) / "wandb"
+        print("creating wandb directory at ", path_wandb)
+        path_wandb.mkdir(parents=True, exist_ok=True)
+    cluster_env.barrier()
 
+    trainer = get_trainer(params, cluster_env)
     params["cnt_workers"] = trainer.world_size
     params["batch_size_effective"] = params["batch_size"] * params["cnt_workers"] * params["accumulate_batches"]
     print(f"!!! Starting on host {socket.gethostname()}, p {trainer.global_rank} of {trainer.world_size}")
