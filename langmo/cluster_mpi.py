@@ -27,10 +27,15 @@ class MPIClusterEnvironment(ClusterEnvironment):
         self.gpus_per_node = int(os.environ["NUM_GPUS_PER_NODE"])
         master_addr = get_address()
         self.master_addr = self.comm.bcast(master_addr, root=0)
+        os.environ["RANK"] = str(self.comm.Get_rank())
 
     @property
     def creates_processes_externally(self) -> bool:
         """Return True if the cluster is managed (you don't launch processes yourself)"""
+        return True
+
+    @staticmethod
+    def detect():
         return True
 
     def world_size(self) -> int:
@@ -46,11 +51,13 @@ class MPIClusterEnvironment(ClusterEnvironment):
         # TODO: make sure processes allocate like this
         return self.comm.Get_rank() // self.gpus_per_node
 
-    def master_address(self) -> str:
+    @property
+    def main_address(self) -> str:
         return self.master_addr
 
-    def master_port(self) -> int:
-        return "31415"
+    @property
+    def main_port(self) -> int:
+        return 31415
 
     def cnt_nodes(self) -> int:
         return self.comm.Get_size() // self.gpus_per_node
@@ -62,3 +69,8 @@ class MPIClusterEnvironment(ClusterEnvironment):
     def set_global_rank(self, rank: int) -> None:
         # raise(NotImplementedError(f"why would you set global rank to {rank}"))
         print("why would you set global rank to ", rank)
+        # if rank == 2:
+        #     traceback.print_stack()
+
+    def barrier(self) -> None:
+        self.comm.barrier()

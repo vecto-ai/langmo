@@ -2,9 +2,11 @@
 
 import datasets
 import torch
-from protonn.distributed import dist_adapter as da
-
+import torch.distributed as dist
 from langmo.benchmarks.base_data import BaseCollator, BaseDataModule
+
+# from protonn.distributed import dist_adapter as da
+
 
 dic_heuristics = {"lexical_overlap": 0, "constituent": 1, "subsequence": 2}
 
@@ -121,15 +123,16 @@ class NLIDataModule(BaseDataModule):
         # local SSD")
 
         self.cnt_train_samples = 0
-        if da.rank() == 0:
+        # if self.trainer.global_rank == 0:
             # TODO: can we download without loading
-            ds_hans = datasets.load_dataset("hans")
-            print("preload hans", ds_hans)
-            ds = datasets.load_dataset("multi_nli")
-            self.cnt_train_samples = len(ds["train"])
+        ds_hans = datasets.load_dataset("hans")
+        print("preload hans", ds_hans)
+        ds = datasets.load_dataset("multi_nli")
+        self.cnt_train_samples = len(ds["train"])
 
-        num_samples_tensor = torch.LongTensor([self.cnt_train_samples])
-        self.cnt_train_samples = da.broadcast(num_samples_tensor, 0).item()
+        #num_samples_tensor = torch.LongTensor([self.cnt_train_samples])
+        #dist.broadcast(num_samples_tensor, 0, device=torch.cpu)
+        #self.cnt_train_samples = num_samples_tensor.item()
 
     def train_dataloader(self):
         return [self.get_split_dataloader("multi_nli", "train")]

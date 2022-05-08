@@ -1,16 +1,20 @@
+from typing import Optional
+
 import pytorch_lightning as pl
 import torch
+import torch.distributed as dist
 import torch.nn.functional as F
 from langmo.base import PLBase
 from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
                                          TopMLP2)
 from langmo.callbacks.monitor import Monitor
+from langmo.cluster_mpi import MPIClusterEnvironment
 from langmo.config import ConfigFinetune as Config
 from langmo.nn.utils import reinit_model, reinit_tensor
-from protonn.distributed import dist_adapter as da
+from langmo.trainer import get_trainer
+# from protonn.distributed import dist_adapter as da
 from protonn.utils import get_time_str
 from pytorch_lightning.callbacks import LearningRateMonitor
-from pytorch_lightning.loggers import WandbLogger
 from torchmetrics.functional import accuracy
 from transformers import (AutoModel, AutoModelForQuestionAnswering,
                           AutoModelForSequenceClassification, AutoTokenizer)
@@ -40,10 +44,11 @@ class BaseFinetuner:
     def __init__(self, name_task, class_data_module, class_model):
         # TODO: refactor this into sub-methods
         # TODO: and this da is over-complicated
-        da.init("horovod")
-        if da.rank() != 0:
-            tr_logging.set_verbosity_error()  # to reduce warning of unused weights
-        self.params = Config(name_task=name_task, is_master=(da.rank() == 0))
+        cluster_env = MPIClusterEnvironment()
+        # da.init("horovod")
+        if cluster_env.global_rank() != 0:
+             tr_logging.set_verbosity_error()  # to reduce warning of unused weights
+        self.params = Config(name_task=name_task)
         timestamp = get_time_str()
         self.tokenizer = AutoTokenizer.from_pretrained(self.params["model_name"])
 
@@ -57,11 +62,8 @@ class BaseFinetuner:
             name_run += "_RND"
         name_run += f"_{'↓' if self.params['uncase'] else '◯'}_{timestamp[:-3]}"
         if "suffix" in self.params:
-            name_wandb_project = (
-                self.params["name_project"] + f"_{self.params['suffix']}"
-            )
-        else:
-            name_wandb_project = self.params["name_project"]
+                self.params["name_project"] += f"_{self.params['suffix']}"
+        self.params["name_run"] = name_run
         self.model = class_model(self.net, self.tokenizer, self.params)
         self.maybe_randomize_special_tokens()
 
@@ -72,32 +74,7 @@ class BaseFinetuner:
             self.tokenizer,
             params=self.params,
         )
-        lr_monitor = LearningRateMonitor(logging_interval="step")
-        self.wandb_logger = WandbLogger(
-            project=name_wandb_project,
-            name=name_run,
-            save_dir=self.params["path_results"],
-        )
-        self.trainer = pl.Trainer(
-            default_root_dir=self.params["path_results"],
-            weights_save_path=self.params["path_results"],
-            gpus=1,
-            num_sanity_val_steps=-1,
-            # num_sanity_val_steps=0,
-            max_epochs=self.params["cnt_epochs"],
-            strategy="horovod",  # da.get_backend_as_pl_strategy(),
-            precision=self.params["precision"],
-            replace_sampler_ddp=False,
-            # early_stop_callback=early_stop_callback,
-            # we probably don't need to checkpoint eval - but can make this optional
-            callbacks=[lr_monitor, Monitor()],  # on_n_step_callback
-            checkpoint_callback=False,
-            logger=self.wandb_logger,
-            progress_bar_refresh_rate=0,
-            gradient_clip_val=self.params["gradient_clip_val"],
-            track_grad_norm=2,
-            terminate_on_nan=True,
-        )
+        self.trainer = get_trainer(self.params, cluster_env)
         # TODO: Please use the DeviceStatsMonitor callback directly instead.
         # TODO: sync_batchnorm: bool = False, to params
 
@@ -147,11 +124,22 @@ class QAFinetuner(BaseFinetuner):
         return net, name_model
 
 
+def allreduce(tensor: torch.Tensor, op: Optional[int]=None) -> torch.Tensor:
+    if op is None:
+        dist.all_reduce(tensor)
+        tensor /= dist.get_world_size()
+    else:
+        # print(tensor)
+        dist.all_reduce(tensor, op=op)
+    return tensor
+
+
 def aggregate_batch_stats(batch_stats, key):
     if key in batch_stats[0]:
         value = torch.stack([x[key] for x in batch_stats]).sum()
     else:
         value = torch.tensor(0)
     # print("reducing", key, value)
-    value = da.allreduce(value, op=da.SUM)
+    value = value.cuda()
+    value = allreduce(value, op=dist.ReduceOp.SUM)
     return value.item()
