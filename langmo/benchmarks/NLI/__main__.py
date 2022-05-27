@@ -2,8 +2,8 @@ import torch
 import torch.nn.functional as F
 from langmo.benchmarks.base import (BaseClassificationModel,
                                     ClassificationFinetuner,
-                                    aggregate_batch_stats)
-from protonn.distributed import dist_adapter as da
+                                    aggregate_batch_stats, allreduce)
+# from protonn.distributed import dist_adapter as da
 # import vecto
 # import vecto.embeddings
 from torchmetrics.functional import accuracy
@@ -78,7 +78,7 @@ class PLModel(BaseClassificationModel):
             name_dataset = self.ds_prefixes[id_dataloader]
             loss = torch.stack([x["val_loss"] for x in lst_split]).mean()  # .item()
             # TODO: refactor this reduction an logging in one helper function
-            metrics[f"val_loss_{name_dataset}"] = da.allreduce(loss).item()
+            metrics[f"val_loss_{name_dataset}"] = allreduce(loss, None).item()
             cnt_correct = aggregate_batch_stats(lst_split, "cnt_correct")
             cnt_questions = aggregate_batch_stats(lst_split, "cnt_questions")
             metrics[f"val_acc_{name_dataset}"] = cnt_correct / cnt_questions
@@ -99,8 +99,8 @@ class PLModel(BaseClassificationModel):
                     metric_name = f"val_acc_{name_dataset}_{labels_entail[entail]}"
                     metric_val = cnt_correct_label / cnt_questions_label
                     metrics[metric_name] = metric_val
-                    self.log(metric_name, metric_val)
-
+                    # self.log(metric_name, metric_val)
+            self.log_dict(metrics)
             # cnt_correct = aggregate_batch_stats(lst_split, "cnt_correct")
         # self.save_metrics_and_model(metrics)
 

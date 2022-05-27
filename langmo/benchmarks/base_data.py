@@ -12,10 +12,10 @@ class BaseDataModule(pl.LightningDataModule):
         self.params = params
         self.shuffle = params["shuffle"]
         self.test = params["test"]
-        self.percent_start = float(da.rank()) / float(da.world_size()) * 100
-        self.percent_end = float(da.rank() + 1) / float(da.world_size()) * 100
 
     def get_split_dataloader(self, dataset_name, split):
+        self.percent_start = float(self.trainer.global_rank) / float(self.trainer.world_size) * 100
+        self.percent_end = float(self.trainer.global_rank + 1) / float(self.trainer.world_size) * 100
         shuffle = (split == "train") and (self.shuffle)
         if self.test:
             ds_size = self.batch_size * 2
@@ -25,7 +25,7 @@ class BaseDataModule(pl.LightningDataModule):
             sampler = None
         elif shuffle:
             dataset = datasets.load_dataset(dataset_name, split=split)
-            sampler = DistributedSampler(dataset, da.world_size(), da.rank(), shuffle)
+            sampler = DistributedSampler(dataset, self.trainer.world_size, self.trainer.global_rank, shuffle)
         else:
             split = datasets.ReadInstruction(
                 split,
