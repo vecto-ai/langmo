@@ -1,1 +1,3 @@
-Hey this is a pretty short corpus. Like, really short. 
+Hey this is a pretty short corpus. Like, really short.
+
+second paragraph of the short corpus.

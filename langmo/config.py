@@ -182,3 +182,4 @@ class ConfigFinetune(Config):
         self.defaults["freeze_encoder"] = False
         self.defaults["encoder_wrapper"] = "pooler"
         self.defaults["shuffle"] = False
+        self.defaults["cnt_seps"] = -1

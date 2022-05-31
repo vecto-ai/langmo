@@ -21,13 +21,15 @@ class Collator(BaseCollator):
         empty_tokenized = self.tokenizer(text=[""], text_pair=[""])
         self.has_token_type_ids = "token_type_ids" in empty_tokenized
         cls_sep_end = empty_tokenized["input_ids"][0]
+        # TODO: move this logic to parent class for all benchmarks
+        # or remove completely
         self.cls, self.mid_seps, self.end_sep = (
             cls_sep_end[:1],
             cls_sep_end[1:-1],
             cls_sep_end[-1:],
         )
-        if "sep_cnt" in self.params:
-            self.mid_seps = self.params["sep_cnt"] * [self.tokenizer.sep_token_id]
+        if "cnt_seps" != -1:
+            self.mid_seps = self.params["cnt_seps"] * [self.tokenizer.sep_token_id]
 
     def truncate(self, seq1, seq2, target_len):
         len1 = len(seq1)

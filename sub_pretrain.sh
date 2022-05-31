@@ -11,6 +11,6 @@ fi
     # probably TSUBAME-KFC/DL
     # sbatch run_kfc.sh
     # abci
-    qsub -g gcb50300 $EMAILARGS run_pretrain_perf.sh
+    qsub -g gcb50300 $EMAILARGS run_pretrain.sh
     # qsub -ar 5476 -g gad50785 $EMAILARGS run_pretrain.sh
 #fi
