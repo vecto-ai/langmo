@@ -26,7 +26,7 @@ mpirun ${MPIOPTS} \
     -x TOKENIZERS_PARALLELISM \
     -x NUM_GPUS_PER_NODE \
     -x PL_TORCH_DISTRIBUTED_BACKEND \
-    python3 -m langmo.benchmarks.SST nli.yaml
+    python3 -m langmo.benchmarks.NLI nli.yaml
 
 # horovodrun -np 4 python3 main.py
 

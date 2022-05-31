@@ -19,7 +19,7 @@ def get_trainer(params, cluster_env):
     lr_monitor = LearningRateMonitor(logging_interval="step")
     # gpus = [int(os.environ["RANK"])] if params["use_gpu"] else 0
     gpus = -1 if params["use_gpu"] else 0
-    pl.utilities.rank_zero.rank_zero_only.rank = cluster_env.local_rank()
+    pl.utilities.rank_zero.rank_zero_only.rank = cluster_env.global_rank()
     logger = WandbLogger(
             project=params["name_project"],
             name=params["name_run"],
