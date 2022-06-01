@@ -6,6 +6,7 @@ from pathlib import Path
 import yaml
 from langmo.log_helper import set_root_logger
 from langmo.utils import get_unique_results_path, parse_float
+
 # from protonn.distributed import dist_adapter as da
 from protonn.utils import get_time_str, load_json
 
@@ -46,6 +47,7 @@ def load_yaml_config(path_config):
 
 class Config(dict):
     def __init__(self, name_task, is_master=False, param_path=None):
+        self.name_task = name_task
         set_root_logger()
         _logger = logging.getLogger(__name__)
         if len(sys.argv) < 2 and param_path == None:
@@ -127,6 +129,7 @@ class Config(dict):
 
     def set_defaults(self):
         self.defaults = dict(
+            name_task=self.name_task,
             test=False,
             use_gpu=True,
             precision=32,
@@ -183,3 +186,66 @@ class ConfigFinetune(Config):
         self.defaults["encoder_wrapper"] = "pooler"
         self.defaults["shuffle"] = False
         self.defaults["cnt_seps"] = -1
+
+
+GLUETASKTOKEYS = {
+    "cola": ("sentence", None),
+    "mrpc": ("sentence1", "sentence2"),
+    "qnli": ("question", "sentence"),
+    "qqp": ("question1", "question2"),
+    "rte": ("sentence1", "sentence2"),
+    "sst2": ("sentence", None),
+    "stsb": ("sentence1", "sentence2"),
+    "wnli": ("sentence1", "sentence2"),
+    "mnli": ("premise", "hypothesis"),
+    "mnli-mm": ("premise", "hypothesis"),
+}
+
+GLUETASKTOMETRIC = {
+    "cola": "matthews_correlation",
+    "stsb": "pearson",
+    "mrpc": "accuracy",
+    "qnli": "accuracy",
+    "qqp": "accuracy",
+    "rte": "accuracy",
+    "sst2": "accuracy",
+    "wnli": "accuracy",
+    "mnli": "accuracy",
+    "mnli-mm": "accuracy",
+}
+
+GLUETASKTONUMLABELS = {
+    "stsb": 1,
+    "cola": 2,
+    "mrpc": 2,
+    "qnli": 2,
+    "qqp": 2,
+    "rte": 2,
+    "sst2": 2,
+    "wnli": 2,
+    "mnli": 3,
+    "mnli-mm": 3,
+}
+
+
+class GLUEConfig(ConfigFinetune):
+    def set_defaults(self):
+        super().set_defaults()
+
+        try:
+            assert self.name_task in GLUETASKTOKEYS
+        except:
+            glue_tasks = list(self.defaults["task_to_keys"].keys())
+            raise AssertionError(f"Task must be one of {glue_tasks}")
+
+        self.defaults["sent1"] = GLUETASKTOKEYS[self.name_task][0]
+        self.defaults["sent2"] = GLUETASKTOKEYS[self.name_task][1]
+        self.defaults["num_labels"] = GLUETASKTONUMLABELS[self.name_task]
+        self.defaults["metric_name"] = GLUETASKTOMETRIC[self.name_task]
+        self.defaults["validation_split"] = (
+            "validation_mismatched"
+            if self.name_task == "mnli-mm"
+            else "validation_matched"
+            if self.name_task == "mnli"
+            else "validation"
+        )

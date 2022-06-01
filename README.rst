@@ -17,6 +17,12 @@ to perfrorm fibetuning on a task, e.g. NLI run as::
 
     horovodrun -np N python -m langmo.benchmarks.NLI config.yaml
 
+Temporarily for any glue task:
+
+    python -m langmo.benchmarks.GLUE config_file.yaml glue_task
+
+glue_task among: **cola, rte, stsb, mnli, mnli-mm, mrpc, sst2, qqp, qnli**
+
 example cofig file:
 
 ::
