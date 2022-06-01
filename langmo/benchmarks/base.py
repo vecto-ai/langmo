@@ -5,19 +5,24 @@ import torch
 import torch.distributed as dist
 import torch.nn.functional as F
 from langmo.base import PLBase
-from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
-                                         TopMLP2)
+from langmo.benchmarks.NLI.model import BertWithCLS, BertWithLSTM, Siamese, TopMLP2
 from langmo.callbacks.monitor import Monitor
 from langmo.cluster_mpi import MPIClusterEnvironment
 from langmo.config import ConfigFinetune as Config
 from langmo.nn.utils import reinit_model, reinit_tensor
 from langmo.trainer import get_trainer
+
 # from protonn.distributed import dist_adapter as da
 from protonn.utils import get_time_str
 from pytorch_lightning.callbacks import LearningRateMonitor
 from torchmetrics.functional import accuracy
-from transformers import (AutoModel, AutoModelForQuestionAnswering,
-                          AutoModelForSequenceClassification, AutoTokenizer)
+from transformers import (
+    AutoModel,
+    AutoModelForQuestionAnswering,
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+)
+from pathlib import Path
 from transformers import logging as tr_logging
 
 
@@ -30,14 +35,20 @@ class BaseClassificationModel(PLBase):
         # 0 is there seince PL returns tuple of batched from all dataloaders
         # not sure if this will be persisten behavior
         logits = self(inputs)
-        loss = F.cross_entropy(logits, targets)
-        acc = accuracy(F.softmax(logits, dim=1), targets)
+        loss = self._compute_loss(logits, targets)
+        acc = self._compute_metric(logits, targets)
         metrics = {
             "train_loss": loss,
             "train_acc": acc,
         }
         self.log_dict(metrics, on_step=True, on_epoch=True)
         return loss
+
+    def _compute_metric(self, logits, targets):
+        return accuracy(F.softmax(logits, dim=1), targets)
+
+    def _compute_loss(self, logits, targets):
+        return F.cross_entropy(logits, targets)
 
 
 class BaseFinetuner:
@@ -47,8 +58,12 @@ class BaseFinetuner:
         cluster_env = MPIClusterEnvironment()
         # da.init("horovod")
         if cluster_env.global_rank() != 0:
-             tr_logging.set_verbosity_error()  # to reduce warning of unused weights
-        self.params = Config(name_task=name_task)
+            tr_logging.set_verbosity_error()  # to reduce warning of unused weights
+        self._init_params(name_task)
+        if cluster_env.global_rank() == 0:
+            path_wandb = Path(self.params["path_results"]) / "wandb"
+            path_wandb.mkdir(parents=True, exist_ok=True)
+        cluster_env.barrier()
         timestamp = get_time_str()
         self.tokenizer = AutoTokenizer.from_pretrained(self.params["model_name"])
 
@@ -62,7 +77,7 @@ class BaseFinetuner:
             name_run += "_RND"
         name_run += f"_{'↓' if self.params['uncase'] else '◯'}_{timestamp[:-3]}"
         if "suffix" in self.params:
-                self.params["name_project"] += f"_{self.params['suffix']}"
+            self.params["name_project"] += f"_{self.params['suffix']}"
         self.params["name_run"] = name_run
         self.model = class_model(self.net, self.tokenizer, self.params)
         self.maybe_randomize_special_tokens()
@@ -77,6 +92,9 @@ class BaseFinetuner:
         self.trainer = get_trainer(self.params, cluster_env)
         # TODO: Please use the DeviceStatsMonitor callback directly instead.
         # TODO: sync_batchnorm: bool = False, to params
+
+    def _init_params(self, name_task):
+        self.params = Config(name_task=name_task)
 
     def maybe_randomize_special_tokens(self):
         if "rand_tok" in self.params:
@@ -124,7 +142,7 @@ class QAFinetuner(BaseFinetuner):
         return net, name_model
 
 
-def allreduce(tensor: torch.Tensor, op: Optional[int]=None) -> torch.Tensor:
+def allreduce(tensor: torch.Tensor, op: Optional[int] = None) -> torch.Tensor:
     if op is None:
         dist.all_reduce(tensor)
         tensor /= dist.get_world_size()
