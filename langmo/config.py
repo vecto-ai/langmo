@@ -100,7 +100,7 @@ class Config(dict):
             if key not in user_config:
                 ## tokenizer defaults to model_name if absent
                 if key == "tokenizer_name":
-                    value = self.defaults.get(key, self.defaults["model_name"])
+                    value = user_config.get(key, user_config["model_name"])
                 if self._is_master:
                     _logger.warning(f"setting parameter {key} to default value {value}")
                 self[key] = value
@@ -156,6 +156,7 @@ class Config(dict):
             percent_warmup=6.0,
             log_every_n_steps=50,
             seconds_between_snapshots=3600,
+            replace_hf_config=None,
         )
         self.required_options = set()
         self.required_options.add("model_name")
