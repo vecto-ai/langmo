@@ -156,7 +156,7 @@ class Config(dict):
             percent_warmup=6.0,
             log_every_n_steps=50,
             seconds_between_snapshots=3600,
-            replace_hf_config=None,
+            replace_hf_config=dict(),
         )
         self.required_options = set()
         self.required_options.add("model_name")
