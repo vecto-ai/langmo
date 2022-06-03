@@ -98,6 +98,9 @@ class Config(dict):
             # print(key, value)
         for key, value in self.defaults.items():
             if key not in user_config:
+                ## tokenizer defaults to model_name if absent
+                if key == "tokenizer_name":
+                    value = self.defaults.get(key, self.defaults["model_name"])
                 if self._is_master:
                     _logger.warning(f"setting parameter {key} to default value {value}")
                 self[key] = value
@@ -147,6 +150,7 @@ class Config(dict):
             beta2=0.999,
             max_lr=5e-5,
             initial_lr=0.0,
+            tokenizer_name=None,
             gradient_clip_val=0.0,
             accumulate_batches=1,
             percent_warmup=6.0,
