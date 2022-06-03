@@ -1,0 +1,24 @@
+model_name: "albert-base-v2"
+tokenizer_name: "roberta-base"
+path_results: puppa
+cnt_epochs: 2
+uncase: False
+batch_size: 2
+max_length: 128
+path_corpus: "./data/tokenized/sense/roberta-base/128/"
+path_val_corpus: "./data/sense_small_roberta_base_preprocessed"
+test: True
+initial_lr: 1e-5
+cnt_samples_per_epoch: 800
+suffix: test
+seconds_between_snapshots: 40
+## params to adapt to RoBERTa model
+replace_hf_config: {
+  bos_token_id: 0,
+  eos_token_id: 2,
+  max_position_embeddings: 512,
+  pad_token_id: 1,
+  transformers_version: "4.16.0",
+  type_vocab_size: 1,
+  vocab_size: 50265
+}
