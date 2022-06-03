@@ -22,7 +22,7 @@ from langmo.trainer import get_trainer
 
 def build_model(params):
     # support loading weights for continuation of pretraining
-    tokenizer = AutoTokenizer.from_pretrained(params["model_name"])
+    tokenizer = AutoTokenizer.from_pretrained(params["tokenizer_name"])
     config = AutoConfig.from_pretrained(params["model_name"])
     net = AutoModelForMaskedLM.from_config(config)
     net.train()
