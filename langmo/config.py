@@ -96,6 +96,9 @@ class Config(dict):
             ):
                 raise RuntimeError(f"got unexpected key in user config\t{key}: {value}")
             # print(key, value)
+        for key in self.required_options:
+            if key not in user_config:
+                raise RuntimeError(f"required key not in config {key}")
         for key, value in self.defaults.items():
             if key not in user_config:
                 ## tokenizer defaults to model_name if absent
@@ -104,9 +107,7 @@ class Config(dict):
                 if self._is_master:
                     _logger.warning(f"setting parameter {key} to default value {value}")
                 self[key] = value
-        for key in self.required_options:
-            if key not in user_config:
-                raise RuntimeError(f"required key not in config {key}")
+
         self.update(user_config)
         name_project = name_task
         if "suffix" in user_config:
