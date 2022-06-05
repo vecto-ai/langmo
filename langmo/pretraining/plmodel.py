@@ -4,6 +4,7 @@ from time import sleep
 import torch
 from langmo.base import PLBase
 from protonn.utils import get_time_str
+from torchmetrics import MeanMetric
 
 
 class PLModel(PLBase):
@@ -12,6 +13,7 @@ class PLModel(PLBase):
         # TODO: add corpus metadata
         print("%%%%%%%%%%%%% WE ARE IN INIT OF PL MODEL")
         self.pylogger = getLogger(__name__)
+        self.metric_loss = MeanMetric()
         # self.hparams["cnt_samples_processed"] = 0
 
     def forward(self, batch):
@@ -62,6 +64,7 @@ class PLModel(PLBase):
         # print(loss.shape)
         if batch_idx % 10000 == 0:
             print(f"end train step {batch_idx} on worker {self.global_rank}, loss={loss.item()}, time={get_time_str()}")
+        self.metric_loss.update(loss)
         return loss
 
     def training_epoch_end(self, *args, **kwargs):
@@ -72,6 +75,7 @@ class PLModel(PLBase):
             # self.add_epoch_id_to_metrics(metrics)
             # self.append_metrics_to_train_logs(metrics)
         self.pylogger.info(f"training epoch end")
+        self.hparams["train_logs"][-1]["loss"] = self.metric_loss.compute().item()
         sleep(1)
 
     # def validation_step(self, batch, batch_idx):
