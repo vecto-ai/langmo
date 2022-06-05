@@ -43,6 +43,8 @@ def get_trainer(params, cluster_env):
         # TODO: is this ok?
         # theirs samples do like you did
         # but there is special checkpoint_callback param too....
+        # callbacks=[lr_monitor, LayerNormCallback(), Monitor()],
+        # TODO: layernorm doesn't work with albert
         callbacks=[lr_monitor, Monitor()],
         gradient_clip_val=params["gradient_clip_val"],
         enable_progress_bar=False,
