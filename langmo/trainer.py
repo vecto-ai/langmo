@@ -45,7 +45,7 @@ def get_trainer(params, cluster_env):
         # but there is special checkpoint_callback param too....
         callbacks=[lr_monitor, Monitor()],
         gradient_clip_val=params["gradient_clip_val"],
-        enable_progress_bar=True,
+        enable_progress_bar=False,
         enable_checkpointing=False,
         # TODO: figure out what is this
         track_grad_norm=1,
