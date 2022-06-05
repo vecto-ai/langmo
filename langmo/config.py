@@ -96,14 +96,18 @@ class Config(dict):
             ):
                 raise RuntimeError(f"got unexpected key in user config\t{key}: {value}")
             # print(key, value)
-        for key, value in self.defaults.items():
-            if key not in user_config:
-                if self._is_master:
-                    _logger.warning(f"setting parameter {key} to default value {value}")
-                self[key] = value
         for key in self.required_options:
             if key not in user_config:
                 raise RuntimeError(f"required key not in config {key}")
+        for key, value in self.defaults.items():
+            if key not in user_config:
+                ## tokenizer defaults to model_name if absent
+                if key == "tokenizer_name":
+                    value = user_config.get(key, user_config["model_name"])
+                if self._is_master:
+                    _logger.warning(f"setting parameter {key} to default value {value}")
+                self[key] = value
+
         self.update(user_config)
         name_project = name_task
         if "suffix" in user_config:
@@ -147,11 +151,13 @@ class Config(dict):
             beta2=0.999,
             max_lr=5e-5,
             initial_lr=0.0,
+            tokenizer_name=None,
             gradient_clip_val=0.0,
             accumulate_batches=1,
             percent_warmup=6.0,
             log_every_n_steps=50,
             seconds_between_snapshots=3600,
+            replace_hf_config=dict(),
         )
         self.required_options = set()
         self.required_options.add("model_name")

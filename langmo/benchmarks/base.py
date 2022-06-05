@@ -65,7 +65,7 @@ class BaseFinetuner:
             path_wandb.mkdir(parents=True, exist_ok=True)
         cluster_env.barrier()
         timestamp = get_time_str()
-        self.tokenizer = AutoTokenizer.from_pretrained(self.params["model_name"])
+        self.tokenizer = AutoTokenizer.from_pretrained(self.params["tokenizer_name"])
 
         # wandb_logger.watch(net, log='gradients', log_freq=100)
         # embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
