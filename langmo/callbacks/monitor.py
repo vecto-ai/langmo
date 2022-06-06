@@ -49,12 +49,12 @@ class Monitor(pl.Callback):
             self.log[-1]["samples_per_second"] = self.hparams["cnt_samples_per_epoch"] / epoch_time
             self.log[-1]["samples_per_second_worker"] = self.hparams["train_logs"][-1]["samples_per_second"] / self.hparams["cnt_workers"]
             self.log[-1]["cnt_samples_processed"] = self.hparams["cnt_samples_processed"]
-            # pl_module.save_metadata()
             path_checkpoint = Path(pl_module.hparams["path_results"]) / "checkpoints" / f"ep_{self.epoch:03d}_smpl_{num_to_str_with_suffix(self.hparams['cnt_samples_processed'])}"
             print("saving to ", path_checkpoint)
-            path_hf = path_checkpoint / "hf"
-            pl_module.save_as_hf(path_hf)
             pl_module.save_metadata(path_checkpoint)
+            if pl_module.hparams["per_epoch_snapshot"]:
+                path_hf = path_checkpoint / "hf"
+                pl_module.save_as_hf(path_hf)
             print("saving done")
 
     def on_validation_epoch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule):

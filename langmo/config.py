@@ -6,7 +6,6 @@ from pathlib import Path
 import yaml
 from langmo.log_helper import set_root_logger
 from langmo.utils import get_unique_results_path, parse_float
-
 # from protonn.distributed import dist_adapter as da
 from protonn.utils import get_time_str, load_json
 
@@ -157,6 +156,7 @@ class Config(dict):
             percent_warmup=6.0,
             log_every_n_steps=50,
             seconds_between_snapshots=3600,
+            per_epoch_snapshot=True,
             replace_hf_config=dict(),
         )
         self.required_options = set()

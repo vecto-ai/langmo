@@ -12,7 +12,7 @@ source modules.sh
 
 NUM_NODES=${NHOSTS}
 export NUM_GPUS_PER_NODE=8
-NUM_GPUS_PER_SOCKET=$(expr ${NUM_GPUS_PER_NODE} / 2)
+# NUM_GPUS_PER_SOCKET=$(expr ${NUM_GPUS_PER_NODE} / 2)
 NUM_PROCS=$(expr ${NUM_NODES} \* ${NUM_GPUS_PER_NODE})
 
 MPIOPTS="-np ${NUM_PROCS} -map-by ppr:${NUM_GPUS_PER_NODE}:node -mca pml ob1 -mca btl ^openib -mca btl_tcp_if_include bond0"
