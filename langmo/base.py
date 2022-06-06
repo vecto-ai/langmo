@@ -4,12 +4,13 @@ from pathlib import Path
 
 import pytorch_lightning as pl
 import torch
+
 # from apex.optimizers import FusedLAMB
 from protonn.utils import save_data_json
 from torch.optim import AdamW
 
 # from transformers.optimization import AdamW
-
+from .utils.model_utils import zero_and_freeze_param_by_name
 
 class PLBase(pl.LightningModule):
     def __init__(self, net=None, tokenizer=None, params=None):
@@ -32,6 +33,11 @@ class PLBase(pl.LightningModule):
             * self.hparams["accumulate_batches"]
         )
         self.logger.log_hyperparams(self.hparams)
+
+        # set token_type_embeddings to zero and token_type_embeddings.requires_grad = False
+        # if there is only one possible token_type_id
+        if self.net.config.to_dict().get("type_vocab_size", 0) == 1:
+            zero_and_freeze_param_by_name(self.net, "token_type_embeddings.weight")
 
     def configure_optimizers(self):
         # param_optimizer = list(self.net.named_parameters())
