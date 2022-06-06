@@ -1,6 +1,6 @@
-def zero_param_and_grad_with_string(model, txt):
+def zero_and_freeze_param_by_name(model, name):
     params = [
-        param for param_name, param in model.named_parameters() if txt in param_name
+        param for param_name, param in model.named_parameters() if name in param_name
     ]
     for param in params:
         param.data.zero_()
