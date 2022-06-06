@@ -24,7 +24,8 @@ class Monitor(pl.Callback):
             self.hparams["train_logs"].append({"epoch": -1, "epoch_time": 0.0})
             path_checkpoint = Path(self.hparams["path_results"]) / "checkpoints" / "ep_-1_smpl_000" / "hf"
             if trainer.global_rank == 0:
-                pl_module.save_as_hf(path_checkpoint)
+                if pl_module.hparams["per_epoch_snapshot"]:
+                    pl_module.save_as_hf(path_checkpoint)
         self.log = self.hparams["train_logs"]
         self.time_last_checkpoint = timer()
         # check if we are not resuimg
@@ -49,10 +50,11 @@ class Monitor(pl.Callback):
             self.log[-1]["samples_per_second"] = self.hparams["cnt_samples_per_epoch"] / epoch_time
             self.log[-1]["samples_per_second_worker"] = self.hparams["train_logs"][-1]["samples_per_second"] / self.hparams["cnt_workers"]
             self.log[-1]["cnt_samples_processed"] = self.hparams["cnt_samples_processed"]
-            path_checkpoint = Path(pl_module.hparams["path_results"]) / "checkpoints" / f"ep_{self.epoch:03d}_smpl_{num_to_str_with_suffix(self.hparams['cnt_samples_processed'])}"
-            print("saving to ", path_checkpoint)
-            pl_module.save_metadata(path_checkpoint)
+            pl_module.save_metadata(pl_module.hparams["path_results"])
             if pl_module.hparams["per_epoch_snapshot"]:
+                path_checkpoint = Path(pl_module.hparams["path_results"]) / "checkpoints" / f"ep_{self.epoch:03d}_smpl_{num_to_str_with_suffix(self.hparams['cnt_samples_processed'])}"
+                print("saving to ", path_checkpoint)
+                pl_module.save_metadata(path_checkpoint)
                 path_hf = path_checkpoint / "hf"
                 pl_module.save_as_hf(path_hf)
             print("saving done")
