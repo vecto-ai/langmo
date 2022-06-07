@@ -9,6 +9,11 @@ def main():
     path_dst = Path(sys.argv[2])
     shutil.copy(path_src / "metadata.json", path_dst / "metadata.json")
     for checkpoint in (path_src / "checkpoints").iterdir():
+        try:
+            shutil.copy(checkpoint / "metadata.json",
+                        path_dst / checkpoint.relative_to(path_src) / "metadata.json")
+        except:
+            print("warning, snapshot meta missing at", checkpoint)
         for eval_task in (checkpoint / "eval").iterdir():
             for eval_run in eval_task.iterdir():
                 path_eval_relative = eval_run.relative_to(path_src)
