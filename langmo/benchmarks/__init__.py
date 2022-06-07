@@ -28,14 +28,14 @@ header_ABCI = (
 
 
 def schedule_eval_run(path):
-    num_runs = 1  # TODO: move this to config
+    # TODO: support capping max runs
+    num_runs = 1
     for _ in range(num_runs):
         # TODO: move group name to header of jobfile
         cmd_submit = "qsub -g gcb50300"
         cmd = f"{cmd_submit} {path}"
         print(f"@@@ scheduling: {cmd}")
         os.system(cmd)
-    # TODO: make wandb offline when schedule massive runs
 
 
 def make_executable(path):
@@ -53,16 +53,14 @@ def create_config_file(path, path_config):
         file_config.write(f"per_epoch_snapshot: false\n")
 
 
-def create_job_files(path):
+def create_files_and_submit(path, name_task):
     path_config = path / "evalconfig.yaml"
     path_jobscript = path / "evaljobscript.sh"
     create_config_file(path, path_config)
-    # TODO: do we need to set execution rights?
     with open(path_jobscript, "w") as file_jobscript:
         # TODO: get platform-specific headers from config
         # e.g. for ABCI the nodes, the groups etc
         # (nonTODO:) expect langmo to be installed by user
-        # TODO: use "schedule all" API
         file_jobscript.write(header_ABCI)
         file_jobscript.write("mpirun ${MPIOPTS} \\\n\t")
         file_jobscript.write("-x TOKENIZERS_PARALLELISM \\\n\t")
@@ -71,7 +69,10 @@ def create_job_files(path):
         file_jobscript.write("-x WANDB_MODE \\\n\t")
         # TODO: this failes if python on login node is different
         # cmd = f"{sys.executable} -m langmo.benchmarks.NLI {path_config}\n"
-        cmd = f"python3 -m langmo.benchmarks.NLI {path_config}\n"
+        if name_task == "NLI":
+            cmd = f"python3 -m langmo.benchmarks.NLI {path_config}\n"
+        else:
+            cmd = f"python3 -m langmo.benchmarks.GLUE {path_config} {name_task}\n"
         file_jobscript.write(cmd)
-    # TODO: this is not gonna scale to multiple benchmarks - use some defaults
+    make_executable(path_jobscript)
     schedule_eval_run(path_jobscript)
