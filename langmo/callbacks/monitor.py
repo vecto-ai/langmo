@@ -7,6 +7,7 @@ from protonn.utils import num_to_str_with_suffix
 # TODO: proper logging
 # TODO: processed samples per epoch
 
+
 class Monitor(pl.Callback):
 
     # def append_metrics_to_train_logs(self, metrics):
@@ -15,21 +16,31 @@ class Monitor(pl.Callback):
     #         val = v.item() if hasattr(v, "item") else v
     #         entry[k] = val
     #     self.hparams["train_logs"].append(entry)
+    def maybe_save_metadata_and_hf(self, trainer, pl_module):
+        if trainer.global_rank == 0:
+            if pl_module.hparams["per_epoch_snapshot"]:
+                path_checkpoint = Path(pl_module.hparams["path_results"]) / "checkpoints" / f"ep_{self.epoch:03d}_smpl_{num_to_str_with_suffix(self.hparams['cnt_samples_processed'])}"
+                print("saving to ", path_checkpoint)
+                pl_module.save_metadata(path_checkpoint)
+                path_hf = path_checkpoint / "hf"
+                pl_module.save_as_hf(path_hf)
+            print("saving done")
+
     def setup(self, trainer, pl_module, stage=None):
         self.hparams = pl_module.hparams
         # TODO: check what happens on resume
         if "train_logs" not in self.hparams:
             self.hparams["train_logs"] = []
             self.hparams["cnt_samples_processed"] = 0
-            self.hparams["train_logs"].append({"epoch": -1, "epoch_time": 0.0})
-            path_checkpoint = Path(self.hparams["path_results"]) / "checkpoints" / "ep_-1_smpl_000" / "hf"
-            if trainer.global_rank == 0:
-                if pl_module.hparams["per_epoch_snapshot"]:
-                    pl_module.save_as_hf(path_checkpoint)
+            self.hparams["train_logs"].append({})
+            self.hparams["train_logs"][-1]["epoch"] = -1
+            self.hparams["train_logs"][-1]["epoch_time"] = 0.0
+            self.hparams["train_logs"][-1]["cnt_samples_processed"] = 0
+            self.epoch = -1
+            self.maybe_save_metadata_and_hf(trainer, pl_module)
         self.log = self.hparams["train_logs"]
         self.time_last_checkpoint = timer()
         # check if we are not resuimg
-
 
     def on_train_epoch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
         pl_module.hparams["train_logs"].append({})
@@ -51,13 +62,7 @@ class Monitor(pl.Callback):
             self.log[-1]["samples_per_second_worker"] = self.hparams["train_logs"][-1]["samples_per_second"] / self.hparams["cnt_workers"]
             self.log[-1]["cnt_samples_processed"] = self.hparams["cnt_samples_processed"]
             pl_module.save_metadata(pl_module.hparams["path_results"])
-            if pl_module.hparams["per_epoch_snapshot"]:
-                path_checkpoint = Path(pl_module.hparams["path_results"]) / "checkpoints" / f"ep_{self.epoch:03d}_smpl_{num_to_str_with_suffix(self.hparams['cnt_samples_processed'])}"
-                print("saving to ", path_checkpoint)
-                pl_module.save_metadata(path_checkpoint)
-                path_hf = path_checkpoint / "hf"
-                pl_module.save_as_hf(path_hf)
-            print("saving done")
+            self.maybe_save_metadata_and_hf(trainer, pl_module)
 
     def on_validation_epoch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
         # in PL train epoch start hook activates, then all training batches are processed
