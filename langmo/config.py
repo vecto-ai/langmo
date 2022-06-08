@@ -16,7 +16,7 @@ def is_yaml_config(path):
 
 def is_resume_run(path):
     _logger = logging.getLogger(__name__)
-    _logger.info("starting new experiment")
+    _logger.info("resuming the experiment")
     path = Path(path) / "metadata.json"
     return path.is_file() and path.suffix == ".json"
 
@@ -133,8 +133,8 @@ class Config(dict):
     def set_defaults(self):
         self.defaults = dict(
             name_task=self.name_task,
+            cnt_gpus_per_node=int(os.environ["NUM_GPUS_PER_NODE"]),
             test=False,
-            use_gpu=True,
             precision=32,
             batch_size=32,
             padding="max_length",

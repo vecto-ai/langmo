@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+# TODO: move this to langmo.nn
 class SiameseBase(nn.Module):
     def __init__(self, bottom, top, freeze_bottom=True):
         super().__init__()
@@ -14,7 +15,7 @@ class SiameseBase(nn.Module):
         return torch.cat((u, v, torch.abs(u - v), u * v), 1)
 
     def save_pretrained(self, path):
-        print("save poretrained not impolemented")
+        print("save poretrained not implemented")
 
 
 class BaseBERTWrapper(nn.Module):
