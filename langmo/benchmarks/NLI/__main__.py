@@ -1,11 +1,10 @@
 import torch
 import torch.nn.functional as F
+# import vecto
+# import vecto.embeddings
 from langmo.benchmarks.base import (BaseClassificationModel,
                                     ClassificationFinetuner,
                                     aggregate_batch_stats, allreduce)
-# from protonn.distributed import dist_adapter as da
-# import vecto
-# import vecto.embeddings
 from torchmetrics.functional import accuracy
 
 from .data import NLIDataModule, labels_entail, labels_heuristics

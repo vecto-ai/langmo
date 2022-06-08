@@ -1,5 +1,3 @@
-import os
-
 import pytorch_lightning as pl
 import torch
 from langmo.callbacks.layernorm import LayerNormCallback
@@ -14,11 +12,12 @@ def get_trainer(params, cluster_env):
     #     params["path_results"] = "/tmp"
     # gpus = [cluster_env.local_rank()] if params["use_gpu"] else 0
     # print(f"### trying to use gpus: {gpus} ")
-    if params["use_gpu"]:
-        assert torch.cuda.device_count() > 0, "Asked for `use_gpu` but no gpu detected"
+    if params["cnt_gpus_per_node"] > 0:
+        assert torch.cuda.device_count() > 0, "Asked for GPUs but none detected"
     lr_monitor = LearningRateMonitor(logging_interval="step")
+    # TODO: check if making only local GPU visible makes init faster
     # gpus = [int(os.environ["RANK"])] if params["use_gpu"] else 0
-    gpus = -1 if params["use_gpu"] else 0
+    gpus = -1 if (params["cnt_gpus_per_node"] > 0) else 0
     pl.utilities.rank_zero.rank_zero_only.rank = cluster_env.global_rank()
     logger = WandbLogger(
             project=params["name_project"],

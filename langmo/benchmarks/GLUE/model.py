@@ -1,12 +1,12 @@
-import torch.nn.functional as F
-import torch
 import math
-import torchmetrics
-from torchmetrics.functional import accuracy, pearson_corrcoef
 
-from langmo.config import GLUEConfig
+import torch
+import torch.nn.functional as F
+import torchmetrics
 from langmo.base import PLBase
 from langmo.benchmarks.base import BaseFinetuner, allreduce
+from langmo.config import GLUEConfig
+from torchmetrics.functional import accuracy, pearson_corrcoef
 from transformers import AutoModelForSequenceClassification
 
 
@@ -83,6 +83,7 @@ class GLUEModel(PLBase):
         self.log_dict(metrics)
         # TODO: make sure metrics are logged
         # self.save_metrics_and_model(metrics)
+
 
 class GLUEFineTuner(BaseFinetuner):
     def _init_params(self, name_task):

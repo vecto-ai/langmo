@@ -1,6 +1,5 @@
 import datasets
 import pytorch_lightning as pl
-from protonn.distributed import dist_adapter as da
 from torch.utils.data import DataLoader, DistributedSampler
 
 
@@ -19,8 +18,8 @@ class BaseDataModule(pl.LightningDataModule):
         shuffle = (split == "train") and (self.shuffle)
         if self.test:
             ds_size = self.batch_size * 2
-            start = da.rank() * ds_size
-            split = f"{split}[{start}:{start+ds_size}]"
+            start = self.trainer.global_rank * ds_size
+            split = f"{split}[{start}:{start + ds_size}]"
             dataset = self._init_dataset(dataset_name, split=split)
             sampler = None
         elif shuffle:
@@ -41,7 +40,7 @@ class BaseDataModule(pl.LightningDataModule):
             collate_fn=self.collator,
             sampler=sampler,
         )
-    
+
     def _init_dataset(self, dataset_name, split):
         return datasets.load_dataset(dataset_name, split=split)
 

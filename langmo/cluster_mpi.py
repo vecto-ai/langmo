@@ -24,7 +24,9 @@ class MPIClusterEnvironment(ClusterEnvironment):
     def __init__(self, **kwargs):
         self.comm = MPI.COMM_WORLD
         # TODO: automate this
-        self.gpus_per_node = int(os.environ["NUM_GPUS_PER_NODE"])
+        self.ranks_per_node = int(os.environ["NUM_GPUS_PER_NODE"])
+        if self.ranks_per_node == 0:
+            self.ranks_per_node = 1
         master_addr = get_address()
         self.master_addr = self.comm.bcast(master_addr, root=0)
         os.environ["RANK"] = str(self.comm.Get_rank())
@@ -45,11 +47,11 @@ class MPIClusterEnvironment(ClusterEnvironment):
         return self.comm.Get_rank()
 
     def local_rank(self) -> int:
-        return self.comm.Get_rank() % self.gpus_per_node
+        return self.comm.Get_rank() % self.ranks_per_node
 
     def node_rank(self) -> int:
         # TODO: make sure processes allocate like this
-        return self.comm.Get_rank() // self.gpus_per_node
+        return self.comm.Get_rank() // self.ranks_per_node
 
     @property
     def main_address(self) -> str:
@@ -60,7 +62,7 @@ class MPIClusterEnvironment(ClusterEnvironment):
         return 31415
 
     def cnt_nodes(self) -> int:
-        return self.comm.Get_size() // self.gpus_per_node
+        return self.comm.Get_size() // self.ranks_per_node
 
     def set_world_size(self, size: int) -> None:
         # raise(NotImplementedError("why would you set world size"))

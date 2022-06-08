@@ -1,28 +1,20 @@
+from pathlib import Path
 from typing import Optional
 
-import pytorch_lightning as pl
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F
 from langmo.base import PLBase
-from langmo.benchmarks.NLI.model import BertWithCLS, BertWithLSTM, Siamese, TopMLP2
-from langmo.callbacks.monitor import Monitor
+from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
+                                         TopMLP2)
 from langmo.cluster_mpi import MPIClusterEnvironment
 from langmo.config import ConfigFinetune as Config
 from langmo.nn.utils import reinit_model, reinit_tensor
 from langmo.trainer import get_trainer
-
-# from protonn.distributed import dist_adapter as da
 from protonn.utils import get_time_str
-from pytorch_lightning.callbacks import LearningRateMonitor
 from torchmetrics.functional import accuracy
-from transformers import (
-    AutoModel,
-    AutoModelForQuestionAnswering,
-    AutoModelForSequenceClassification,
-    AutoTokenizer,
-)
-from pathlib import Path
+from transformers import (AutoModel, AutoModelForQuestionAnswering,
+                          AutoModelForSequenceClassification, AutoTokenizer)
 from transformers import logging as tr_logging
 
 
@@ -158,6 +150,7 @@ def aggregate_batch_stats(batch_stats, key):
     else:
         value = torch.tensor(0)
     # print("reducing", key, value)
-    value = value.cuda()
+    if torch.cuda.is_available():
+        value = value.cuda()
     value = allreduce(value, op=dist.ReduceOp.SUM)
     return value.item()

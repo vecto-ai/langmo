@@ -29,14 +29,16 @@ class GLUEDataModule(BaseDataModule):
     def __init__(self, tokenizer, params):
         super().__init__(tokenizer, params)
         self.collator = GLUECollator(self.tokenizer, params)
+        self.params = params
 
     def setup(self, stage=None):
         self.cnt_train_samples = 0
         if self.trainer.global_rank == 0:
             ds = self._init_dataset(self.params["name_task"])
             self.cnt_train_samples = len(ds["train"])
-
-        num_samples_tensor = torch.LongTensor([self.cnt_train_samples]).cuda()
+        num_samples_tensor = torch.LongTensor([self.cnt_train_samples])
+        if self.params["cnt_gpus_per_node"] > 0:
+            num_samples_tensor = num_samples_tensor.cuda()
         dist.broadcast(num_samples_tensor, 0)
         self.cnt_train_samples = num_samples_tensor.item()
 
