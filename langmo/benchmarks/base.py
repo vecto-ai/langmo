@@ -68,8 +68,6 @@ class BaseFinetuner:
             reinit_model(self.hparamsnet)
             name_run += "_RND"
         name_run += f"_{'↓' if self.params['uncase'] else '◯'}_{timestamp[:-3]}"
-        if "suffix" in self.params:
-            self.params["name_project"] += f"_{self.params['suffix']}"
         self.params["name_run"] = name_run
         self.model = class_model(self.net, self.tokenizer, self.params)
         self.maybe_randomize_special_tokens()
