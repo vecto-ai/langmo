@@ -9,8 +9,8 @@ def main():
         return (-1)
     print("this is in-memory shuffler, be sure you have enough RAM")
     path_in = Path(sys.argv[1])
-    path_out = sys.argv[2]
-
+    path_out = Path(sys.argv[2])
+    path_out.parent.absolute().mkdir(parents=True, exist_ok=True)
     lines = []
     for p in path_in.rglob("*.jsonl"):
         print(p.resolve())
