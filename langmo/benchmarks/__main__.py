@@ -7,15 +7,17 @@ from langmo.benchmarks import create_files_and_submit
 
 def main():
     print("scheduling benchmark runs")
-    path = Path(sys.argv[1])
+    path = Path(sys.argv[1]).resolve()
     name_task = sys.argv[2]
-    # TODO: support detecting if we are in a single snapshot  - and not search subdirs then
-    if not (path / "checkpoints").exists():
+    if (path / "checkpoints").exists():
+        for subdir in (path / "checkpoints").iterdir():
+            print("scheduling", subdir)
+            create_files_and_submit(subdir, name_task)
+    elif (path / "hf").exists():
+        print("schdulign single run at", path)
+        create_files_and_submit(path, name_task)
+    else:
         raise RuntimeError("directory does not have checkpoints")
-    path = path.resolve() / "checkpoints"
-    for subdir in path.iterdir():
-        print("scheduling", subdir)
-        create_files_and_submit(subdir, name_task)
 
 
 if __name__ == "__main__":
