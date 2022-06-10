@@ -7,12 +7,15 @@ from pytorch_lightning.plugins.environments import ClusterEnvironment
 
 def get_address():
 
+    if os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] == "MPI":
+        return ""
+
     st = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        st.connect(('10.255.255.255', 1))
+        st.connect(("10.255.255.255", 1))
         IP = st.getsockname()[0]
     except Exception:
-        IP = '127.0.0.1'
+        IP = "127.0.0.1"
         raise RuntimeError("can't determine routable IP")
     finally:
         st.close()
@@ -20,7 +23,6 @@ def get_address():
 
 
 class MPIClusterEnvironment(ClusterEnvironment):
-
     def __init__(self, **kwargs):
         self.comm = MPI.COMM_WORLD
         # TODO: automate this
