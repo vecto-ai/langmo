@@ -86,8 +86,9 @@ class GLUEModel(PLBase):
 
 
 class GLUEFineTuner(BaseFinetuner):
-    def _init_params(self, name_task):
+    def __init__(self, name_task, class_data_module, class_model):
         self.params = GLUEConfig(name_task)
+        super().__init__(class_data_module, class_model)
 
     def create_net(self):
         name_model = self.params["model_name"]
