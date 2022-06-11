@@ -44,7 +44,7 @@ class BatchIter:
         self._thread.start()
 
     def adjust_processed_batches_on_resume(self):
-        if len(self.params["train_logs"]) > 1:
+        if "train_logs" in self.params and len(self.params["train_logs"]) > 1:
             # this is resume
             cnt_samples_seen_in_last_epoch = (
                 self.params["cnt_samples_processed"]

@@ -5,8 +5,8 @@ from langmo.cluster_mpi import MPIClusterEnvironment
 from langmo.config import ConfigPretrain as Config
 from langmo.log_helper import set_root_logger
 from langmo.trainer import get_trainer
-# from protonn.distributed import dist_adapter as da
 from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
+from transformers import logging as tr_logging
 
 from .data import TextDataModule
 from .plmodel import PLModel
@@ -18,7 +18,6 @@ from .plmodel import PLModel
 # from langmo.nn.utils import reinit_model
 
 
-# from transformers import logging as tr_logging
 
 def build_model(params):
     # support loading weights for continuation of pretraining
@@ -52,12 +51,10 @@ def get_run_name(params):
 def main():
     set_root_logger()
     cluster_env = MPIClusterEnvironment()
-    # da.init("ddp")
-    # if da.rank() != 0:
-    #     tr_logging.set_verbosity_error()  # to reduce warning of unused weights
+    if cluster_env.global_rank() != 0:
+        tr_logging.set_verbosity_error()  # to reduce warning of unused weights
     name_task = "pretrain"
-    params = Config(name_task=name_task)
-    # params = Config(name_task=name_task, is_master=(da.rank() == 0))
+    params = Config(name_task=name_task, is_master=cluster_env.global_rank() == 0)
     # TODO: make logging report rank and size and use logging
     params["name_run"] = get_run_name(params)
     if cluster_env.global_rank() == 0:

@@ -46,12 +46,10 @@ class BaseClassificationModel(PLBase):
 class BaseFinetuner:
     def __init__(self, name_task, class_data_module, class_model):
         # TODO: refactor this into sub-methods
-        # TODO: and this da is over-complicated
         cluster_env = MPIClusterEnvironment()
-        # da.init("horovod")
         if cluster_env.global_rank() != 0:
             tr_logging.set_verbosity_error()  # to reduce warning of unused weights
-        self._init_params(name_task)
+        self._init_params(name_task, cluster_env.global_rank() == 0)
         if cluster_env.global_rank() == 0:
             path_wandb = Path(self.params["path_results"]) / "wandb"
             path_wandb.mkdir(parents=True, exist_ok=True)
@@ -83,8 +81,9 @@ class BaseFinetuner:
         # TODO: Please use the DeviceStatsMonitor callback directly instead.
         # TODO: sync_batchnorm: bool = False, to params
 
-    def _init_params(self, name_task):
-        self.params = Config(name_task=name_task)
+    # TODO: I think these should be done though the inherited init...
+    def _init_params(self, name_task, is_master):
+        self.params = Config(name_task=name_task, is_master=is_master)
 
     def maybe_randomize_special_tokens(self):
         if "rand_tok" in self.params:
