@@ -46,12 +46,10 @@ class BaseClassificationModel(PLBase):
 class BaseFinetuner:
     def __init__(self, name_task, class_data_module, class_model, config_type=ConfigFinetune):
         # TODO: refactor this into sub-methods
-        # TODO: and this da is over-complicated
         cluster_env = MPIClusterEnvironment()
-        # da.init("horovod")
         if cluster_env.global_rank() != 0:
             tr_logging.set_verbosity_error()  # to reduce warning of unused weights
-        self.params = config_type(name_task)
+        self.params = config_type(name_task, cluster_env.global_rank() == 0)
         if cluster_env.global_rank() == 0:
             path_wandb = Path(self.params["path_results"]) / "wandb"
             path_wandb.mkdir(parents=True, exist_ok=True)

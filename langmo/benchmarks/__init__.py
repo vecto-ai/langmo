@@ -2,7 +2,7 @@ import os
 import stat
 
 import yaml
-from langmo.config import load_yaml_or_empty, GLUETASKTOKEYS
+from langmo.config import GLUETASKTOKEYS, load_yaml_or_empty
 
 # TODO: make console logs go to the target dir
 
@@ -11,7 +11,6 @@ def schedule_eval_run(path):
     # TODO: support capping max runs
     # TODO: add some warnings/ howto later
     config = load_yaml_or_empty("./configs/langmo.yaml")
-    # cmd_submit = "qsub"
     num_runs = 1
     for _ in range(num_runs):
         if "submit_command" in config:

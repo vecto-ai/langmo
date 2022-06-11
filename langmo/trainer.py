@@ -33,7 +33,7 @@ def get_trainer(params, cluster_env):
         num_nodes=cluster_env.cnt_nodes(),
         num_sanity_val_steps=0 if "resume" in params else -1,
         max_epochs=params["cnt_epochs"],
-        strategy="ddp",
+        strategy="ddp_find_unused_parameters_false",
         precision=params["precision"],
         replace_sampler_ddp=False,
         logger=logger,

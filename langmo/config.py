@@ -2,13 +2,14 @@ import logging
 import os
 import os.path
 import sys
+import time
 from pathlib import Path
 
 import yaml
 from langmo.log_helper import set_root_logger
 from langmo.utils import get_unique_results_path, parse_float
-# from protonn.distributed import dist_adapter as da
 from protonn.utils import get_time_str, load_json
+from transformers import set_seed
 
 
 def is_yaml_config(path):
@@ -62,17 +63,17 @@ def load_yaml_config(path_config):
 
 
 class Config(dict):
-    def __init__(self, name_task, is_master=False, param_path=None):
+    def __init__(self, name_task, is_master, param_path=None):
         self.name_task = name_task
         set_root_logger()
         _logger = logging.getLogger(__name__)
-        if len(sys.argv) < 2 and param_path == None:
+        if len(sys.argv) < 2 and param_path is None:
             print("run main.py config.yaml")
             print("or")
             print("run main.py logs/path/to/snapshot/epoc10_step42000")
             exit(-1)
 
-        if param_path == None:
+        if param_path is None:
             path = Path(sys.argv[1])
         else:
             path = Path(param_path)
@@ -84,22 +85,11 @@ class Config(dict):
             self.read_from_yaml_and_set_default(path, name_task)
             # self.add_distributes_info()
 
-        # TODO: this breaks finetuning!
-        # TODO: not even makes sense, it's not about path corpus, it's about path model
-        # path_model = self["path_corpus"]
-        # if is_resume_run(path_model):
-        #     # TODO: decide what to do when e.g. cnt_workers changed
-        #     _logger.info("resuming from checkpoint")
-        #     self.update(load_resume_run_params(path_model))
-        # else:
-        #     _logger.info("not resuming")
-
-    def add_distributes_info(self):
-        # cnt_workers = da.world_size()
-        batch_size = self["batch_size"]
-        acc_batches = self["accumulate_batches"]
-        self["cnt_workers"] = cnt_workers
-        self["batch_size_effective"] = batch_size * cnt_workers * acc_batches
+    # def add_distributed_info(self):
+    #     batch_size = self["batch_size"]
+    #     acc_batches = self["accumulate_batches"]
+    #     self["cnt_workers"] = cnt_workers
+    #     self["batch_size_effective"] = batch_size * cnt_workers * acc_batches
 
     def read_from_yaml_and_set_default(self, path, name_task):
         _logger = logging.getLogger(__name__)
@@ -117,7 +107,7 @@ class Config(dict):
                 raise RuntimeError(f"required key not in config {key}")
         for key, value in self.defaults.items():
             if key not in user_config:
-                ## tokenizer defaults to model_name if absent
+                # tokenizer defaults to model_name if absent
                 if key == "tokenizer_name":
                     value = user_config.get(key, user_config["model_name"])
                 if self._is_master:
@@ -143,6 +133,7 @@ class Config(dict):
         # Convert to "FP16" to (int) 16
         if isinstance(self["precision"], str):
             self["precision"] = int(self["precision"].lower().replace("fp", ""))
+        set_seed(self["seed"])
         # TODO: we put it here for now for simplicitly
         # this needs to be revisited when we do model parallel
         # TODO: also we whould think what we do when we resume with different number of workers
@@ -175,6 +166,7 @@ class Config(dict):
             seconds_between_snapshots=3600,
             per_epoch_snapshot=True,
             replace_hf_config=dict(),
+            seed=int(time.time()),
         )
         self.required_options = set()
         self.required_options.add("model_name")
