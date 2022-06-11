@@ -1,5 +1,6 @@
 import logging
 import os
+import os.path
 import sys
 from pathlib import Path
 
@@ -33,9 +34,25 @@ def load_resume_run_params(path):
     return params
 
 
+def load_yaml_file(path):
+    with open(path, "r") as cfg:
+        data = yaml.load(cfg, Loader=yaml.SafeLoader)
+    return data
+
+
+def load_yaml_or_empty(path):
+    path = Path(path)
+    if path.exists():
+        with open(path, "r") as cfg:
+            data = yaml.load(cfg, Loader=yaml.SafeLoader)
+    else:
+        data = {}
+    return data
+
+
+# TODO: raname
 def load_yaml_config(path_config):
-    with open(path_config, "r") as cfg:
-        params_user = yaml.load(cfg, Loader=yaml.SafeLoader)
+    params_user = load_yaml_file(path_config)
     parse_float(params_user, "initial_lr")
     parse_float(params_user, "max_lr")
     parse_float(params_user, "eps")
