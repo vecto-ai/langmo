@@ -7,6 +7,8 @@ from langmo.benchmarks import create_files_and_submit
 
 def main():
     print("scheduling benchmark runs")
+    # TODO: use argparse
+    # TODO: allow extra config to overwrite default yaml for task
     path = Path(sys.argv[1]).resolve()
     name_task = sys.argv[2]
     if (path / "checkpoints").exists():
