@@ -2,7 +2,7 @@ import os
 import stat
 
 import yaml
-from langmo.config import load_yaml_or_empty
+from langmo.config import load_yaml_or_empty, GLUETASKTOKEYS
 
 # TODO: make console logs go to the target dir
 
@@ -31,8 +31,8 @@ def make_executable(path):
 def create_config_file(path_snapshot, path_config):
     # TUDO: add warnings when overwriting
     user_config = load_yaml_or_empty("./configs/auto_finetune.yaml")
-    user_config["model_name"] = str(path_snapshot / 'hf')
-    user_config["path_results"] = str(path_snapshot / 'eval')
+    user_config["model_name"] = str(path_snapshot / "hf")
+    user_config["path_results"] = str(path_snapshot / "eval")
     user_config["suffix"] = "auto"
     with open(path_config, "w") as file_config:
         yaml.dump(user_config, file_config)
@@ -47,7 +47,11 @@ def create_job_file(path_jobscript, path_config, name_task):
         if name_task == "NLI":
             cmd = f"python3 -m langmo.benchmarks.NLI {path_config}\n"
         else:
-            # TODO: check if task is in supported list to not waste time
+            available_glue_tasks = list(GLUETASKTOKEYS.keys())
+            if not name_task in available_glue_tasks:
+                raise Exception(
+                    f"{name_task} is not supported. One among {'|'.join(available_glue_tasks)} should be chosen."
+                )
             cmd = f"python3 -m langmo.benchmarks.GLUE {path_config} {name_task}\n"
         file_jobscript.write(cmd)
     make_executable(path_jobscript)

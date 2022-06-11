@@ -63,13 +63,23 @@ example config file:
 Automatic evaluation
 --------------------
 
-langmo supports automatic scheduling (currently on clusters using univa grid engine, more generic support comming soon) of evaluation runs for a model saved in a given location, 
-or for all snapshots found int /snapshots folder. 
+langmo supports automatic scheduling of evaluation runs for a model saved in a given location, or for all snapshots found int /snapshots folder.
+To configure langmo the user has to create the following file:
+
+./configs/langmo.yaml with entry "submit_command" correspoding to a job submission command of a given cluster. If the file is not present, the jobs will not be submitted to the job queue, but executed immediately one by one on the same node.
+
+./configs/auto_finetune.inc - the content of this file will be copied to the beginning of the job scripts. Place here directive for e.g. slurm job scheduler such as 
+which resource group to use, how many nodes to allocate, time limit etc. Set up all necessary environment variables, particulalry NUM_GPUS_PER_NODE and
+PL_TORCH_DISTRIBUTED_BACKED (MPI, NCCL or GLOO). Finally add mpirun command with necessay option and end the file with new line.
+Command to invoke langmo in the right way will be added automatically.
+
+./configs/auto_finetune.yaml - any parameters such as batch size etc to owerride the defaults in a fine-tuning run.
+
 To schedule evaluation jobs run from the login node::
 
     python -m langmo.benchmarks path_to_model task_name
 
-the results will be saved in the eval/task_name/run_name/ subfolder in the same folder the model is saved. 
+the results will be saved in the eval/task_name/run_name/ subfolder in the same folder the model is saved.
 
 Fugaku notes
 ------------
