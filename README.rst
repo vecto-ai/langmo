@@ -5,25 +5,47 @@ The library for distributed pretraining and finetuning of language models.
 
 Supported features:
 
-- vanilla pre-training on BERT-like models
-- finetuning the following datasets
+- vanilla pre-training of BERT-like models
+- distributed training on multi-node/multi-GPU systems
+- benchmarking/finetuning the following tasks
+    - all GLUE
     - MNLI  + additional validation on HANS
-    - SST
     - more coming soon
 - using siamese architectures for finutuning
 
 
-to perfrorm fibetuning on a task, e.g. NLI run as::
+Pretraining
+-----------
 
-    horovodrun -np N python -m langmo.benchmarks.NLI config.yaml
+Pretraining a model::
 
-Temporarily for any glue task:
+    mpirun -np N python -m langmo.pretraining config.yaml
 
-    python -m langmo.benchmarks.GLUE config_file.yaml glue_task
+langmo saves 2 types of snapshots: in pytorch_ligning format 
 
-glue_task among: **cola, rte, stsb, mnli, mnli-mm, mrpc, sst2, qqp, qnli**
+To resume crashed/aborted pretraining session:
 
-example cofig file:
+    mpirun -np N python -m langmo.pretraining.resume path_to_run
+
+
+Finetuning/Evaluation
+---------------------
+
+Fintuning on one of the GLUE tasks::
+
+    mpirun -np N python -m langmo.benchmarks.GLUE config.yaml glue_task
+
+supported tasks: **cola, rte, stsb, mnli, mnli-mm, mrpc, sst2, qqp, qnli**
+
+NLI task has additional special implentation which supports validation on adversarial HANS dataset,
+as well as additional staticics for each label/heuristic.
+
+To perfrorm fibetuning on NLI run as::
+
+    mpirun -np N python -m langmo.benchmarks.NLI config.yaml
+
+
+example config file:
 
 ::
 
@@ -37,6 +59,17 @@ example cofig file:
     encoder_wrapper: pooler
     shuffle: true
 
+
+Automatic evaluation
+--------------------
+
+langmo supports automatic scheduling (currently on clusters using univa grid engine, more generic support comming soon) of evaluation runs for a model saved in a given location, 
+or for all snapshots found int /snapshots folder. 
+To schedule evaluation jobs run from the login node::
+
+    python -m langmo.benchmarks path_to_model task_name
+
+the results will be saved in the eval/task_name/run_name/ subfolder in the same folder the model is saved. 
 
 Fugaku notes
 ------------
