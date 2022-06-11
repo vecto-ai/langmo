@@ -1,15 +1,15 @@
 import socket
 from pathlib import Path
-from langmo.cluster_mpi import MPIClusterEnvironment
 
+from langmo.cluster_mpi import MPIClusterEnvironment
 from langmo.config import ConfigPretrain as Config
 from langmo.log_helper import set_root_logger
+from langmo.trainer import get_trainer
 # from protonn.distributed import dist_adapter as da
 from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
 
 from .data import TextDataModule
 from .plmodel import PLModel
-from langmo.trainer import get_trainer
 
 # from langmo.cluster_mpi import MPIClusterEnvironment
 # from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
@@ -24,8 +24,7 @@ def build_model(params):
     # support loading weights for continuation of pretraining
     tokenizer = AutoTokenizer.from_pretrained(params["tokenizer_name"])
     config = AutoConfig.from_pretrained(params["model_name"])
-    
-    ## update config with replace_hf_configs provided in yaml file
+    # update config with replace_hf_configs provided in yaml file
     config.update(params["replace_hf_config"])
 
     net = AutoModelForMaskedLM.from_config(config)

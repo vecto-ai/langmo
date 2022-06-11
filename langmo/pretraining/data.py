@@ -6,8 +6,7 @@ from threading import Thread
 
 import pytorch_lightning as pl
 import torch
-# from protonn.distributed import dist_adapter as da
-from torch.utils.data import DataLoader, DistributedSampler
+# from torch.utils.data import DataLoader, DistributedSampler
 from vecto.corpus import Corpus, DirCorpus
 
 IGNORE_TOKEN_ID = -100
@@ -30,12 +29,35 @@ class BatchIter:
         self.batch_size = params["batch_size"]
         self.max_length = params["max_length"]
         self.tokenizer = tokenizer
-        self.batches_per_epoch = params["cnt_samples_per_epoch"] / (params["batch_size"] * params["cnt_workers"])
+        self.batches_per_epoch = params["cnt_samples_per_epoch"] / (
+            params["batch_size"] * params["cnt_workers"]
+        )
         print("required samples per epoch", params["cnt_samples_per_epoch"])
         print("batch size", params["batch_size"])
         print("cnt_workers", params["cnt_workers"])
         print("batches per epoch", self.batches_per_epoch)
-        self.cnt_batches_produced = 0
+        self.adjust_processed_batches_on_resume()
+        self.prepare_dummy_batch()
+        self.ignore_token_id = IGNORE_TOKEN_ID
+        self._queue = Queue(maxsize=5)
+        self._thread = Thread(target=self.thread, args=(), daemon=True)
+        self._thread.start()
+
+    def adjust_processed_batches_on_resume(self):
+        if len(self.params["train_logs"]) > 1:
+            # this is resume
+            cnt_samples_seen_in_last_epoch = (
+                self.params["cnt_samples_processed"]
+                - self.params["train_logs"][-2]["cnt_samples_processed"]
+            )
+            self.cnt_batches_produced = cnt_samples_seen_in_last_epoch / (
+                self.params["batch_size"] * self.params["cnt_workers"]
+            )
+        else:
+            self.cnt_batches_produced = 0
+
+    def prepare_dummy_batch(self):
+        # this is for perf measrumenet w/o IO bottleneck
         self.dummy_batch = TBatch(
             input_ids=torch.zeros(
                 (self.batch_size, self.max_length), dtype=torch.int64
@@ -46,11 +68,6 @@ class BatchIter:
             ),
             labels=torch.zeros((self.batch_size, self.max_length), dtype=torch.int64),
         )
-        self.ignore_token_id = IGNORE_TOKEN_ID
-        self._queue = Queue(maxsize=5)
-        self._thread = Thread(target=self.thread, args=(), daemon=True)
-        self._thread.start()
-        # this is not well documented but seems to apply to all HF models
 
     def __iter__(self):
         return self
@@ -80,7 +97,9 @@ class BatchIter:
         if self.params["mask_special_tokens"]:
             mask_non_special = line != tokenizer.pad_token_id
         else:
-            mask_non_special = torch.tensor([i not in tokenizer.all_special_ids for i in line])
+            mask_non_special = torch.tensor(
+                [i not in tokenizer.all_special_ids for i in line]
+            )
 
         mask_with_mask = (rolls < proba_masking) & mask_non_special
         mask_with_random = (
@@ -98,7 +117,9 @@ class BatchIter:
 
         token_ids[mask_with_mask] = tokenizer.mask_token_id
         token_ids[mask_with_random] = random_tokens[mask_with_random]
-        labels[~(mask_with_mask | mask_with_random | mask_with_original)] = ignore_token_id
+        labels[
+            ~(mask_with_mask | mask_with_random | mask_with_original)
+        ] = ignore_token_id
 
         # TODO: check if we have too few or too many masks?
         # wasn't constant number if mask positions better?

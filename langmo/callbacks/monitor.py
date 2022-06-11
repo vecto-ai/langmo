@@ -54,13 +54,12 @@ class Monitor(pl.Callback):
         # TODO: this is here since we are trhing to remove valiation epoch
         self.time_end = timer()
         epoch_time = self.time_end - self.time_start
+        self.log[-1]["epoch_time"] = epoch_time
+        self.log[-1]["samples_per_second"] = self.hparams["cnt_samples_per_epoch"] / epoch_time
+        self.log[-1]["samples_per_second_worker"] = self.hparams["train_logs"][-1]["samples_per_second"] / self.hparams["cnt_workers"]
+        self.log[-1]["cnt_samples_processed"] = self.hparams["cnt_samples_processed"]
         if trainer.global_rank == 0:
-
             print(f"@@@@ perf callback: train epoch {pl_module.current_epoch} end, done in {epoch_time} sec")
-            self.log[-1]["epoch_time"] = epoch_time
-            self.log[-1]["samples_per_second"] = self.hparams["cnt_samples_per_epoch"] / epoch_time
-            self.log[-1]["samples_per_second_worker"] = self.hparams["train_logs"][-1]["samples_per_second"] / self.hparams["cnt_workers"]
-            self.log[-1]["cnt_samples_processed"] = self.hparams["cnt_samples_processed"]
             pl_module.save_metadata(pl_module.hparams["path_results"])
             self.maybe_save_metadata_and_hf(trainer, pl_module)
 
