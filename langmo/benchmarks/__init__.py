@@ -33,6 +33,7 @@ def get_results_path(path_snapshot, name_task):
     path = path / name_task
     # seed-batch-hash
     path = path / "NAME_RUN"
+    path.mkdir(parents=True, exist_ok=True)
     return path
 
 
@@ -69,7 +70,6 @@ def create_job_file(path_jobscript, path_config, name_task):
 
 def create_files_and_submit(path_snapshot, name_task):
     path_out = get_results_path(path_snapshot, name_task)
-    path_out.mkdir(parents=True, exist_ok=True)
 
     path_config = path_out / f"auto_{name_task}.yaml"
     create_config_file(path_snapshot, path_config, path_out)
