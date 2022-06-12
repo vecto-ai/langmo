@@ -28,23 +28,31 @@ def make_executable(path):
     os.chmod(path, st.st_mode | stat.S_IEXEC)
 
 
-def get_results_path(path_snapshot, name_task):
-    path = path_snapshot / "eval"
-    path = path / name_task
+def get_results_path(user_config, path_snapshot, name_task):
     # seed-batch-hash
-    path = path / "NAME_RUN"
+    bs = "no_batch_size"
+    if "batch_size" in user_config:
+        bs = str(user_config["batch_size"])
+    else:
+        pass  # warning
+
+    seed = "no_seed"
+    if "seed" in user_config:
+        seed = user_config["seed"]
+    else:
+        pass  # warning
+
+    path = path_snapshot / "eval" / name_task / bs / seed
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
-def create_config_file(path_snapshot, path_config, path_out):
+def create_config_file(user_config, path_snapshot, path_config, path_out):
     # TUDO: add warnings when overwriting
-    user_config = load_yaml_or_empty("./configs/auto_finetune.yaml")
     user_config["model_name"] = str(path_snapshot / "hf")
     user_config["path_results"] = str(path_out)
     user_config["suffix"] = "auto"
     user_config["create_unique_path"] = False
-    # seed:
     with open(path_config, "w") as file_config:
         yaml.dump(user_config, file_config)
 
@@ -69,10 +77,11 @@ def create_job_file(path_jobscript, path_config, name_task):
 
 
 def create_files_and_submit(path_snapshot, name_task):
-    path_out = get_results_path(path_snapshot, name_task)
+    user_config = load_yaml_or_empty("./configs/auto_finetune.yaml")
+    path_out = get_results_path(user_config, path_snapshot, name_task)
 
     path_config = path_out / f"auto_{name_task}.yaml"
-    create_config_file(path_snapshot, path_config, path_out)
+    create_config_file(user_config, path_snapshot, path_config, path_out)
 
     path_jobscript = path_out / f"auto_{name_task}.sh"
     create_job_file(path_jobscript, path_config, name_task)
