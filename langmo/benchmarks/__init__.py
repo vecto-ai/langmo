@@ -2,6 +2,7 @@ import os
 import stat
 
 import yaml
+
 from langmo.config import GLUETASKTOKEYS, load_yaml_or_empty
 
 # TODO: make console logs go to the target dir
@@ -27,12 +28,22 @@ def make_executable(path):
     os.chmod(path, st.st_mode | stat.S_IEXEC)
 
 
-def create_config_file(path_snapshot, path_config):
+def get_results_path(path_snapshot, name_task):
+    path = path_snapshot / "eval"
+    path = path / name_task
+    # seed-batch-hash
+    path = path / "NAME_RUN"
+    return path
+
+
+def create_config_file(path_snapshot, path_config, path_out):
     # TUDO: add warnings when overwriting
     user_config = load_yaml_or_empty("./configs/auto_finetune.yaml")
     user_config["model_name"] = str(path_snapshot / "hf")
-    user_config["path_results"] = str(path_snapshot / "eval")
+    user_config["path_results"] = str(path_out)
     user_config["suffix"] = "auto"
+    user_config["create_unique_path"] = False
+    # seed:
     with open(path_config, "w") as file_config:
         yaml.dump(user_config, file_config)
 
@@ -57,11 +68,12 @@ def create_job_file(path_jobscript, path_config, name_task):
 
 
 def create_files_and_submit(path_snapshot, name_task):
-    # TODO: add unique suffix to filenames
-    path_eval = path_snapshot / "eval"
-    path_eval.mkdir(parents=True, exist_ok=True)
-    path_config = path_eval / f"auto_{name_task}.yaml"
-    path_jobscript = path_eval / f"auto_{name_task}.sh"
-    create_config_file(path_snapshot, path_config)
+    path_out = get_results_path(path_snapshot, name_task)
+    path_out.mkdir(parents=True, exist_ok=True)
+
+    path_config = path_out / f"auto_{name_task}.yaml"
+    create_config_file(path_snapshot, path_config, path_out)
+
+    path_jobscript = path_out / f"auto_{name_task}.sh"
     create_job_file(path_jobscript, path_config, name_task)
     schedule_eval_run(path_jobscript)
