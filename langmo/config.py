@@ -6,10 +6,13 @@ import time
 from pathlib import Path
 
 import yaml
-from langmo.log_helper import set_root_logger
-from langmo.utils import get_unique_results_path, parse_float
 from protonn.utils import get_time_str, load_json
 from transformers import set_seed
+
+from langmo.log_helper import set_root_logger
+from langmo.utils import get_unique_results_path, parse_float
+
+# from protonn.distributed import dist_adapter as da
 
 
 def is_yaml_config(path):
@@ -122,9 +125,9 @@ class Config(dict):
             if user_config["test"]:
                 name_project += "_test"
         self["name_project"] = name_project
-        self["path_results"] = os.path.join(self["path_results"], name_project)
         self["timestamp"] = get_time_str()
         if self["create_unique_path"]:
+            self["path_results"] = os.path.join(self["path_results"], name_project)
             self["path_results"] = get_unique_results_path(
                 self["path_results"],
                 self["model_name"],
