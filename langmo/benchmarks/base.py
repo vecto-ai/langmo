@@ -8,7 +8,7 @@ from langmo.base import PLBase
 from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
                                          TopMLP2)
 from langmo.cluster_mpi import MPIClusterEnvironment
-from langmo.config import ConfigFinetune as Config
+from langmo.config import ConfigFinetune
 from langmo.nn.utils import reinit_model, reinit_tensor
 from langmo.trainer import get_trainer
 from protonn.utils import get_time_str
@@ -44,12 +44,12 @@ class BaseClassificationModel(PLBase):
 
 
 class BaseFinetuner:
-    def __init__(self, name_task, class_data_module, class_model):
+    def __init__(self, name_task, class_data_module, class_model, config_type=ConfigFinetune):
         # TODO: refactor this into sub-methods
         cluster_env = MPIClusterEnvironment()
         if cluster_env.global_rank() != 0:
             tr_logging.set_verbosity_error()  # to reduce warning of unused weights
-        self._init_params(name_task, cluster_env.global_rank() == 0)
+        self.params = config_type(name_task, cluster_env.global_rank() == 0)
         if cluster_env.global_rank() == 0:
             path_wandb = Path(self.params["path_results"]) / "wandb"
             path_wandb.mkdir(parents=True, exist_ok=True)
@@ -80,10 +80,6 @@ class BaseFinetuner:
         self.trainer = get_trainer(self.params, cluster_env)
         # TODO: Please use the DeviceStatsMonitor callback directly instead.
         # TODO: sync_batchnorm: bool = False, to params
-
-    # TODO: I think these should be done though the inherited init...
-    def _init_params(self, name_task, is_master):
-        self.params = Config(name_task=name_task, is_master=is_master)
 
     def maybe_randomize_special_tokens(self):
         if "rand_tok" in self.params:
