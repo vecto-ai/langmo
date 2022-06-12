@@ -47,12 +47,12 @@ class BaseFinetuner:
     def __init__(self, name_task, class_data_module, class_model, config_type=ConfigFinetune):
         # TODO: refactor this into sub-methods
         cluster_env = MPIClusterEnvironment()
-        if cluster_env.global_rank() != 0:
-            tr_logging.set_verbosity_error()  # to reduce warning of unused weights
-        self.params = config_type(name_task, cluster_env.global_rank() == 0)
+        self.params = config_type(name_task, cluster_env)
         if cluster_env.global_rank() == 0:
             path_wandb = Path(self.params["path_results"]) / "wandb"
             path_wandb.mkdir(parents=True, exist_ok=True)
+        else:
+            tr_logging.set_verbosity_error()  # to reduce warning of unused weights
         cluster_env.barrier()
         timestamp = get_time_str()
         self.tokenizer = AutoTokenizer.from_pretrained(self.params["tokenizer_name"])

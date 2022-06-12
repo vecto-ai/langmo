@@ -1,18 +1,16 @@
 import logging
 import os
 import os.path
+import platform
 import sys
 import time
 from pathlib import Path
 
 import yaml
+from langmo.log_helper import set_root_logger
+from langmo.utils import parse_float
 from protonn.utils import get_time_str, load_json
 from transformers import set_seed
-
-from langmo.log_helper import set_root_logger
-from langmo.utils import get_unique_results_path, parse_float
-
-# from protonn.distributed import dist_adapter as da
 
 
 def is_yaml_config(path):
@@ -66,7 +64,7 @@ def load_yaml_config(path_config):
 
 
 class Config(dict):
-    def __init__(self, name_task, is_master, param_path=None):
+    def __init__(self, name_task, cluster_env, param_path=None):
         self.name_task = name_task
         set_root_logger()
         _logger = logging.getLogger(__name__)
@@ -81,18 +79,40 @@ class Config(dict):
         else:
             path = Path(param_path)
         self.set_defaults()
-        self._is_master = is_master
+        self._is_master = cluster_env.global_rank() == 0
 
         if is_yaml_config(path):
             _logger.info("starting new experiment")
             self.read_from_yaml_and_set_default(path, name_task)
-            # self.add_distributes_info()
+        else:
+            raise NotImplementedError("is this way of resume still supported?")
 
-    # def add_distributed_info(self):
-    #     batch_size = self["batch_size"]
-    #     acc_batches = self["accumulate_batches"]
-    #     self["cnt_workers"] = cnt_workers
-    #     self["batch_size_effective"] = batch_size * cnt_workers * acc_batches
+        self.add_distributed_info(cluster_env.world_size())
+        self.maybe_create_unique_path()
+
+    def get_run_folder(self):
+        timestamp = self["timestamp"][:-3]
+        hostname = platform.node().split(".")[0]
+        bs = self["batch_size_effective"]
+        lr = self["max_lr"] * self["cnt_workers"]
+        seed = self["seed"]
+        run_folder = f"{timestamp}_bs{bs}_lr{lr}_s{seed}_{hostname}"
+        # TODO: make this trully unique
+        return run_folder
+
+    def maybe_create_unique_path(self):
+        if self["create_unique_path"]:
+            self["path_results"] = os.path.join(self["path_results"], self["name_project"])
+            model_name = self["model_name"].split("/")[-1]
+            self["path_results"] = os.path.join(self["path_results"], model_name)
+            run_dir = self.get_run_folder()
+            self["path_results"] = os.path.join(self["path_results"], run_dir)
+
+    def add_distributed_info(self, cnt_workers):
+        batch_size = self["batch_size"]
+        acc_batches = self["accumulate_batches"]
+        self["cnt_workers"] = cnt_workers
+        self["batch_size_effective"] = batch_size * cnt_workers * acc_batches
 
     def read_from_yaml_and_set_default(self, path, name_task):
         _logger = logging.getLogger(__name__)
@@ -126,13 +146,6 @@ class Config(dict):
                 name_project += "_test"
         self["name_project"] = name_project
         self["timestamp"] = get_time_str()
-        if self["create_unique_path"]:
-            self["path_results"] = os.path.join(self["path_results"], name_project)
-            self["path_results"] = get_unique_results_path(
-                self["path_results"],
-                self["model_name"],
-                self["timestamp"],
-            )
         # Convert to "FP16" to (int) 16
         if isinstance(self["precision"], str):
             self["precision"] = int(self["precision"].lower().replace("fp", ""))
@@ -186,14 +199,16 @@ class ConfigPretrain(Config):
         self.required_options.add("cnt_samples_per_epoch")
 
 
-class ConfigResume(Config):
-    def __init__(self, name_task, old_params, is_master=False, param_path=None):
-        self.old_params = old_params
-        super().__init__(name_task, is_master=is_master, param_path=param_path)
+# TODO: this needs to be rewritten
+# here is a good place to check if BS changed etc
+# class ConfigResume(Config):
+#     def __init__(self, name_task, old_params, is_master=False, param_path=None):
+#         self.old_params = old_params
+#         super().__init__(name_task, is_master=is_master, param_path=param_path)
 
-    def set_defaults(self):
-        self.defaults = self.old_params
-        self.required_options = set()
+#     def set_defaults(self):
+#         self.defaults = self.old_params
+#         self.required_options = set()
 
 
 class ConfigFinetune(Config):

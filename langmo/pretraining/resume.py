@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 from langmo.cluster_mpi import MPIClusterEnvironment
-from langmo.config import ConfigResume as Config
+# from langmo.config import ConfigResume as Config
 from langmo.trainer import get_trainer
 from protonn.utils import load_json
 from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
@@ -16,6 +16,7 @@ def load_model_from_checkpoint(path, params):
     path_hf = path / "checkpoints" / "ep_-01_smpl_0" / "hf"
     tokenizer = AutoTokenizer.from_pretrained(path_hf)
     config = AutoConfig.from_pretrained(path_hf)
+    # TODO: assert batch size didn't change or think how to deal with it
     net = AutoModelForMaskedLM.from_config(config)
     net.train()
     model = PLModel.load_from_checkpoint(
@@ -33,12 +34,15 @@ def main():
         print("RESUMING")
     path = Path(sys.argv[1])
     params = load_json(path / "metadata.json")
-    if len(sys.argv) > 2:
-        replaced_param_path = Path(sys.argv[2])
-        replaced_params = Config(
-            name_task="pretrain", old_params=params, param_path=replaced_param_path
-        )
-        params.update(replaced_params)
+    # TODO: this is semi borken and probably not needed
+    # if we need train an alternative version - can just use snapshot as a new model,
+    # just force train to not re-init
+    # if len(sys.argv) > 2:
+    #     replaced_param_path = Path(sys.argv[2])
+    #     replaced_params = Config(
+    #         name_task="pretrain", old_params=params, param_path=replaced_param_path
+    #     )
+    #     params.update(replaced_params)
     model = load_model_from_checkpoint(path, params)
     trainer = get_trainer(params, cluster_env)
     model.hparams["train_logs"] = model.hparams["train_logs"][:-1]

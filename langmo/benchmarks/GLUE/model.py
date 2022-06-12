@@ -87,7 +87,7 @@ class GLUEModel(PLBase):
 
 class GLUEFineTuner(BaseFinetuner):
     def __init__(self, name_task, class_data_module, class_model):
-        self.super().__init__(
+        super().__init__(
             name_task, class_data_module, class_model, config_type=GLUEConfig
         )
 

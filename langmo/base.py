@@ -4,13 +4,13 @@ from pathlib import Path
 
 import pytorch_lightning as pl
 import torch
-
 # from apex.optimizers import FusedLAMB
 from protonn.utils import save_data_json
 from torch.optim import AdamW
 
 # from transformers.optimization import AdamW
 from .utils.model_utils import zero_and_freeze_param_by_name
+
 
 class PLBase(pl.LightningModule):
     def __init__(self, net=None, tokenizer=None, params=None):
@@ -26,12 +26,6 @@ class PLBase(pl.LightningModule):
     def setup(self, stage):
         if self.global_rank == 0:
             os.makedirs(self.hparams["path_results"], exist_ok=True)
-        self.hparams["cnt_workers"] = self.trainer.world_size
-        self.hparams["batch_size_effective"] = (
-            self.hparams["batch_size"]
-            * self.hparams["cnt_workers"]
-            * self.hparams["accumulate_batches"]
-        )
         self.logger.log_hyperparams(self.hparams)
 
         # set token_type_embeddings to zero and token_type_embeddings.requires_grad = False
