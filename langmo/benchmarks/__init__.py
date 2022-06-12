@@ -1,5 +1,6 @@
 import os
 import stat
+import tempfile
 
 import yaml
 
@@ -28,21 +29,22 @@ def make_executable(path):
     os.chmod(path, st.st_mode | stat.S_IEXEC)
 
 
+def get_value_or_placeholder(config, key):
+    value = f"no_{key}"
+    if key in config:
+        value = str(config[key])
+    else:
+        pass  # warning
+    return value
+
+
 def get_results_path(user_config, path_snapshot, name_task):
-    # seed-batch-hash
-    bs = "no_batch_size"
-    if "batch_size" in user_config:
-        bs = str(user_config["batch_size"])
-    else:
-        pass  # warning
+    bs = get_value_or_placeholder(user_config, "batch_size")
+    seed = get_value_or_placeholder(user_config, "seed")
+    random = tempfile.NamedTemporaryFile().name.split("/")[-1]
 
-    seed = "no_seed"
-    if "seed" in user_config:
-        seed = user_config["seed"]
-    else:
-        pass  # warning
-
-    path = path_snapshot / "eval" / name_task / bs / seed
+    path = path_snapshot / f"eval/{name_task}/{bs}_{seed}_{random}"
+    print(f"PATH: {path}")
     path.mkdir(parents=True, exist_ok=True)
     return path
 
