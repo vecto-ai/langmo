@@ -11,12 +11,8 @@ from transformers import logging as tr_logging
 from .data import TextDataModule
 from .plmodel import PLModel
 
-# from langmo.cluster_mpi import MPIClusterEnvironment
 # from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 # from langmo.nn.utils import reinit_model
-# from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
-# from langmo.nn.utils import reinit_model
-
 
 
 def build_model(params):
@@ -54,7 +50,7 @@ def main():
     if cluster_env.global_rank() != 0:
         tr_logging.set_verbosity_error()  # to reduce warning of unused weights
     name_task = "pretrain"
-    params = Config(name_task=name_task, is_master=cluster_env.global_rank() == 0)
+    params = Config(name_task=name_task, cluster_env=cluster_env)
     # TODO: make logging report rank and size and use logging
     params["name_run"] = get_run_name(params)
     if cluster_env.global_rank() == 0:
@@ -64,8 +60,6 @@ def main():
     cluster_env.barrier()
 
     trainer = get_trainer(params, cluster_env)
-    params["cnt_workers"] = trainer.world_size
-    params["batch_size_effective"] = params["batch_size"] * params["cnt_workers"] * params["accumulate_batches"]
     print(f"!!! Starting on host {socket.gethostname()}, p {trainer.global_rank} of {trainer.world_size}")
     model = build_model(params)
 
