@@ -3,7 +3,6 @@ import stat
 import tempfile
 
 import yaml
-
 from langmo.config import GLUETASKTOKEYS, load_yaml_or_empty
 
 # TODO: make console logs go to the target dir
@@ -69,7 +68,7 @@ def create_job_file(path_jobscript, path_config, name_task):
             cmd = f"python3 -m langmo.benchmarks.NLI {path_config}\n"
         else:
             available_glue_tasks = list(GLUETASKTOKEYS.keys())
-            if not name_task in available_glue_tasks:
+            if name_task not in available_glue_tasks:
                 raise Exception(
                     f"{name_task} is not supported. One among {'|'.join(available_glue_tasks)} should be chosen."
                 )
