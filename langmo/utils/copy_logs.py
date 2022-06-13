@@ -18,6 +18,8 @@ def main():
             print("warning, snapshot meta missing at", checkpoint)
         for eval_task in (checkpoint / "eval").iterdir():
             for eval_run in eval_task.iterdir():
+                if not (eval_run / "metadata.json").exists():
+                    continue
                 path_eval_relative = eval_run.relative_to(path_src)
                 (path_dst / path_eval_relative).mkdir(parents=True, exist_ok=True)
                 shutil.copy(eval_run / "metadata.json",
