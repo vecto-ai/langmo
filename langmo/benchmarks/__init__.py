@@ -40,9 +40,8 @@ def get_value_or_placeholder(config, key):
 def get_results_path(user_config, path_snapshot, name_task):
     bs = get_value_or_placeholder(user_config, "batch_size")
     seed = get_value_or_placeholder(user_config, "seed")
-    random = tempfile.NamedTemporaryFile().name.split("/")[-1]
-
-    path = path_snapshot / f"eval/{name_task}/{bs}_{seed}_{random}"
+    random = tempfile.NamedTemporaryFile().name.split("/")[-1][3:]
+    path = path_snapshot / f"eval/{name_task}/lbs{bs}_s{seed}_{random}"
     print(f"PATH: {path}")
     path.mkdir(parents=True, exist_ok=True)
     return path
