@@ -1,6 +1,7 @@
 import socket
 from pathlib import Path
 
+import torch
 from langmo.cluster_mpi import MPIClusterEnvironment
 from langmo.config import ConfigPretrain as Config
 from langmo.log_helper import set_root_logger
