@@ -1,140 +1,103 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
+from torchmetrics.functional import accuracy
 
-# TODO: move this to langmo.nn
-class SiameseBase(nn.Module):
-    def __init__(self, bottom, top, freeze_bottom=True):
-        super().__init__()
-        self.bottom = bottom
-        # self.bottom.requires_grad = not freeze_bottom
-        self.top = top
-
-    def combine(self, u, v):
-        return torch.cat((u, v, torch.abs(u - v), u * v), 1)
-
-    def save_pretrained(self, path):
-        print("save poretrained not implemented")
+from langmo.benchmarks.base import BaseClassificationModel, aggregate_batch_stats, allreduce
+from .data import labels_entail, labels_heuristics
 
 
-class BaseBERTWrapper(nn.Module):
-    def __init__(self, net, freeze):
-        super().__init__()
-        self.net = net
-        if freeze:
-            for param in self.net.parameters():
-                param.requires_grad = False
+class NLIModel(BaseClassificationModel):
+    def __init__(self, net, tokenizer, params):
+        super().__init__(net, tokenizer, params)
+        # self.example_input_array = ((
+        #     torch.zeros((128, params["batch_size"]), dtype=torch.int64),
+        #     torch.zeros((128, params["batch_size"]), dtype=torch.int64),
+        # ))
+        self.ds_prefixes = {0: "matched", 1: "mismatched", 2: "hans"}
 
-    def get_output_size(self):
-        if hasattr(self.net, "pooler"):
-            if hasattr(self.net.pooler, "out_features"):
-                return self.net.pooler.out_features
-            if hasattr(self.net.pooler, "dense"):
-                return (self.net.pooler.dense.out_features)
-        raise RuntimeError("can't estimate encoder output size")
+    def training_step(self, batch, batch_idx):
+        inputs, targets, heuristic = batch[0]
+        # this is to fix PL 1.2+ thinking that top level list is multiple iterators
+        # should be address by returning proper dataloader
+        logits = self(inputs)
+        loss = F.cross_entropy(logits, targets)
+        acc = accuracy(F.softmax(logits, dim=1), targets)
+        # acc = accuracy(logits, targets)
+        metrics = {
+            "train_loss": loss,
+            "train_acc": acc,
+        }
+        self.log_dict(metrics, on_step=True, on_epoch=True)
+        return loss
 
+    def validation_step(self, batch, batch_idx, dataloader_idx):
+        # print("got val batch\n" + describe_var(batch))
+        inputs, targets, heuristic = batch
+        logits = self(inputs)
+        if dataloader_idx == 2:
+            entail = logits[:, :1]
+            non_entail = logits[:, 1:]
+            non_entail = non_entail.max(axis=1).values
+            logits = torch.cat((entail, non_entail.unsqueeze(1)), 1)
+        loss = F.cross_entropy(logits, targets)
+        # acc = accuracy(torch.nn.functional.softmax(logits, dim=1), targets)
+        mask_correct = torch.argmax(logits, axis=1) == targets
+        cnt_correct = mask_correct.sum()
+        # if self.hparams["test"] and dataloader_idx == 2:
+        #     print(
+        #         f"worker {da.rank()} of {da.world_size()}\n"
+        #         f"\tval batch {batch_idx} ({logits.size()}) of dloader {dataloader_idx}\n"
+        #         f"\ttargets: {targets.sum()}, acc is {acc}"
+        #     )
+        metrics = {
+            f"val_loss": loss,
+            # f"val_acc": acc,
+            f"cnt_correct": cnt_correct,
+            f"cnt_questions": torch.tensor(targets.shape[0]),
+        }
+        if dataloader_idx == 2:
+            for entail in [0, 1]:
+                for id_heuristic in [0, 1, 2]:
+                    # fmt: off
+                    split_name = f"{labels_heuristics[id_heuristic]}_{labels_entail[entail]}"
+                    mask_split = torch.logical_and((targets == entail), (heuristic == id_heuristic))
+                    metrics[f"cnt_correct_{split_name}"] = torch.logical_and(mask_correct, mask_split).sum()
+                    metrics[f"cnt_questions_{split_name}"] = mask_split.sum()
+                    # fmt: on
+        return metrics
 
-class BertWithCLS(BaseBERTWrapper):
-    def forward(self, **x):
-        res = self.net(**x)["last_hidden_state"][:, 0, :]
-        return res
+    def validation_epoch_end(self, outputs):
+        metrics = self.hparams["train_logs"][-1]
+        # self.add_epoch_id_to_metrics(metrics)
+        for id_dataloader, lst_split in enumerate(outputs):
+            name_dataset = self.ds_prefixes[id_dataloader]
+            loss = torch.stack([x["val_loss"] for x in lst_split]).mean()  # .item()
+            # TODO: refactor this reduction an logging in one helper function
+            metrics[f"val_loss_{name_dataset}"] = allreduce(loss, None).item()
+            cnt_correct = aggregate_batch_stats(lst_split, "cnt_correct")
+            cnt_questions = aggregate_batch_stats(lst_split, "cnt_questions")
+            metrics[f"val_acc_{name_dataset}"] = cnt_correct / cnt_questions
 
-
-class BertWithPooler(BaseBERTWrapper):
-    def forward(self, **x):
-        res = self.net(**x)["last_hidden_state"]["pooler_output"]
-        return res
-
-
-def get_encoder_wrapper(name):
-    name = name.lower()
-    wrappers = {"cls": BertWithCLS, "pooler": BertWithPooler, "lstm": BertWithLSTM}
-    return wrappers[name]
-
-
-class BertWithLSTM(BaseBERTWrapper):
-    def __init__(self, net, freeze):
-        super().__init__(net, freeze)
-        size_hidden = super().get_output_size()
-        self.rnn = nn.LSTM(input_size=size_hidden,
-                           hidden_size=size_hidden,
-                           num_layers=2,
-                           batch_first=True,
-                           dropout=0,
-                           bidirectional=True)
-
-    def lstm_out_to_tensor(self, x):
-        return x[0][:, -1, :]
-
-    def forward(self, **x):
-        h = self.net(**x)["last_hidden_state"]
-        h = self.rnn(h)
-        return self.lstm_out_to_tensor(h)
-
-    def get_output_size(self):
-        cnt_rnn_directions = 2
-        return super().get_output_size() * cnt_rnn_directions
-
-
-class Siamese(SiameseBase):
-    def forward(self, left, right):
-        h_left = self.bottom(** left)
-        h_right = self.bottom(** right)
-        combined = self.combine(h_left, h_right)
-        h = self.top(combined)
-        return {"logits": h}
-
-
-class TopMLP2(nn.Module):
-    def __init__(self, in_size=512, hidden_size=512, cnt_classes=3):
-        super().__init__()
-        self.l1 = nn.Linear(in_size, hidden_size)
-        self.l2 = nn.Linear(hidden_size, cnt_classes)
-
-    def forward(self, x):
-        h = self.l1(x)
-        h = F.relu(h)
-        h = self.l2(h)
-        return(h)
-
-
-class LSTM_Encoder(nn.Module):
-    def __init__(self, embs, nhid, nlayers, dropout=0.3):
-        super().__init__()
-        self.drop = nn.Dropout(dropout)
-        self.embs = nn.Embedding(embs.matrix.shape[0], embs.matrix.shape[1])
-        self.rnn = nn.LSTM(embs.matrix.shape[1],
-                           nhid, nlayers,
-                           dropout=dropout,
-                           bidirectional=True)
-        # self.decoder = nn.Linear(nhid, 2)
-        self.init_weights(embs)
-        self.embs.weight.requires_grad = False
-
-    def init_weights(self, embs):
-        # initrange = 0.1
-        self.embs.weight.data = torch.from_numpy(embs.matrix)
-        # self.decoder.bias.data.zero_()
-        # self.decoder.weight.data.uniform_(-initrange, initrange)
-
-    def forward(self, input):
-        # print("in", input.shape)
-        emb = self.drop(self.embs(input))
-        # emb.unsqueeze_(0)
-        # print("emb", emb.shape)
-        # output, self.hidden = self.rnn(emb, self.hidden)
-        output, self.hidden = self.rnn(emb, self.hidden)
-        # print("rnn out", output.shape)
-        #output = self.drop(output)
-        #decoded = self.decoder(output[-1])
-        # print("decoded", decoded)
-        return output
-
-
-# TODO: call it something more self-descriptive
-# class Net(Siamese):
-#     def __init__(self, embs):
-#         encoder = LSTM_Encoder(embs, 128, 2)
-#         top = TopMLP2()
-#         super().__init__(encoder, top)
+            for entail in [0, 1]:
+                cnt_correct_label = 0
+                cnt_questions_label = 0
+                for id_heuristic in [0, 1, 2]:
+                    split_name = f"{labels_heuristics[id_heuristic]}_{labels_entail[entail]}"
+                    cnt_correct = aggregate_batch_stats(lst_split, f"cnt_correct_{split_name}")
+                    cnt_questions = aggregate_batch_stats(lst_split, f"cnt_questions_{split_name}")
+                    if cnt_questions > 0:
+                        metrics[f"cnt_correct_{name_dataset}_{split_name}"] = cnt_correct
+                        metrics[f"val_acc_{name_dataset}_{split_name}"] = (
+                            cnt_correct / cnt_questions
+                        )
+                    cnt_correct_label += cnt_correct
+                    cnt_questions_label += cnt_questions
+                if cnt_questions_label > 0:
+                    metric_name = f"val_acc_{name_dataset}_{labels_entail[entail]}"
+                    metric_val = cnt_correct_label / cnt_questions_label
+                    metrics[metric_name] = metric_val
+                    # self.log(metric_name, metric_val)
+            self.log_dict(metrics)
+            # cnt_correct = aggregate_batch_stats(lst_split, "cnt_correct")
+        # self.save_metrics_and_model(metrics)

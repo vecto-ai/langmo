@@ -28,6 +28,9 @@ class PLBase(pl.LightningModule):
             os.makedirs(self.hparams["path_results"], exist_ok=True)
         self.logger.log_hyperparams(self.hparams)
 
+        if self.hparams["siamese"]:
+            return
+
         # set token_type_embeddings to zero and token_type_embeddings.requires_grad = False
         # if there is only one possible token_type_id
         if self.net.config.to_dict().get("type_vocab_size", 0) == 1:
