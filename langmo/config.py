@@ -12,6 +12,8 @@ from langmo.utils import parse_float
 from protonn.utils import get_time_str, load_json
 from transformers import set_seed
 
+CONFIG_OPTIONS = {"snapshot_strategy": ["per_epoch", "best_only", "none"]}
+
 
 def is_yaml_config(path):
     return path.is_file() and path.suffix in {".yaml", ".yml"}
@@ -89,7 +91,9 @@ class Config(dict):
 
         self.add_distributed_info(cluster_env.world_size())
         self.maybe_create_unique_path()
+        cluster_env.barrier()
 
+    # TODO: use name run
     def get_run_folder(self):
         timestamp = self["timestamp"][:-3]
         hostname = platform.node().split(".")[0]
@@ -103,10 +107,18 @@ class Config(dict):
     def maybe_create_unique_path(self):
         if self["create_unique_path"]:
             self["path_results"] = os.path.join(self["path_results"], self["name_project"])
+            # TODO: extract nicemodel name from metadata
             model_name = self["model_name"].split("/")[-1]
             self["path_results"] = os.path.join(self["path_results"], model_name)
             run_dir = self.get_run_folder()
             self["path_results"] = os.path.join(self["path_results"], run_dir)
+        else:
+            # TODO: chech if the folder is empty
+            pass
+        if "WANDB_MODE" in os.environ and os.environ["WANDB_MODE"] != "disabled":
+            if self._is_master:
+                path_wandb = Path(self.params["path_results"]) / "wandb"
+                path_wandb.mkdir(parents=True, exist_ok=True)
 
     def add_distributed_info(self, cnt_workers):
         batch_size = self["batch_size"]
@@ -118,11 +130,7 @@ class Config(dict):
         _logger = logging.getLogger(__name__)
         user_config = load_yaml_config(path)
         for key, value in user_config.items():
-            if (
-                key not in self.defaults
-                and key not in self.required_options
-                and key != "suffix"
-            ):
+            if key not in self.defaults and key not in self.required_options and key != "suffix":
                 raise RuntimeError(f"got unexpected key in user config\t{key}: {value}")
             # print(key, value)
         for key in self.required_options:
@@ -153,6 +161,12 @@ class Config(dict):
         # TODO: we put it here for now for simplicitly
         # this needs to be revisited when we do model parallel
         # TODO: also we whould think what we do when we resume with different number of workers
+        for key, val in self.items():
+            if key in CONFIG_OPTIONS and val not in CONFIG_OPTIONS[key]:
+                raise Exception(
+                    f"Option {key} does not allow value {val}."
+                    f"One among {'|'.join(CONFIG_OPTIONS[key])} must be picked"
+                )
 
     def set_defaults(self):
         self.defaults = dict(
@@ -180,8 +194,9 @@ class Config(dict):
             percent_warmup=6.0,
             log_every_n_steps=50,
             seconds_between_snapshots=3600,
-            per_epoch_snapshot=True,
-            replace_hf_config=dict(),
+            metric_to_monitor=None,
+            snapshot_strategy="per_epoch",
+            replace_hf_config={},
             seed=int(time.time()),
         )
         self.required_options = set()

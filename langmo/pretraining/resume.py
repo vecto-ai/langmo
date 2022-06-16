@@ -20,7 +20,7 @@ def load_model_from_checkpoint(path, params):
     net = AutoModelForMaskedLM.from_config(config)
     net.train()
     model = PLModel.load_from_checkpoint(
-        path / "PL_model.ckpt",
+        path / "resume" / "PL_model.ckpt",
         net=net,
         tokenizer=tokenizer,
         params=params,
@@ -33,7 +33,7 @@ def main():
     if cluster_env.local_rank() == 0:
         print("RESUMING")
     path = Path(sys.argv[1])
-    params = load_json(path / "metadata.json")
+    params = load_json(path / "resume" / "metadata.json")
     # TODO: this is semi borken and probably not needed
     # if we need train an alternative version - can just use snapshot as a new model,
     # just force train to not re-init

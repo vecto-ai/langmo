@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from langmo.base import PLBase
 from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
                                          TopMLP2)
+from langmo.callbacks.model_snapshots_schedule import FinetuneMonitor
 from langmo.cluster_mpi import MPIClusterEnvironment
 from langmo.config import ConfigFinetune
 from langmo.nn.utils import reinit_model, reinit_tensor
@@ -48,10 +49,7 @@ class BaseFinetuner:
         # TODO: refactor this into sub-methods
         cluster_env = MPIClusterEnvironment()
         self.params = config_type(name_task, cluster_env)
-        if cluster_env.global_rank() == 0:
-            path_wandb = Path(self.params["path_results"]) / "wandb"
-            path_wandb.mkdir(parents=True, exist_ok=True)
-        else:
+        if cluster_env.global_rank() != 0:
             tr_logging.set_verbosity_error()  # to reduce warning of unused weights
         cluster_env.barrier()
         timestamp = get_time_str()
@@ -77,7 +75,7 @@ class BaseFinetuner:
             self.tokenizer,
             params=self.params,
         )
-        self.trainer = get_trainer(self.params, cluster_env)
+        self.trainer = get_trainer(self.params, cluster_env, extra_callbacks=[FinetuneMonitor()])
         # TODO: Please use the DeviceStatsMonitor callback directly instead.
         # TODO: sync_batchnorm: bool = False, to params
 
