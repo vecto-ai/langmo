@@ -3,14 +3,14 @@ import math
 import torch
 import torch.nn.functional as F
 import torchmetrics
-from langmo.base import PLBase
-from langmo.benchmarks.base import BaseFinetuner, allreduce
+from langmo.benchmarks.base import (BaseClassificationModel, BaseFinetuner,
+                                    allreduce)
 from langmo.config import GLUEConfig
 from torchmetrics.functional import accuracy, pearson_corrcoef
 from transformers import AutoModelForSequenceClassification
 
 
-class GLUEModel(PLBase):
+class GLUEModel(BaseClassificationModel):
     def __init__(self, net=None, tokenizer=None, params=None):
         super().__init__(net, tokenizer, params)
         num_labels = self.hparams["num_labels"]
@@ -25,9 +25,6 @@ class GLUEModel(PLBase):
                 "f1": torchmetrics.F1Score(num_classes=num_labels),
                 "matthews_corr": torchmetrics.MatthewsCorrCoef(num_classes=num_labels),
             }
-
-    def forward(self, inputs):
-        return self.net(**inputs)["logits"]
 
     def training_step(self, batch, batch_idx):
         inputs, targets = batch[0]
