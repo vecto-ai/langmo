@@ -6,7 +6,7 @@ from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 
 
-def get_trainer(params, cluster_env):
+def get_trainer(params, cluster_env, extra_callbacks=[]):
     # use 1 GPU with horovod and -1 with DDP
     # if (da.rank() != 0):
     #     params["path_results"] = "/tmp"
@@ -20,10 +20,10 @@ def get_trainer(params, cluster_env):
     gpus = -1 if (params["cnt_gpus_per_node"] > 0) else 0
     pl.utilities.rank_zero.rank_zero_only.rank = cluster_env.global_rank()
     logger = WandbLogger(
-            project=params["name_project"],
-            name=params["name_run"],
-            save_dir=params["path_results"],
-        )
+        project=params["name_project"],
+        name=params["name_run"],
+        save_dir=params["path_results"],
+    )
     trainer = pl.Trainer(
         plugins=[cluster_env],
         default_root_dir=params["path_results"],
@@ -44,7 +44,7 @@ def get_trainer(params, cluster_env):
         # but there is special checkpoint_callback param too....
         # callbacks=[lr_monitor, LayerNormCallback(), Monitor()],
         # TODO: layernorm doesn't work with albert
-        callbacks=[lr_monitor, Monitor()],
+        callbacks=[lr_monitor] + extra_callbacks,
         gradient_clip_val=params["gradient_clip_val"],
         enable_progress_bar=False,
         enable_checkpointing=False,

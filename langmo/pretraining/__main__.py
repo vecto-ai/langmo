@@ -1,7 +1,6 @@
 import socket
-from pathlib import Path
 
-import torch
+from langmo.callbacks.model_snapshots_schedule import Monitor
 from langmo.cluster_mpi import MPIClusterEnvironment
 from langmo.config import ConfigPretrain as Config
 from langmo.log_helper import set_root_logger
@@ -54,13 +53,11 @@ def main():
     params = Config(name_task=name_task, cluster_env=cluster_env)
     # TODO: make logging report rank and size and use logging
     params["name_run"] = get_run_name(params)
-    if cluster_env.global_rank() == 0:
-        path_wandb = Path(params["path_results"]) / "wandb"
-        print("creating wandb directory at ", path_wandb)
-        path_wandb.mkdir(parents=True, exist_ok=True)
     cluster_env.barrier()
 
-    trainer = get_trainer(params, cluster_env)
+    trainer = get_trainer(params, cluster_env, [Monitor()])
+    params["cnt_workers"] = trainer.world_size
+    params["batch_size_effective"] = params["batch_size"] * params["cnt_workers"] * params["accumulate_batches"]
     print(f"!!! Starting on host {socket.gethostname()}, p {trainer.global_rank} of {trainer.world_size}")
     model = build_model(params)
 

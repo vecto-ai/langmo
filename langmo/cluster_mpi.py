@@ -1,6 +1,8 @@
 import os
 import socket
 
+# torch import is not used but should be here for mpi4py to precced mpi init from mpi4py
+import torch
 from mpi4py import MPI
 from pytorch_lightning.plugins.environments import ClusterEnvironment
 
