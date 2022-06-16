@@ -1,9 +1,7 @@
-from pathlib import Path
 from typing import Optional
 
 import torch
 import torch.distributed as dist
-import torch.nn.functional as F
 from langmo.base import PLBase
 from langmo.benchmarks.NLI.model import (BertWithCLS, BertWithLSTM, Siamese,
                                          TopMLP2)
@@ -13,7 +11,6 @@ from langmo.config import ConfigFinetune
 from langmo.nn.utils import reinit_model, reinit_tensor
 from langmo.trainer import get_trainer
 from protonn.utils import get_time_str
-from torchmetrics.functional import accuracy
 from transformers import (AutoModel, AutoModelForQuestionAnswering,
                           AutoModelForSequenceClassification, AutoTokenizer)
 from transformers import logging as tr_logging
@@ -21,27 +18,18 @@ from transformers import logging as tr_logging
 
 class BaseClassificationModel(PLBase):
     def forward(self, inputs):
+        current_batch_size = inputs["input_ids"].shape[0]
+        self.hparams["cnt_samples_processed"] += (
+            current_batch_size * self.hparams["cnt_workers"]
+        )
         return self.net(**inputs)["logits"]
 
-    def training_step(self, batch, batch_idx):
-        inputs, targets = batch[0]
-        # 0 is there seince PL returns tuple of batched from all dataloaders
-        # not sure if this will be persisten behavior
-        logits = self(inputs)
-        loss = self._compute_loss(logits, targets)
-        acc = self._compute_metric(logits, targets)
-        metrics = {
-            "train_loss": loss,
-            "train_acc": acc,
-        }
-        self.log_dict(metrics, on_step=True, on_epoch=True)
-        return loss
+    # TODO: this seems to be wrong and also not used
+    # def _compute_metric(self, logits, targets):
+    #     return accuracy(F.softmax(logits, dim=1), targets)
 
-    def _compute_metric(self, logits, targets):
-        return accuracy(F.softmax(logits, dim=1), targets)
-
-    def _compute_loss(self, logits, targets):
-        return F.cross_entropy(logits, targets)
+    # def _compute_loss(self, logits, targets):
+    #     return F.cross_entropy(logits, targets)
 
 
 class BaseFinetuner:
@@ -130,7 +118,6 @@ def allreduce(tensor: torch.Tensor, op: Optional[int] = None) -> torch.Tensor:
         dist.all_reduce(tensor)
         tensor /= dist.get_world_size()
     else:
-        # print(tensor)
         dist.all_reduce(tensor, op=op)
     return tensor
 
