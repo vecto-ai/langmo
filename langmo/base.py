@@ -28,7 +28,7 @@ class PLBase(pl.LightningModule):
             os.makedirs(self.hparams["path_results"], exist_ok=True)
         self.logger.log_hyperparams(self.hparams)
 
-        if self.hparams["siamese"]:
+        if "siamese" in self.hparams and self.hparams["siamese"]:
             return
 
         # set token_type_embeddings to zero and token_type_embeddings.requires_grad = False
