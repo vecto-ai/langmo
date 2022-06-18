@@ -3,11 +3,13 @@ import math
 import torch
 import torch.nn.functional as F
 import torchmetrics
-from langmo.benchmarks.base import (BaseClassificationModel, BaseFinetuner,
-                                    allreduce)
-from langmo.config import GLUEConfig
 from torchmetrics.functional import accuracy, pearson_corrcoef
-from transformers import AutoModelForSequenceClassification
+from langmo.benchmarks.base import (
+    BaseClassificationModel,
+    ClassificationFinetuner,
+    allreduce,
+)
+from langmo.config import GLUEConfig
 
 
 class GLUEModel(BaseClassificationModel):
@@ -50,7 +52,7 @@ class GLUEModel(BaseClassificationModel):
         if self.hparams["num_labels"] == 1:
             return pearson_corrcoef(logits, targets)
         elif self.hparams["num_labels"] > 1:
-            return accuracy(torch.argmax(logits, 1), targets)
+            return accuracy(torch.argmax(logits, -1), targets)
 
     def validation_step(self, batch, batch_idx):
         inputs, targets = batch
@@ -82,19 +84,6 @@ class GLUEModel(BaseClassificationModel):
         # self.save_metrics_and_model(metrics)
 
 
-class GLUEFineTuner(BaseFinetuner):
+class GLUEFinetuner(ClassificationFinetuner):
     def __init__(self, name_task, class_data_module, class_model):
-        super().__init__(
-            name_task, class_data_module, class_model, config_type=GLUEConfig
-        )
-
-    def create_net(self):
-        name_model = self.params["model_name"]
-        net = AutoModelForSequenceClassification.from_pretrained(
-            name_model, num_labels=self.params["num_labels"]
-        )
-        name_run = name_model.split("pretrain")[-1]
-        # TODO: this should be done in pretraining!!!!!
-        # net.bert.embeddings.token_type_embeddings.weight.data = torch.zeros_like(net.bert.embeddings.token_type_embeddings.weight)
-
-        return net, name_run
+        super().__init__(name_task, class_data_module, class_model, config_type=GLUEConfig)

@@ -42,12 +42,14 @@ class BertWithLSTM(BaseBERTWrapper):
     def __init__(self, net, freeze):
         super().__init__(net, freeze)
         size_hidden = super().get_output_size()
-        self.rnn = nn.LSTM(input_size=size_hidden,
-                           hidden_size=size_hidden,
-                           num_layers=2,
-                           batch_first=True,
-                           dropout=0,
-                           bidirectional=True)
+        self.rnn = nn.LSTM(
+            input_size=size_hidden,
+            hidden_size=size_hidden,
+            num_layers=2,
+            batch_first=True,
+            dropout=0,
+            bidirectional=True,
+        )
 
     def lstm_out_to_tensor(self, x):
         return x[0][:, -1, :]
@@ -59,7 +61,7 @@ class BertWithLSTM(BaseBERTWrapper):
 
     def get_output_size(self):
         cnt_rnn_directions = 2
-        return self.size_hidden * cnt_rnn_directions
+        return super().get_output_size() * cnt_rnn_directions
 
 
 def wrap_encoder(encoder, name, freeze):

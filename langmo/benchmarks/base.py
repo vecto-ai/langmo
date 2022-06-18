@@ -97,16 +97,22 @@ class ClassificationFinetuner(BaseFinetuner):
             if self.params["freeze_encoder"]:
                 name_run += "fr_"
             name_run += name_model
-            encoder = AutoModel.from_pretrained(name_model,
-                                                num_labels=3,
-                                                add_pooling_layer=False)
-            wrapped_encoder = wrap_encoder(encoder,
-                                           name=self.params["encoder_wrapper"],
-                                           freeze=self.params["freeze_encoder"])
+            encoder = AutoModel.from_pretrained(name_model, add_pooling_layer=False)
+            wrapped_encoder = wrap_encoder(
+                encoder, name=self.params["encoder_wrapper"], freeze=self.params["freeze_encoder"]
+            )
             # TODO: add different heads support
-            net = Siamese(wrapped_encoder, TopMLP2(in_size=wrapped_encoder.get_output_size() * 4))
+            net = Siamese(
+                wrapped_encoder,
+                TopMLP2(
+                    in_size=wrapped_encoder.get_output_size() * 4,
+                    cnt_classes=self.params["num_labels"],
+                ),
+            )
         else:
-            net = AutoModelForSequenceClassification.from_pretrained(name_model, num_labels=3)
+            net = AutoModelForSequenceClassification.from_pretrained(
+                name_model, num_labels=self.params["num_labels"]
+            )
             name_run = name_model.split("pretrain")[-1]
 
         return net, name_run
