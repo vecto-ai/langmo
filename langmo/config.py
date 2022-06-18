@@ -7,12 +7,21 @@ import time
 from pathlib import Path
 
 import yaml
+from transformers import set_seed
+from protonn.utils import get_time_str, load_json
+
 from langmo.log_helper import set_root_logger
 from langmo.utils import parse_float
-from protonn.utils import get_time_str, load_json
-from transformers import set_seed
 
-CONFIG_OPTIONS = {"snapshot_strategy": ["per_epoch", "best_only", "none"]}
+
+
+CONFIG_OPTIONS = {
+    "snapshot_strategy": ["per_epoch", "best_only", "none"],
+    "encoder_wrapper": ["cls", "pooler", "lstm"],
+    # TODO: related to todo in langmo.benchmarks.base 
+    # to allow different heads
+    # "model_head": ["topmlp2", "lstm"]
+}
 
 
 def is_yaml_config(path):
@@ -235,6 +244,7 @@ class ConfigFinetune(Config):
         self.defaults["encoder_wrapper"] = "pooler"
         self.defaults["shuffle"] = False
         self.defaults["cnt_seps"] = -1
+
 
 
 GLUETASKTOKEYS = {

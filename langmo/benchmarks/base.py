@@ -1,20 +1,18 @@
 from typing import Optional
+
 import torch
 import torch.distributed as dist
 from langmo.base import PLBase
-from langmo.nn import Siamese, TopMLP2, BertWithCLS
 from langmo.callbacks.model_snapshots_schedule import FinetuneMonitor
 from langmo.cluster_mpi import MPIClusterEnvironment
 from langmo.config import ConfigFinetune
+from langmo.nn import Siamese, TopMLP2, wrap_encoder
+# from langmo.nn.heads import get_downstream_head
 from langmo.nn.utils import reinit_model, reinit_tensor
 from langmo.trainer import get_trainer
 from protonn.utils import get_time_str
-from transformers import (
-    AutoModel,
-    AutoModelForQuestionAnswering,
-    AutoModelForSequenceClassification,
-    AutoTokenizer,
-)
+from transformers import (AutoModel, AutoModelForQuestionAnswering,
+                          AutoModelForSequenceClassification, AutoTokenizer)
 from transformers import logging as tr_logging
 
 
@@ -97,15 +95,14 @@ class ClassificationFinetuner(BaseFinetuner):
                 name_run += "fr_"
             name_run += name_model
             encoder = AutoModel.from_pretrained(name_model, num_labels=3)
-            encoder = BertWithCLS(encoder, freeze=self.params["freeze_encoder"])
-            net = Siamese(encoder, TopMLP2(in_size=encoder.get_output_size() * 4))
+            wrapped_encoder = wrap_encoder(encoder,
+                                           name=self.params["encoder_wrapper"],
+                                           freeze=self.params["freeze_encoder"])
+            # TODO: add different heads support
+            net = Siamese(wrapped_encoder, TopMLP2(in_size=wrapped_encoder.get_output_size() * 4))
         else:
             net = AutoModelForSequenceClassification.from_pretrained(name_model, num_labels=3)
             name_run = name_model.split("pretrain")[-1]
-            # TODO: this should be done in pretraining!!!!!
-            # net.bert.embeddings.token_type_embeddings.weight.data = (
-            #       torch.zeros_like(net.bert.embeddings.token_type_embeddings.weight
-            # )
 
         return net, name_run
 

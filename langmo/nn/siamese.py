@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class SiameseBase(nn.Module):
@@ -29,19 +28,7 @@ class Siamese(SiameseBase):
         return {"logits": h}
 
 
-class TopMLP2(nn.Module):
-    def __init__(self, in_size=512, hidden_size=512, cnt_classes=3):
-        super().__init__()
-        self.l1 = nn.Linear(in_size, hidden_size)
-        self.l2 = nn.Linear(hidden_size, cnt_classes)
-
-    def forward(self, x):
-        h = self.l1(x)
-        h = F.relu(h)
-        h = self.l2(h)
-        return h
-
-
+# TODO: move it encoders later. but this is not head!
 class LSTM_Encoder(nn.Module):
     def __init__(self, embs, nhid, nlayers, dropout=0.3):
         super().__init__()
@@ -70,7 +57,6 @@ class LSTM_Encoder(nn.Module):
         # decoded = self.decoder(output[-1])
         # print("decoded", decoded)
         return output
-
 
 # TODO: call it something more self-descriptive
 # class Net(Siamese):
