@@ -122,7 +122,6 @@ class Monitor(pl.Callback):
         # )
 
     def on_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
-        # TODO: add this to config
         checkpoint_interval = pl_module.hparams["seconds_between_snapshots"]
         if timer() - self.time_last_checkpoint > checkpoint_interval:
             self.time_last_checkpoint = timer()
