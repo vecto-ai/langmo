@@ -49,6 +49,9 @@ class BaseFinetuner:
         # embs = vecto.embeddings.load_from_dir(params["path_embeddings"])
         # bottom = AutoModel.from_pretrained(name_model)
         # net = Siamese(bottom, TopMLP2())
+
+        # NOTE: create_net can't be called before
+        # self.tokenizer is created
         self.net, name_run = self.create_net()
         if self.params["randomize"]:
             reinit_model(self.hparamsnet)
@@ -94,7 +97,9 @@ class ClassificationFinetuner(BaseFinetuner):
             if self.params["freeze_encoder"]:
                 name_run += "fr_"
             name_run += name_model
-            encoder = AutoModel.from_pretrained(name_model, num_labels=3)
+            encoder = AutoModel.from_pretrained(name_model,
+                                                num_labels=3,
+                                                add_pooling_layer=False)
             wrapped_encoder = wrap_encoder(encoder,
                                            name=self.params["encoder_wrapper"],
                                            freeze=self.params["freeze_encoder"])
@@ -105,6 +110,11 @@ class ClassificationFinetuner(BaseFinetuner):
             name_run = name_model.split("pretrain")[-1]
 
         return net, name_run
+
+    # def _get_encoder_and_output_size(self, encoder):
+    #     return (
+    #         encoder,
+    #     )
 
 
 class QAFinetuner(BaseFinetuner):
