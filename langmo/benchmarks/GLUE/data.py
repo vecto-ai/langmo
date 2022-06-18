@@ -19,9 +19,14 @@ class GLUECollator(BaseCollator):
             labels = labels.long()
         elif self.params["num_labels"] == 1:
             labels = labels.unsqueeze(1)
-        features = self.tokenizer(
-            text=sents1, text_pair=sents2, **self.tokenizer_params
-        )
+        # TODO: refactor into BaseCollator as
+        # it is the same here and in NLI
+        if not self.params["siamese"]:
+            features = self.tokenizer(text=sents1, text_pair=sents2, **self.tokenizer_params)
+        else:
+            sent1 = self.tokenizer(text=sents1, **self.tokenizer_params)
+            sent2 = self.tokenizer(text=sents2, **self.tokenizer_params)
+            features = {"left": sent1, "right": sent2}
         return (features, labels)
 
 

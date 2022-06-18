@@ -14,11 +14,10 @@ from langmo.log_helper import set_root_logger
 from langmo.utils import parse_float
 
 
-
 CONFIG_OPTIONS = {
     "snapshot_strategy": ["per_epoch", "best_only", "none"],
     "encoder_wrapper": ["cls", "pooler", "lstm"],
-    # TODO: related to todo in langmo.benchmarks.base 
+    # TODO: related to todo in langmo.benchmarks.base
     # to allow different heads
     # "model_head": ["topmlp2", "lstm"]
 }
@@ -243,8 +242,8 @@ class ConfigFinetune(Config):
         self.defaults["freeze_encoder"] = False
         self.defaults["encoder_wrapper"] = "pooler"
         self.defaults["shuffle"] = False
+        self.defaults["num_labels"] = 3
         self.defaults["cnt_seps"] = -1
-
 
 
 GLUETASKTOKEYS = {
@@ -258,6 +257,9 @@ GLUETASKTOKEYS = {
     "wnli": ("sentence1", "sentence2"),
     "mnli": ("premise", "hypothesis"),
     "mnli-mm": ("premise", "hypothesis"),
+    # TODO: for future better integratio
+    # between NLI/GLUE
+    "NLI": ("premise", "hypothesis"),
 }
 
 GLUETASKTOMETRIC = {
@@ -271,6 +273,9 @@ GLUETASKTOMETRIC = {
     "wnli": "accuracy",
     "mnli": "accuracy",
     "mnli-mm": "accuracy",
+    # TODO: for future better integratio
+    # between NLI/GLUE
+    "NLI": "accuracy",
 }
 
 GLUETASKTONUMLABELS = {
@@ -284,6 +289,9 @@ GLUETASKTONUMLABELS = {
     "wnli": 2,
     "mnli": 3,
     "mnli-mm": 3,
+    # TODO: for future better integratio
+    # between NLI/GLUE
+    "NLI": 3,
 }
 
 
