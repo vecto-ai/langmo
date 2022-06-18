@@ -1,7 +1,7 @@
-model_name: "roberta-base"
+model_name: "nreimers/BERT-Mini_L-4_H-256_A-4"
 # tokenizer_name: roberta-base
 batch_size: 16
-cnt_epochs: 8
+cnt_epochs: 2
 test: true
 uncase: false
 randomize: false
@@ -10,7 +10,7 @@ max_lr: 2.e-5
 siamese: true
 freeze_encoder: false
 num_sanity_val_steps: 5
-encoder_wrapper: "lstm"
+encoder_wrapper: "pooler"
 weight_decay: 0.01
 eps: 1.e-8
 shuffle: true
