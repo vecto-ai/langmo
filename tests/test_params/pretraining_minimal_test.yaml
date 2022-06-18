@@ -1,0 +1,18 @@
+cnt_epochs: 2
+uncase: False
+batch_size: 2
+max_length: 128
+# model_name: "prajjwal1/bert-mini"
+# path_corpus: "./data/sense"
+# path_val_corpus: "./data/sense_small"
+path_corpus: "./data/tokenized/sense/roberta-base/128/"
+# TODO: use same tokenized format for val
+path_val_corpus: "./data/sense_small_roberta_base_preprocessed"
+model_name: "roberta-base"
+test: True
+path_results: ./tests/test_output
+initial_lr: 1e-5
+cnt_samples_per_epoch: 800
+# use_gpu: False
+suffix: test
+seconds_between_snapshots: 40

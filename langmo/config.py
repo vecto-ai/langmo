@@ -194,6 +194,7 @@ class Config(dict):
             percent_warmup=6.0,
             log_every_n_steps=50,
             seconds_between_snapshots=3600,
+            num_sanity_val_steps=-1,
             metric_to_monitor=None,
             snapshot_strategy="per_epoch",
             replace_hf_config={},

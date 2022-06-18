@@ -1,9 +1,11 @@
 import unittest
 
-from langmo.pretraining.data import BatchIter
+
+import torch
 from transformers import AutoTokenizer
 from datasets import load_dataset
-import torch
+
+from langmo.pretraining.data import BatchIter
 
 
 class MaskTestCase:
