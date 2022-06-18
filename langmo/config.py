@@ -150,7 +150,7 @@ class Config(dict):
         if "suffix" in user_config:
             name_project += f"_{user_config['suffix']}"
         else:
-            if user_config["test"]:
+            if self["test"]:
                 name_project += "_test"
         self["name_project"] = name_project
         self["timestamp"] = get_time_str()

@@ -1,6 +1,7 @@
 import os
 import stat
 import tempfile
+from pathlib import Path
 
 import yaml
 from langmo.config import GLUETASKTOKEYS, load_yaml_or_empty
@@ -37,22 +38,21 @@ def get_value_or_placeholder(config, key):
     return value
 
 
-def get_results_path(user_config, path_snapshot, name_task):
+def get_results_path(user_config, path_snapshot, name_task, salt):
     bs = get_value_or_placeholder(user_config, "batch_size")
     seed = get_value_or_placeholder(user_config, "seed")
-    random = tempfile.NamedTemporaryFile().name.split("/")[-1][3:]
-    path = path_snapshot / f"eval/{name_task}/lbs{bs}_s{seed}_{random}"
+    path = path_snapshot / f"eval/{name_task}/lbs{bs}_s{seed}_{salt}"
     print(f"PATH: {path}")
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
-def create_config_file(user_config, path_snapshot, path_config, path_out):
+def create_config_file(user_config, path_snapshot, path_config):
     # TUDO: add warnings when overwriting
-    user_config["model_name"] = str(path_snapshot / "hf")
-    user_config["path_results"] = str(path_out)
-    user_config["suffix"] = "auto"
-    user_config["create_unique_path"] = False
+    if path_snapshot.exists():
+        user_config["model_name"] = str(path_snapshot / "hf")
+    else:
+        user_config["model_name"] = str(path_snapshot)
     with open(path_config, "w") as file_config:
         yaml.dump(user_config, file_config)
 
@@ -76,13 +76,20 @@ def create_job_file(path_jobscript, path_config, name_task):
     make_executable(path_jobscript)
 
 
-def create_files_and_submit(path_snapshot, name_task):
-    user_config = load_yaml_or_empty("./configs/auto_finetune.yaml")
-    path_out = get_results_path(user_config, path_snapshot, name_task)
-
-    path_config = path_out / f"auto_{name_task}.yaml"
-    create_config_file(user_config, path_snapshot, path_config, path_out)
-
-    path_jobscript = path_out / f"auto_{name_task}.sh"
+def create_files_and_submit(path_snapshot, name_task, config, out_dir):
+    # TODO: don't forget to resolve the path
+    user_config = load_yaml_or_empty(config)
+    salt = tempfile.NamedTemporaryFile().name.split("/")[-1][3:]
+    if out_dir is None:
+        path_out = get_results_path(user_config, path_snapshot, name_task, salt)
+        user_config["create_unique_path"] = False
+    else:
+        path_out = Path(out_dir)
+        user_config["create_unique_path"] = True
+    user_config["path_results"] = str(path_out)
+    path_out.mkdir(parents=True, exist_ok=True)
+    path_config = path_out / f"auto_{name_task}_{salt}.yaml"
+    path_jobscript = path_out / f"auto_{name_task}_{salt}.sh"
+    create_config_file(user_config, path_snapshot, path_config)
     create_job_file(path_jobscript, path_config, name_task)
     schedule_eval_run(path_jobscript)
