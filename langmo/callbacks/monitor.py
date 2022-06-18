@@ -6,7 +6,6 @@ import pytorch_lightning as pl
 from protonn.utils import num_to_str_with_suffix
 
 # TODO: proper logging
-# TODO: processed samples per epoch
 
 
 class Monitor(pl.Callback):
@@ -69,7 +68,9 @@ class Monitor(pl.Callback):
         self.hparams["train_logs"][-1]["epoch"] = trainer.current_epoch
         self.epoch = trainer.current_epoch
         if trainer.global_rank == 0:
-            print(f"@@@@ perf callback: train epoch epoch {pl_module.current_epoch} started @@@@")
+            print(
+                f"@@@@ perf callback: train epoch epoch {pl_module.current_epoch} started @@@@"
+            )
         self.time_start = timer()
 
     def on_train_epoch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
@@ -81,7 +82,8 @@ class Monitor(pl.Callback):
             self.hparams["cnt_samples_per_epoch"] / epoch_time
         )
         self.hparams["train_logs"][-1]["samples_per_second_worker"] = (
-            self.hparams["train_logs"][-1]["samples_per_second"] / self.hparams["cnt_workers"]
+            self.hparams["train_logs"][-1]["samples_per_second"]
+            / self.hparams["cnt_workers"]
         )
         self.hparams["train_logs"][-1]["cnt_samples_processed"] = self.hparams[
             "cnt_samples_processed"
@@ -95,7 +97,9 @@ class Monitor(pl.Callback):
             pl_module.save_metadata(pl_module.hparams["path_results"])
             self.maybe_save_metadata_and_hf(trainer, pl_module)
 
-    def on_validation_epoch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
+    def on_validation_epoch_start(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ):
         # in PL train epoch start hook activates, then all training batches are processed
         # then validation epoch starts, then all val batches,
         # then val epoch ends, then train epoch ends
@@ -104,9 +108,13 @@ class Monitor(pl.Callback):
         self.epoch = -1 if trainer.sanity_checking else trainer.current_epoch
         self.hparams["train_logs"][-1]["epoch"] = self.epoch
         if trainer.global_rank == 0:
-            print(f"@@@@ perf callback: validation epoch {pl_module.current_epoch} started @@@@")
+            print(
+                f"@@@@ perf callback: validation epoch {pl_module.current_epoch} started @@@@"
+            )
 
-    def on_validation_epoch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
+    def on_validation_epoch_end(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ):
         print(
             f"@@@@ perf callback: validation epoch epoch {pl_module.current_epoch}"
             f" ended wrkr {trainer.global_rank} @@@@"
@@ -121,7 +129,15 @@ class Monitor(pl.Callback):
         #     / str_cnt_sampels
         # )
 
-    def on_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
+    def on_train_batch_end(
+        self,
+        trainer: pl.Trainer,
+        pl_module: pl.LightningModule,
+        outputs,
+        batch,
+        batch_idx,
+        unused=0,
+    ):
         checkpoint_interval = pl_module.hparams["seconds_between_snapshots"]
         if timer() - self.time_last_checkpoint > checkpoint_interval:
             self.time_last_checkpoint = timer()
