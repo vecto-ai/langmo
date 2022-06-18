@@ -1,0 +1,24 @@
+model_name: "roberta-base"
+# tokenizer_name: roberta-base
+batch_size: 16
+cnt_epochs: 8
+test: true
+uncase: false
+randomize: false
+path_results: ./tests/test_output
+max_lr: 2.e-5
+siamese: true
+freeze_encoder: false
+num_sanity_val_steps: 5
+encoder_wrapper: "lstm"
+weight_decay: 0.01
+eps: 1.e-8
+shuffle: true
+percent_warmup: 0.0
+max_length: 256
+# dynamic_pooler: true
+# multiple_cls: true
+
+# test checkpointing
+snapshot_strategy: "per_epoch"
+metric_to_monitor: "val_accuracy"

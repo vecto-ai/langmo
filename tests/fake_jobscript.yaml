@@ -1,0 +1,1 @@
+python3 -m langmo.benchmarks.GLUE drozd_model_nli.yaml stsb
