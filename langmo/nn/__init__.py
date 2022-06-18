@@ -1,2 +1,3 @@
-from .siamese import *
 from .heads import *
+from .siamese import *
+from .wrappers import *
