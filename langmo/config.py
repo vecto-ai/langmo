@@ -7,12 +7,10 @@ import time
 from pathlib import Path
 
 import yaml
-from transformers import set_seed
-from protonn.utils import get_time_str, load_json
-
 from langmo.log_helper import set_root_logger
 from langmo.utils import parse_float
-
+from protonn.utils import get_time_str, load_json
+from transformers import set_seed
 
 CONFIG_OPTIONS = {
     "snapshot_strategy": ["per_epoch", "best_only", "none"],
@@ -125,7 +123,7 @@ class Config(dict):
             pass
         if "WANDB_MODE" in os.environ and os.environ["WANDB_MODE"] != "disabled":
             if self._is_master:
-                path_wandb = Path(self.params["path_results"]) / "wandb"
+                path_wandb = Path(self["path_results"]) / "wandb"
                 path_wandb.mkdir(parents=True, exist_ok=True)
 
     def add_distributed_info(self, cnt_workers):
