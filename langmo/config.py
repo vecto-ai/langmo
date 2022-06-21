@@ -33,7 +33,7 @@ TASKTOMETRIC = {
     "mnli-mm": "val_accuracy",
     # TODO: for future better integratio
     # between NLI/GLUE
-    "NLI": "val_accuracy_matched",
+    "NLI": "val_acc_matched",
 }
 
 
