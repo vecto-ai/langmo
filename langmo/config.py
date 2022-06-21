@@ -20,6 +20,22 @@ CONFIG_OPTIONS = {
     # "model_head": ["topmlp2", "lstm"]
 }
 
+TASKTOMETRIC = {
+    "cola": "val_matthews_correlation",
+    "stsb": "val_pearson",
+    "mrpc": "val_accuracy",
+    "qnli": "val_accuracy",
+    "qqp": "val_accuracy",
+    "rte": "val_accuracy",
+    "sst2": "val_accuracy",
+    "wnli": "val_accuracy",
+    "mnli": "val_accuracy",
+    "mnli-mm": "val_accuracy",
+    # TODO: for future better integratio
+    # between NLI/GLUE
+    "NLI": "val_accuracy_matched",
+}
+
 
 def is_yaml_config(path):
     return path.is_file() and path.suffix in {".yaml", ".yml"}
@@ -147,6 +163,8 @@ class Config(dict):
                 # tokenizer defaults to model_name if absent
                 if key == "tokenizer_name":
                     value = user_config.get(key, user_config["model_name"])
+                if key == "metric_to_monitor":
+                    value = TASKTOMETRIC.get(self.name_task, None)
                 if self._is_master:
                     _logger.warning(f"setting parameter {key} to default value {value}")
                 self[key] = value
@@ -260,22 +278,6 @@ GLUETASKTOKEYS = {
     "NLI": ("premise", "hypothesis"),
 }
 
-GLUETASKTOMETRIC = {
-    "cola": "matthews_correlation",
-    "stsb": "pearson",
-    "mrpc": "accuracy",
-    "qnli": "accuracy",
-    "qqp": "accuracy",
-    "rte": "accuracy",
-    "sst2": "accuracy",
-    "wnli": "accuracy",
-    "mnli": "accuracy",
-    "mnli-mm": "accuracy",
-    # TODO: for future better integratio
-    # between NLI/GLUE
-    "NLI": "accuracy",
-}
-
 GLUETASKTONUMLABELS = {
     "stsb": 1,
     "cola": 2,
@@ -306,7 +308,7 @@ class GLUEConfig(ConfigFinetune):
         self.defaults["sent1"] = GLUETASKTOKEYS[self.name_task][0]
         self.defaults["sent2"] = GLUETASKTOKEYS[self.name_task][1]
         self.defaults["num_labels"] = GLUETASKTONUMLABELS[self.name_task]
-        self.defaults["metric_name"] = GLUETASKTOMETRIC[self.name_task]
+        self.defaults["metric_name"] = TASKTOMETRIC[self.name_task]
         self.defaults["validation_split"] = (
             "validation_mismatched"
             if self.name_task == "mnli-mm"
