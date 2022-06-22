@@ -25,6 +25,8 @@ class Monitor(pl.Callback):
         pl_module.save_as_hf(path_checkpoint / "hf")
 
     def maybe_save_metadata_and_hf(self, trainer, pl_module):
+        if trainer.global_rank != 0:
+            return
         dir_checkpoints = Path(pl_module.hparams["path_results"]) / "checkpoints"
         path_new_checkpoint = dir_checkpoints / self._get_ckpt_id(
             pl_module.hparams["train_logs"][-1]
@@ -95,7 +97,7 @@ class Monitor(pl.Callback):
                 f"end, done in {epoch_time} sec"
             )
             pl_module.save_metadata(pl_module.hparams["path_results"])
-            self.maybe_save_metadata_and_hf(trainer, pl_module)
+        self.maybe_save_metadata_and_hf(trainer, pl_module)
 
     def on_validation_epoch_start(
         self, trainer: pl.Trainer, pl_module: pl.LightningModule
