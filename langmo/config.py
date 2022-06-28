@@ -122,7 +122,7 @@ class Config(dict):
         bs = self["batch_size_effective"]
         lr = self["max_lr"] * self["cnt_workers"]
         seed = self["seed"]
-        run_folder = f"{timestamp}_bs{bs}_lr{lr}_s{seed}_{hostname}"
+        run_folder = f"{timestamp}_bs{bs}_lr{lr:.4f}_s{seed}_{hostname}"
         # TODO: make this trully unique
         return run_folder
 
