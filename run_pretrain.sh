@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd
 #$ -l rt_AF=4
-#$ -l h_rt=62:00:00
+#$ -l h_rt=20:00:00
 #$ -N Pretrain
 #$ -j y
 #$ -o ./logs/pretrain/$JOB_NAME.o$JOB_ID
@@ -30,5 +30,6 @@ mpirun ${MPIOPTS} \
     -x NCCL_DEBUG \
     -x NUM_GPUS_PER_NODE \
     -x HOROVOD_CACHE_CAPACITY \
-    python3 -m langmo.pretraining pretrain_shared.yaml
+    python3 -m langmo.pretraining.resume /groups/gcb50300/DL_outs/NLP/pretrain/roberta-base/22.06.28_14.16_bs4096_lr0.0096_s1656393386_a0062
+#    python3 -m langmo.pretraining pretrain_shared.yaml
 

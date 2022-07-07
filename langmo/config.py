@@ -22,7 +22,7 @@ CONFIG_OPTIONS = {
 
 TASKTOMETRIC = {
     "cola": "val_matthews_correlation",
-    "stsb": "val_pearson",
+    "stsb": "val_pearson_corr",
     "mrpc": "val_accuracy",
     "qnli": "val_accuracy",
     "qqp": "val_accuracy",
@@ -34,6 +34,8 @@ TASKTOMETRIC = {
     # TODO: for future better integratio
     # between NLI/GLUE
     "NLI": "val_acc_matched",
+    "squad": "exact_match",
+    "squad_v2": "exact_match",
 }
 
 
@@ -273,8 +275,7 @@ GLUETASKTOKEYS = {
     "wnli": ("sentence1", "sentence2"),
     "mnli": ("premise", "hypothesis"),
     "mnli-mm": ("premise", "hypothesis"),
-    # TODO: for future better integratio
-    # between NLI/GLUE
+    # TODO: better integratio NLI/GLUE
     "NLI": ("premise", "hypothesis"),
 }
 
@@ -289,8 +290,7 @@ GLUETASKTONUMLABELS = {
     "wnli": 2,
     "mnli": 3,
     "mnli-mm": 3,
-    # TODO: for future better integratio
-    # between NLI/GLUE
+    # TODO: better integratio NLI/GLUE
     "NLI": 3,
 }
 
@@ -316,3 +316,20 @@ class GLUEConfig(ConfigFinetune):
             if self.name_task == "mnli"
             else "validation"
         )
+
+
+QATASKS = ["squad", "squad_v2"]
+
+
+class QAConfig(ConfigFinetune):
+    def set_defaults(self):
+        super().set_defaults()
+        if not self.name_task in QATASKS:
+            raise Exception(
+                f"Question answering does not support task: {self.name_task}.\n"
+                f"Supported tasks are: {', '.join(QATASKS)}"
+            )
+        self.defaults["max_answer_length"] = 30
+        self.defaults["n_best"] = 20
+        self.defaults["stride"] = 50
+        self.defaults["num_labels"] = 2
