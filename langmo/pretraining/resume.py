@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 
+from langmo.callbacks.model_snapshots_schedule import Monitor
 from langmo.cluster_mpi import MPIClusterEnvironment
 # from langmo.config import ConfigResume as Config
 from langmo.trainer import get_trainer
@@ -44,13 +45,13 @@ def main():
     #     )
     #     params.update(replaced_params)
     model = load_model_from_checkpoint(path, params)
-    trainer = get_trainer(params, cluster_env)
+    trainer = get_trainer(params, cluster_env, [Monitor()])
     model.hparams["train_logs"] = model.hparams["train_logs"][:-1]
     data_module = TextDataModule(
         tokenizer=model.tokenizer,
         params=params,
     )
-    trainer.fit(model, data_module, ckpt_path=path / "PL_model.ckpt")
+    trainer.fit(model, data_module, ckpt_path=path / "resume" / "PL_model.ckpt")
     print("Training done")
     # TODO: what if e.g. cnt_workers changed
     # TODO: check if cnt_gpus_per_node is same

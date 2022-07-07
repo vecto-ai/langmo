@@ -14,8 +14,11 @@ class DoesRunTestCase:
     def does_NLI_fine_tune_run(self, path):
         subprocess.run([self.py_exec, "-m", "langmo.benchmarks.NLI", path], check=True)
 
-    def does_GLUE_fine_tune_run(self, path):
-        subprocess.run([self.py_exec, "-m", "langmo.benchmarks.GLUE", path, "rte"], check=True)
+    def does_GLUE_fine_tune_run(self, path, task):
+        subprocess.run([self.py_exec, "-m", "langmo.benchmarks.GLUE", path, task], check=True)
+
+    def does_QA_fine_tune_run(self, path, task):
+        subprocess.run([self.py_exec, "-m", "langmo.benchmarks.QA", path, task], check=True)
 
     def does_pretrain_run(self, path):
         subprocess.run([self.py_exec, "-m", "langmo.pretraining", path], check=True)
@@ -53,7 +56,13 @@ class Tests(unittest.TestCase):
             "./tests/test_params/fine_tune_minimal_test.yaml"
         )
         self.tester_does_run.does_GLUE_fine_tune_run(
-            "./tests/test_params/fine_tune_minimal_test.yaml"
+            "./tests/test_params/fine_tune_minimal_test.yaml", "rte"
+        )
+        self.tester_does_run.does_QA_fine_tune_run(
+            "./tests/test_params/fine_tune_minimal_test.yaml", "squad"
+        )
+        self.tester_does_run.does_QA_fine_tune_run(
+            "./tests/test_params/fine_tune_minimal_test.yaml", "squad_v2"
         )
 
     def test_does_run_siamese(self):
@@ -61,7 +70,7 @@ class Tests(unittest.TestCase):
             "tests/test_params/fine_tune_siamese_minimal_test.yaml"
         )
         self.tester_does_run.does_GLUE_fine_tune_run(
-            "tests/test_params/fine_tune_siamese_minimal_test.yaml"
+            "tests/test_params/fine_tune_siamese_minimal_test.yaml", "rte"
         )
 
 

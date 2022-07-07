@@ -7,12 +7,17 @@ from langmo.callbacks.model_snapshots_schedule import FinetuneMonitor
 from langmo.cluster_mpi import MPIClusterEnvironment
 from langmo.config import ConfigFinetune
 from langmo.nn import Siamese, TopMLP2, wrap_encoder
+
 # from langmo.nn.heads import get_downstream_head
 from langmo.nn.utils import reinit_model, reinit_tensor
 from langmo.trainer import get_trainer
 from protonn.utils import get_time_str
-from transformers import (AutoModel, AutoModelForQuestionAnswering,
-                          AutoModelForSequenceClassification, AutoTokenizer)
+from transformers import (
+    AutoModel,
+    AutoModelForQuestionAnswering,
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+)
 from transformers import logging as tr_logging
 
 
@@ -122,12 +127,6 @@ class ClassificationFinetuner(BaseFinetuner):
     #         encoder,
     #     )
 
-
-class QAFinetuner(BaseFinetuner):
-    def create_net(self):
-        name_model = self.params["model_name"]
-        net = AutoModelForQuestionAnswering.from_pretrained(name_model)
-        return net, name_model
 
 
 def allreduce(tensor: torch.Tensor, op: Optional[int] = None) -> torch.Tensor:

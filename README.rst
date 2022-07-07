@@ -31,7 +31,7 @@ To resume crashed/aborted pretraining session:
 Finetuning/Evaluation
 ---------------------
 
-Fintuning on one of the GLUE tasks::
+Finetuning on one of the GLUE tasks::
 
     mpirun -np N python -m langmo.benchmarks.GLUE config.yaml glue_task
 
@@ -44,6 +44,12 @@ To perfrorm fibetuning on NLI run as::
 
     mpirun -np N python -m langmo.benchmarks.NLI config.yaml
 
+
+Finetuning on extractive question-answering tasks::
+
+    mpirun -np N python -m langmo.benchmarks.QA config.yaml qa_task
+
+supported tasks: **squad, squad_v2**
 
 example config file:
 

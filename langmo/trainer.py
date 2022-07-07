@@ -6,7 +6,7 @@ from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 
 
-def get_trainer(params, cluster_env, extra_callbacks=[]):
+def get_trainer(params, cluster_env, extra_callbacks):
     # use 1 GPU with horovod and -1 with DDP
     # if (da.rank() != 0):
     #     params["path_results"] = "/tmp"
