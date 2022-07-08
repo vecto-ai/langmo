@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 import yaml
-from langmo.config import GLUETASKTOKEYS, load_yaml_or_empty
+from langmo.config import GLUETASKTOKEYS, QATASKS, load_yaml_or_empty
 
 # TODO: make console logs go to the target dir
 
@@ -47,7 +47,7 @@ def get_results_path(user_config, path_snapshot, name_task, salt):
     return path
 
 
-def create_config_file(user_config, path_snapshot, path_config):
+def create_config_file(path_config, user_config, path_snapshot):
     # TUDO: add warnings when overwriting
     if path_snapshot.exists():
         user_config["model_name"] = str(path_snapshot / "hf")
@@ -61,22 +61,24 @@ def create_job_file(path_jobscript, path_config, name_task):
     # read headear
     with open("./configs/auto_finetune.inc") as f:
         job_script_header = f.read()
+    available_glue_tasks = list(GLUETASKTOKEYS.keys())
+    if name_task == "NLI":
+        cmd = f"python3 -m langmo.benchmarks.NLI {path_config}\n"
+    elif name_task in available_glue_tasks:
+        cmd = f"python3 -m langmo.benchmarks.GLUE {path_config} {name_task}\n"
+    elif name_task in QATASKS:
+        cmd = f"python3 -m langmo.benchmarks.QA {path_config} {name_task}\n"
+    else:
+        raise ValueError(
+            f"{name_task} is not supported. One among {'|'.join(available_glue_tasks)} or {'|'.join(QATASKS)} should be chosen."
+        )
     with open(path_jobscript, "w") as file_jobscript:
         file_jobscript.write(job_script_header)
-        if name_task == "NLI":
-            cmd = f"python3 -m langmo.benchmarks.NLI {path_config}\n"
-        else:
-            available_glue_tasks = list(GLUETASKTOKEYS.keys())
-            if name_task not in available_glue_tasks:
-                raise Exception(
-                    f"{name_task} is not supported. One among {'|'.join(available_glue_tasks)} should be chosen."
-                )
-            cmd = f"python3 -m langmo.benchmarks.GLUE {path_config} {name_task}\n"
         file_jobscript.write(cmd)
     make_executable(path_jobscript)
 
 
-def create_files_and_submit(path_snapshot, name_task, config, out_dir):
+def create_files_and_submit(path_snapshot, name_task, config, out_dir, path_tempfiles):
     # TODO: don't forget to resolve the path
     user_config = load_yaml_or_empty(config)
     salt = tempfile.NamedTemporaryFile().name.split("/")[-1][3:]
@@ -88,8 +90,12 @@ def create_files_and_submit(path_snapshot, name_task, config, out_dir):
         user_config["create_unique_path"] = True
     user_config["path_results"] = str(path_out)
     path_out.mkdir(parents=True, exist_ok=True)
-    path_config = path_out / f"auto_{name_task}_{salt}.yaml"
-    path_jobscript = path_out / f"auto_{name_task}_{salt}.sh"
-    create_config_file(user_config, path_snapshot, path_config)
+    if path_tempfiles:
+        path_config = path_tempfiles / f"auto_{name_task}_{salt}.yaml"
+        path_jobscript = path_tempfiles / f"auto_{name_task}_{salt}.sh"
+    else:
+        path_config = path_out / f"auto_{name_task}_{salt}.yaml"
+        path_jobscript = path_out / f"auto_{name_task}_{salt}.sh"
+    create_config_file(path_config, user_config, path_snapshot)
     create_job_file(path_jobscript, path_config, name_task)
     schedule_eval_run(path_jobscript)
