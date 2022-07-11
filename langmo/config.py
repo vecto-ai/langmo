@@ -31,11 +31,59 @@ TASKTOMETRIC = {
     "wnli": "val_accuracy",
     "mnli": "val_accuracy",
     "mnli-mm": "val_accuracy",
+    "boolq": "val_accuracy",
     # TODO: for future better integratio
     # between NLI/GLUE
     "NLI": "val_acc_matched",
     "squad": "exact_match",
     "squad_v2": "exact_match",
+}
+
+
+GLUETASKTOKEYS = {
+    "cola": ("sentence", None),
+    "mrpc": ("sentence1", "sentence2"),
+    "qnli": ("question", "sentence"),
+    "qqp": ("question1", "question2"),
+    "rte": ("sentence1", "sentence2"),
+    "sst2": ("sentence", None),
+    "stsb": ("sentence1", "sentence2"),
+    "wnli": ("sentence1", "sentence2"),
+    "mnli": ("premise", "hypothesis"),
+    "mnli-mm": ("premise", "hypothesis"),
+    # TODO: better integratio NLI/GLUE
+    "NLI": ("premise", "hypothesis"),
+    "boolq": ("question", "passage"),
+}
+
+GLUETASKTONUMLABELS = {
+    "stsb": 1,
+    "cola": 2,
+    "mrpc": 2,
+    "qnli": 2,
+    "qqp": 2,
+    "rte": 2,
+    "sst2": 2,
+    "wnli": 2,
+    "mnli": 3,
+    "mnli-mm": 3,
+    # TODO: better integratio NLI/GLUE
+    "NLI": 3,
+    "boolq": 2,
+}
+
+GLUETYPE = {
+    "cola": "glue",
+    "stsb": "glue",
+    "mrpc": "glue",
+    "qnli": "glue",
+    "qqp": "glue",
+    "rte": "glue",
+    "sst2": "glue",
+    "wnli": "glue",
+    "mnli": "glue",
+    "mnli-mm": "glue",
+    "boolq": "super_glue",
 }
 
 
@@ -264,37 +312,6 @@ class ConfigFinetune(Config):
         self.defaults["cnt_seps"] = -1
 
 
-GLUETASKTOKEYS = {
-    "cola": ("sentence", None),
-    "mrpc": ("sentence1", "sentence2"),
-    "qnli": ("question", "sentence"),
-    "qqp": ("question1", "question2"),
-    "rte": ("sentence1", "sentence2"),
-    "sst2": ("sentence", None),
-    "stsb": ("sentence1", "sentence2"),
-    "wnli": ("sentence1", "sentence2"),
-    "mnli": ("premise", "hypothesis"),
-    "mnli-mm": ("premise", "hypothesis"),
-    # TODO: better integratio NLI/GLUE
-    "NLI": ("premise", "hypothesis"),
-}
-
-GLUETASKTONUMLABELS = {
-    "stsb": 1,
-    "cola": 2,
-    "mrpc": 2,
-    "qnli": 2,
-    "qqp": 2,
-    "rte": 2,
-    "sst2": 2,
-    "wnli": 2,
-    "mnli": 3,
-    "mnli-mm": 3,
-    # TODO: better integratio NLI/GLUE
-    "NLI": 3,
-}
-
-
 class GLUEConfig(ConfigFinetune):
     def set_defaults(self):
         super().set_defaults()
@@ -309,6 +326,7 @@ class GLUEConfig(ConfigFinetune):
         self.defaults["sent2"] = GLUETASKTOKEYS[self.name_task][1]
         self.defaults["num_labels"] = GLUETASKTONUMLABELS[self.name_task]
         self.defaults["metric_name"] = TASKTOMETRIC[self.name_task]
+        self.defaults["glue_type"] = GLUETYPE[self.name_task]
         self.defaults["validation_split"] = (
             "validation_mismatched"
             if self.name_task == "mnli-mm"
