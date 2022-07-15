@@ -42,7 +42,8 @@ class QADataModule(BaseDataModule):
     def setup(self, stage=None):
         # self.cnt_train_samples is set by self.train_dataloader
         self._langmo_train_dataloader = self.get_split_dataloader(
-            self.params["name_task"], split="train")
+            self.params["name_task"], split="train"
+        )
         self.cnt_train_samples = len(self._langmo_train_dataloader.dataset)
 
     # pylint: disable=access-member-before-definition
@@ -58,14 +59,18 @@ class QADataModule(BaseDataModule):
             read_instruction = ReadInstruction(
                 split,
                 from_=0,
-                to=1,
-                unit="%",
+                to=self.params["batch_size"] * 3,
+                unit="abs",
             )
         else:
             if split == "validation":
                 # for val we shard DS first so that parts of one question are on one worker
-                percent_start = float(self.trainer.global_rank) / float(self.trainer.world_size) * 100
-                percent_end = float(self.trainer.global_rank + 1) / float(self.trainer.world_size) * 100
+                percent_start = (
+                    float(self.trainer.global_rank) / float(self.trainer.world_size) * 100
+                )
+                percent_end = (
+                    float(self.trainer.global_rank + 1) / float(self.trainer.world_size) * 100
+                )
                 read_instruction = ReadInstruction(
                     split,
                     from_=percent_start,
@@ -82,7 +87,9 @@ class QADataModule(BaseDataModule):
             sampler = None
         elif split == "train":
             ds = self._map(ds, self.preprocess_training_examples)
-            sampler = DistributedSampler(ds, self.trainer.world_size, self.trainer.global_rank, self.shuffle)
+            sampler = DistributedSampler(
+                ds, self.trainer.world_size, self.trainer.global_rank, self.shuffle
+            )
 
         return DataLoader(
             ds,
