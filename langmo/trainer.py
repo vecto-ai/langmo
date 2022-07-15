@@ -1,7 +1,10 @@
+import os
+
 import pytorch_lightning as pl
 import torch
-from langmo.callbacks.layernorm import LayerNormCallback
-from langmo.callbacks.monitor import Monitor
+from langmo.logger_dummy import DummyLogger
+# from langmo.callbacks.layernorm import LayerNormCallback
+# from langmo.callbacks.monitor import Monitor
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 
@@ -19,15 +22,17 @@ def get_trainer(params, cluster_env, extra_callbacks):
     # gpus = [int(os.environ["RANK"])] if params["use_gpu"] else 0
     gpus = -1 if (params["cnt_gpus_per_node"] > 0) else 0
     pl.utilities.rank_zero.rank_zero_only.rank = cluster_env.global_rank()
-    logger = WandbLogger(
-        project=params["name_project"],
-        name=params["name_run"],
-        save_dir=params["path_results"],
-    )
+    if "WANDB_MODE" in os.environ and os.environ["WANDB_MODE"].lower() != "disabled":
+        logger = WandbLogger(
+            project=params["name_project"],
+            name=params["name_run"],
+            save_dir=params["path_results"],
+        )
+    else:
+        logger = DummyLogger()
     trainer = pl.Trainer(
         plugins=[cluster_env],
         default_root_dir=params["path_results"],
-        weights_save_path=params["path_results"],
         gpus=gpus,
         # num_nodes=int(os.environ["CNT_NODES"]),  # cluster_env.cnt_nodes(),
         num_nodes=cluster_env.cnt_nodes(),

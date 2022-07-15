@@ -187,7 +187,7 @@ class Config(dict):
         else:
             # TODO: chech if the folder is empty
             pass
-        if "WANDB_MODE" in os.environ and os.environ["WANDB_MODE"] != "disabled":
+        if "WANDB_MODE" in os.environ and os.environ["WANDB_MODE"].lower() != "disabled":
             if self._is_master:
                 path_wandb = Path(self["path_results"]) / "wandb"
                 path_wandb.mkdir(parents=True, exist_ok=True)
