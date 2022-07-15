@@ -146,6 +146,8 @@ class QAModel(BaseClassificationModel):
     def _check_in_bounds(self, start_index, end_index, offsets):
         if offsets[start_index] is None or offsets[end_index] is None:
             return False
+        if len(offsets[start_index]) == 0 or len(offsets[end_index]) == 0:
+            return False
         if end_index < start_index or end_index - start_index + 1 > self.max_answer_length:
             return False
         return True
@@ -173,11 +175,19 @@ class QANet(nn.Module):
 
     def _partial_init(self, config):
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        classifier_dropout = (
-            config.classifier_dropout
-            if config.classifier_dropout is not None
-            else config.hidden_dropout_prob
-        )
+        conf_dict = config.to_dict()
+        if "classifier_dropout" in conf_dict:
+            classifier_dropout = (
+                config.classifier_dropout
+                if config.classifier_dropout is not None
+                else config.hidden_dropout_prob
+            )
+        elif (
+            "classifier_dropout_prob" in conf_dict
+            and conf_dict["classifier_dropout_prob"] is not None
+        ):
+            classifier_dropout = config.classifier_dropout_prob
+
         self.dropout = nn.Dropout(classifier_dropout)
         self.out_proj = nn.Linear(config.hidden_size, 2)
         self.cl_loss = nn.CrossEntropyLoss()
