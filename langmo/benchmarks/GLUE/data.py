@@ -48,7 +48,7 @@ class GLUEDataModule(BaseDataModule):
         self.cnt_train_samples = num_samples_tensor.item()
 
     def _init_dataset(self, dataset_name, split=None):
-        return datasets.load_dataset("glue", dataset_name, split=split)
+        return datasets.load_dataset(self.params["glue_type"], dataset_name, split=split)
 
     def train_dataloader(self):
         return [self.get_split_dataloader(self.params["name_task"], "train")]
