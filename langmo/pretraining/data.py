@@ -7,7 +7,7 @@ from threading import Thread
 import pytorch_lightning as pl
 import torch
 # from torch.utils.data import DataLoader, DistributedSampler
-from vecto.corpus import Corpus, DirCorpus
+from kapral.corpus import Corpus
 
 IGNORE_TOKEN_ID = -100
 
@@ -220,7 +220,7 @@ class TextDataModule(pl.LightningDataModule):
         self.params = params
         self.tokenizer = tokenizer
         self.corpus = Corpus(self.params["path_corpus"])
-        self.val_corpus = DirCorpus(self.params["path_val_corpus"])
+        # self.val_corpus = Corpus(self.params["path_val_corpus"])
 
     def setup(self, stage=None):
         # TODO: do this in rank 0 and send to the rest
