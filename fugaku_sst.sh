@@ -9,7 +9,7 @@
 #PJM -x PJM_LLIO_GFSCACHE=/vol0004
 ##PJM --llio sharedtmp-size=80Gi
 
-source /home/ra000012/data/pytorch110.Kfast/venv/bin/activate
+source /home/ra000012/data/pytorch.1.10/venv/bin/activate
 
 export NUM_GPUS_PER_NODE=0
 export TOKENIZERS_PARALLELISM=true
