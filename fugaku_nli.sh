@@ -12,13 +12,15 @@
 #PJM -x PJM_LLIO_GFSCACHE=/vol0004
 ##PJM --llio sharedtmp-size=80Gi
 
-source /home/ra000012/data/pytorch.1.10/venv/bin/activate
+PREFIX=/home/ra000012/data/pytorch.1.10
+source $PREFIX/venv/bin/activate
 
 export NUM_GPUS_PER_NODE=0
 export TOKENIZERS_PARALLELISM=true
 export PL_TORCH_DISTRIBUTED_BACKEND=MPI
 
-OMP_NUM_THREADS=48 mpirun \
+
+LD_PRELOAD=$PREFIX/prefix/lib/libtcmalloc.so OMP_NUM_THREADS=48 mpirun \
     -x TOKENIZERS_PARALLELISM \
     -x NUM_GPUS_PER_NODE \
     -x PL_TORCH_DISTRIBUTED_BACKEND \

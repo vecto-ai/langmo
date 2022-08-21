@@ -1,4 +1,5 @@
-model_name: "prajjwal1/bert-mini"
+# model_name: "prajjwal1/bert-mini"
+model_name: "./saved-roberta-base"
 cnt_epochs: 2
 test: true
 

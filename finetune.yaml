@@ -1,7 +1,7 @@
 model_name: "roberta-base"
 cnt_epochs: 2
 test: false
-per_epoch_snapshot: false
+# per_epoch_snapshot: false
 
 # path_embeddings: "/groups2/gcb50300/data/NLP/embeddings/glove.6B.300d/"
 batch_size: 48
