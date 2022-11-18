@@ -28,14 +28,14 @@ class BertWithMeanPooler(BaseBERTWrapper):
         super().__init__(net, freeze)
         self.mean_pooler = nn.Linear(self.net.config.hidden_size, self.net.config.hidden_size)
         self.activation = nn.Tanh()
-    
+
     def forward(self, **x):
         res = self.net(**x)["last_hidden_state"].mean(1)
         res = self.mean_pooler(res)
         return self.activation(res)
 
 
-class BertWithPooler(BaseBERTWrapper):        
+class BertWithPooler(BaseBERTWrapper):
     def forward(self, **x):
         res = self.net(**x)["pooler_output"]
         return res
