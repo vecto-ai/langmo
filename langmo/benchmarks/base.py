@@ -4,20 +4,15 @@ import torch
 import torch.distributed as dist
 from langmo.base import PLBase
 from langmo.callbacks.model_snapshots_schedule import FinetuneMonitor
-from protonn.pl.cluster_mpi import MPIClusterEnvironment
 from langmo.config import ConfigFinetune
 from langmo.nn import Siamese, TopMLP2, wrap_encoder
-
 # from langmo.nn.heads import get_downstream_head
 from langmo.nn.utils import reinit_model, reinit_tensor
 from langmo.trainer import get_trainer
+from protonn.pl.cluster_mpi import MPIClusterEnvironment
 from protonn.utils import get_time_str
-from transformers import (
-    AutoModel,
-    AutoModelForQuestionAnswering,
-    AutoModelForSequenceClassification,
-    AutoTokenizer,
-)
+from transformers import (AutoModel, AutoModelForSequenceClassification,
+                          AutoTokenizer)
 from transformers import logging as tr_logging
 
 
@@ -126,7 +121,6 @@ class ClassificationFinetuner(BaseFinetuner):
     #     return (
     #         encoder,
     #     )
-
 
 
 def allreduce(tensor: torch.Tensor, op: Optional[int] = None) -> torch.Tensor:
