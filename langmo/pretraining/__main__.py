@@ -1,10 +1,10 @@
 import socket
 
 from langmo.callbacks.model_snapshots_schedule import Monitor
-from langmo.cluster_mpi import MPIClusterEnvironment
 from langmo.config import ConfigPretrain as Config
 from langmo.log_helper import set_root_logger
 from langmo.trainer import get_trainer
+from protonn.pl.cluster_mpi import MPIClusterEnvironment
 from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
 

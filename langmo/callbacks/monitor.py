@@ -1,5 +1,6 @@
 # pylint: disable=attribute-defined-outside-init
 from pathlib import Path
+from time import sleep
 from timeit import default_timer as timer
 
 import pytorch_lightning as pl
@@ -27,10 +28,7 @@ class Monitor(pl.Callback):
     def maybe_save_metadata_and_hf(self, trainer, pl_module):
         if trainer.global_rank != 0:
             return
-        dir_checkpoints = Path(pl_module.hparams["path_results"]) / "checkpoints"
-        path_new_checkpoint = dir_checkpoints / self._get_ckpt_id(
-            pl_module.hparams["train_logs"][-1]
-        )
+        path_new_checkpoint = self._get_ckecpoint_folder()
 
         if pl_module.hparams["snapshot_strategy"] == "none":
             return
@@ -42,13 +40,17 @@ class Monitor(pl.Callback):
             self._save_best_only(path_new_checkpoint, pl_module)
         print("saving done")
 
-    def _get_ckpt_id(self, epoch_log):
+    def _get_ckecpoint_folder(self):
+        epoch_log = self.pl_module.hparams["train_logs"][-1]
+        dir_checkpoints = Path(self.pl_module.hparams["path_results"]) / "checkpoints"
         # TODO: here we default to 0 due to on_train/validation_epoch_end
         # order in pytorch_lightning
         n_smpl = num_to_str_with_suffix(epoch_log.get("cnt_samples_processed", 0))
-        return f"ep_{epoch_log['epoch']:03d}_smpl_{n_smpl}"
+        dir_current = f"ep_{epoch_log['epoch']:03d}_smpl_{n_smpl}"
+        return dir_checkpoints / dir_current
 
     def setup(self, trainer, pl_module, stage=None):
+        self.pl_module = pl_module
         self.hparams = pl_module.hparams
         # TODO: check what happens on resume
         if "train_logs" not in self.hparams:
@@ -109,10 +111,18 @@ class Monitor(pl.Callback):
         self.time_end = timer()
         self.epoch = -1 if trainer.sanity_checking else trainer.current_epoch
         self.hparams["train_logs"][-1]["epoch"] = self.epoch
-        if trainer.global_rank == 0:
-            print(
-                f"@@@@ perf callback: validation epoch {pl_module.current_epoch} started @@@@"
-            )
+        path_details = self._get_ckecpoint_folder() / "predictions"
+        # this is kinda ugly. having separate callback would have been better,
+        # but then we have to return predictions from each validation step
+        if self.hparams["save_predictions"]:
+            if trainer.global_rank == 0:
+                path_details.mkdir(parents=True, exist_ok=True)
+                print(
+                    f"@@@@ perf callback: validation epoch {pl_module.current_epoch} started @@@@"
+                )
+            trainer._accelerator_connector.cluster_environment.barrier()
+            for split in pl_module.validation_split_names:
+                pl_module.files_predictions = [open(path_details / f"{split}_w{trainer.global_rank}.jsonl", "w")]
 
     def on_validation_epoch_end(
         self, trainer: pl.Trainer, pl_module: pl.LightningModule
@@ -121,6 +131,11 @@ class Monitor(pl.Callback):
             f"@@@@ perf callback: validation epoch epoch {pl_module.current_epoch}"
             f" ended wrkr {trainer.global_rank} @@@@"
         )
+        if self.hparams["save_predictions"]:
+            for f in pl_module.files_predictions:
+                f.close()
+        # pl_module.files_detail = [open(path_details / f"pred_{split}_w{pl_module.global_rank}.json", "w")
+        #     for split in pl_module.validation_split_names]
         # if trainer.global_rank == 0:
         # pl_module.save_metadata()
         # n_smpl = num_to_str_with_suffix(pl_module.hparams['cnt_samples_processed'])
@@ -147,3 +162,6 @@ class Monitor(pl.Callback):
                 path_save = Path(pl_module.hparams["path_results"]) / "resume"
                 trainer.save_checkpoint(path_save / "PL_model.ckpt")
                 pl_module.save_metadata(path_save)
+
+    # def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
+    #     print("VAL BATCH END CALLBACK:", outputs)
