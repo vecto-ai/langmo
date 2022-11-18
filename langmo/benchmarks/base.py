@@ -5,14 +5,13 @@ import torch.distributed as dist
 from langmo.base import PLBase
 from langmo.callbacks.model_snapshots_schedule import FinetuneMonitor
 from langmo.config import ConfigFinetune
-from langmo.nn import Siamese, TopMLP2, wrap_encoder
+from langmo.nn import create_net
 # from langmo.nn.heads import get_downstream_head
 from langmo.nn.utils import reinit_model, reinit_tensor
 from langmo.trainer import get_trainer
 from protonn.pl.cluster_mpi import MPIClusterEnvironment
 from protonn.utils import get_time_str
-from transformers import (AutoModel, AutoModelForSequenceClassification,
-                          AutoTokenizer)
+from transformers import AutoTokenizer
 from transformers import logging as tr_logging
 
 
@@ -91,36 +90,7 @@ class BaseFinetuner:
 
 class ClassificationFinetuner(BaseFinetuner):
     def create_net(self):
-        name_model = self.params["model_name"]
-        if self.params["siamese"]:
-            name_run = "siam_" + self.params["encoder_wrapper"] + "_"
-            if self.params["freeze_encoder"]:
-                name_run += "fr_"
-            name_run += name_model
-            encoder = AutoModel.from_pretrained(name_model, add_pooling_layer=False)
-            wrapped_encoder = wrap_encoder(
-                encoder, name=self.params["encoder_wrapper"], freeze=self.params["freeze_encoder"]
-            )
-            # TODO: add different heads support
-            net = Siamese(
-                wrapped_encoder,
-                TopMLP2(
-                    in_size=wrapped_encoder.get_output_size() * 4,
-                    cnt_classes=self.params["num_labels"],
-                ),
-            )
-        else:
-            net = AutoModelForSequenceClassification.from_pretrained(
-                name_model, num_labels=self.params["num_labels"]
-            )
-            name_run = name_model.split("pretrain")[-1]
-
-        return net, name_run
-
-    # def _get_encoder_and_output_size(self, encoder):
-    #     return (
-    #         encoder,
-    #     )
+        return create_net(self.params)
 
 
 def allreduce(tensor: torch.Tensor, op: Optional[int] = None) -> torch.Tensor:
