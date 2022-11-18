@@ -2,7 +2,6 @@ import torch.nn as nn
 
 
 class Classifier(nn.Module):
-    # TODO: ignode save_pretrained
     def __init__(self, encoder, head, freeze_encoder=True):
         super().__init__()
         self.encoder = encoder
