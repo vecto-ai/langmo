@@ -35,19 +35,10 @@ class BertWithMeanPooler(BaseBERTWrapper):
         return self.activation(res)
 
 
-class BertWithPooler(BaseBERTWrapper):
-    def __init__(self, net, freeze):
-        super().__init__(net, freeze)
-        self.pooler = nn.Linear(self.new.config.hidden_size, self.net.config.hidden_size)
-        self.activation = nn.Tanh()
-        
+class BertWithPooler(BaseBERTWrapper):        
     def forward(self, **x):
-        # res = self.net(**x)["last_hidden_state"]["pooler_output"]
-        # TODO: double check that all models indeed do mean for pooler
-        # TODO: or better only add original pooler for pooled model
-        res = self.net(**x)["last_hidden_state"][:, 0, :]
-        res = self.pooler(res)
-        return self.activation(res)
+        res = self.net(**x)["pooler_output"]
+        return res
 
 
 class BertWithLSTM(BaseBERTWrapper):
