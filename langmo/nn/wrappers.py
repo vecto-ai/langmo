@@ -23,19 +23,31 @@ class BaseBERTWrapper(nn.Module):
         raise NotImplementedError("Don't use this directly.")
 
 
-class BertWithCLS(BaseBERTWrapper):
+class BertWithMeanPooler(BaseBERTWrapper):
+    def __init__(self, net, freeze):
+        super().__init__(net, freeze)
+        self.mean_pooler = nn.Linear(self.net.config.hidden_size, self.net.config.hidden_size)
+        self.activation = nn.Tanh()
+    
     def forward(self, **x):
-        res = self.net(**x)["last_hidden_state"][:, 0, :]
-        return res
+        res = self.net(**x)["last_hidden_state"].mean(1)
+        res = self.mean_pooler(res)
+        return self.activation(res)
 
 
 class BertWithPooler(BaseBERTWrapper):
+    def __init__(self, net, freeze):
+        super().__init__(net, freeze)
+        self.pooler = nn.Linear(self.new.config.hidden_size, self.net.config.hidden_size)
+        self.activation = nn.Tanh()
+        
     def forward(self, **x):
         # res = self.net(**x)["last_hidden_state"]["pooler_output"]
         # TODO: double check that all models indeed do mean for pooler
         # TODO: or better only add original pooler for pooled model
-        res = self.net(**x)["last_hidden_state"].mean(1)
-        return res
+        res = self.net(**x)["last_hidden_state"][:, 0, :]
+        res = self.pooler(res)
+        return self.activation(res)
 
 
 class BertWithLSTM(BaseBERTWrapper):
@@ -66,6 +78,6 @@ class BertWithLSTM(BaseBERTWrapper):
 
 def wrap_encoder(encoder, name, freeze):
     name = name.lower()
-    wrappers = {"cls": BertWithCLS, "pooler": BertWithPooler, "lstm": BertWithLSTM}
+    wrappers = {"cls": BertWithPooler, "mean_pooler": BertWithMeanPooler, "lstm": BertWithLSTM}
     class_wrapper = wrappers[name]
     return class_wrapper(encoder, freeze)
