@@ -101,6 +101,7 @@ class GLUEConfig(ConfigFinetune):
         self.defaults["metric_name"] = TASKTOMETRIC[self["name_task"]]
         # TODO: support custom additional validation splits
         self.defaults["validation_split"] = task_spec["validation_split"]
+        self.defaults["classifier"] = "huggingface"
         self["sent1"] = task_spec["keys"][0]
         self["sent2"] = task_spec["keys"][1]
         self["glue_type"] = task_spec["dataset_prefix"]

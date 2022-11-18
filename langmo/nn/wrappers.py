@@ -10,6 +10,11 @@ class BaseBERTWrapper(nn.Module):
             for param in self.net.parameters():
                 param.requires_grad = False
 
+    @property
+    def config(self):
+        # TODO: add warning here
+        return self.net.config
+
     def get_output_size(self):
         # if hasattr(self.net, "pooler"):
         #     if hasattr(self.net.pooler, "out_features"):
@@ -55,6 +60,7 @@ class BertWithLSTM(BaseBERTWrapper):
         )
 
     def lstm_out_to_tensor(self, x):
+        # TODO: check if it should be one side of one direction and another one from another
         return x[0][:, -1, :]
 
     def forward(self, **x):

@@ -2,6 +2,7 @@
 
 from transformers import AutoModel, AutoModelForSequenceClassification
 
+from .classifier import Classifier
 from .heads import *
 from .siamese import *
 from .wrappers import *
@@ -24,15 +25,31 @@ def create_net(params):
         # TODO: add different heads support
         net = Siamese(
             wrapped_encoder,
+            # *4 logic should be inside siamese and not here
             TopMLP2(
                 in_size=wrapped_encoder.get_output_size() * 4,
                 cnt_classes=params["num_labels"],
             ),
         )
     else:
-        net = AutoModelForSequenceClassification.from_pretrained(
-            name_model, num_labels=params["num_labels"]
-        )
-        name_run = name_model.split("pretrain")[-1]
+        if params["classifier"] == "huggingface":
+            net = AutoModelForSequenceClassification.from_pretrained(
+                name_model, num_labels=params["num_labels"]
+            )
+            name_run = name_model.split("pretrain")[-1]
+        # TODO: decide what classifier param ataully should be
+        elif params["encoder_wrapper"] == "lstm":
+            encoder = AutoModel.from_pretrained(name_model, add_pooling_layer=False)
+            wrapped_encoder = wrap_encoder(
+                encoder, name=params["encoder_wrapper"], freeze=params["freeze_encoder"]
+            )
+            head = TopMLP2(
+                in_size=wrapped_encoder.get_output_size(),
+                cnt_classes=params["num_labels"],
+            )
+            net = Classifier(wrapped_encoder, head)
+            name_run = name_model + "_custom_cls"
+        else:
+            raise NotImplemented("not yet")
 
     return net, name_run
