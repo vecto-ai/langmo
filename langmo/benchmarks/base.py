@@ -4,7 +4,7 @@ import torch
 import torch.distributed as dist
 from langmo.base import PLBase
 from langmo.callbacks.model_snapshots_schedule import FinetuneMonitor
-from langmo.cluster_mpi import MPIClusterEnvironment
+from protonn.pl.cluster_mpi import MPIClusterEnvironment
 from langmo.config import ConfigFinetune
 from langmo.nn import Siamese, TopMLP2, wrap_encoder
 

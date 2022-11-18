@@ -20,10 +20,10 @@ class BaseDataModule(pl.LightningDataModule):
             ds_size = self.batch_size * 2
             start = self.trainer.global_rank * ds_size
             split = f"{split}[{start}:{start + ds_size}]"
-            dataset = self._init_dataset(dataset_name, split=split)
+            dataset = self._init_dataset((dataset_name), split=split)
             sampler = None
         elif shuffle:
-            dataset = self._init_dataset(dataset_name, split=split)
+            dataset = self._init_dataset((dataset_name), split=split)
             sampler = DistributedSampler(dataset, self.trainer.world_size, self.trainer.global_rank, shuffle)
         else:
             split = datasets.ReadInstruction(
@@ -32,7 +32,7 @@ class BaseDataModule(pl.LightningDataModule):
                 to=self.percent_end,
                 unit="%",
             )
-            dataset = self._init_dataset(dataset_name, split=split)
+            dataset = self._init_dataset((dataset_name), split=split)
             sampler = None
         return DataLoader(
             dataset,
@@ -42,7 +42,8 @@ class BaseDataModule(pl.LightningDataModule):
         )
 
     def _init_dataset(self, dataset_name, split):
-        return datasets.load_dataset(dataset_name, split=split)
+        # TODO: consider making it more explicit, e.g. **
+        return datasets.load_dataset(*dataset_name, split=split)
 
 
 class BaseCollator:

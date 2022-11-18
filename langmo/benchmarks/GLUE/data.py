@@ -39,7 +39,7 @@ class GLUEDataModule(BaseDataModule):
     def setup(self, stage=None):
         self.cnt_train_samples = 0
         if self.trainer.global_rank == 0:
-            ds = self._init_dataset(self.params["name_task"])
+            ds = datasets.load_dataset(*(self.params["glue_type"], self.params["name_task"]))
             self.cnt_train_samples = len(ds["train"])
         num_samples_tensor = torch.LongTensor([self.cnt_train_samples])
         if self.params["cnt_gpus_per_node"] > 0:
@@ -47,13 +47,11 @@ class GLUEDataModule(BaseDataModule):
         dist.broadcast(num_samples_tensor, 0)
         self.cnt_train_samples = num_samples_tensor.item()
 
-    def _init_dataset(self, dataset_name, split=None):
-        return datasets.load_dataset(self.params["glue_type"], dataset_name, split=split)
-
     def train_dataloader(self):
-        return [self.get_split_dataloader(self.params["name_task"], "train")]
+        return [self.get_split_dataloader((self.params["glue_type"], self.params["name_task"]), "train")]
 
     def val_dataloader(self):
-        validation_split = self.params["validation_split"]
-        name_task = self.params["name_task"]
-        return [self.get_split_dataloader(name_task, validation_split)]
+        val_splits = self.params["validation_split"]
+        # TODO: allow extra validation to be a parameter
+        datasets = [self.get_split_dataloader(split["dataset"], split["split"]) for split in val_splits]
+        return datasets

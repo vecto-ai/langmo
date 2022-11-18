@@ -4,7 +4,9 @@ import tempfile
 from pathlib import Path
 
 import yaml
-from langmo.config import GLUETASKTOKEYS, QATASKS, load_yaml_or_empty
+from langmo.config.base import load_yaml_or_empty
+from langmo.config.glue import GLUE_TASKS
+from langmo.config.qa import QATASKS
 
 # TODO: make console logs go to the target dir
 
@@ -61,7 +63,7 @@ def create_job_file(path_jobscript, path_config, name_task):
     # read headear
     with open("./configs/auto_finetune.inc") as f:
         job_script_header = f.read()
-    available_glue_tasks = list(GLUETASKTOKEYS.keys())
+    available_glue_tasks = list(GLUE_TASKS.keys())
     if name_task == "NLI":
         cmd = f"python3 -m langmo.benchmarks.NLI {path_config}\n"
     elif name_task in available_glue_tasks:

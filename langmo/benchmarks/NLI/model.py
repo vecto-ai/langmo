@@ -1,9 +1,9 @@
 import torch
 import torch.nn.functional as F
-
+from langmo.benchmarks.base import (BaseClassificationModel,
+                                    aggregate_batch_stats, allreduce)
 from torchmetrics.functional import accuracy
 
-from langmo.benchmarks.base import BaseClassificationModel, aggregate_batch_stats, allreduce
 from .data import labels_entail, labels_heuristics
 
 
@@ -35,6 +35,7 @@ class NLIModel(BaseClassificationModel):
         # print("got val batch\n" + describe_var(batch))
         inputs, targets, heuristic = batch
         logits = self(inputs)
+        # TODO: this should also come from config somehow!
         if dataloader_idx == 2:
             entail = logits[:, :1]
             non_entail = logits[:, 1:]

@@ -33,7 +33,8 @@ def get_trainer(params, cluster_env, extra_callbacks):
     trainer = pl.Trainer(
         plugins=[cluster_env],
         default_root_dir=params["path_results"],
-        gpus=gpus,
+        devices=params["devices"],
+        accelerator=params["accelerator"],
         # num_nodes=int(os.environ["CNT_NODES"]),  # cluster_env.cnt_nodes(),
         num_nodes=cluster_env.cnt_nodes(),
         num_sanity_val_steps=0 if "resume" in params else params["num_sanity_val_steps"],
