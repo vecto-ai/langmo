@@ -97,7 +97,6 @@ class GLUEConfig(ConfigFinetune):
                                            "name": "val"}]}
         task_spec.update(GLUE_TASKS[self["name_task"]])
         print("task spec", task_spec)
-        # TODO: THIS is not really defaults... should be treated differently
         self.defaults["metric_name"] = TASKTOMETRIC[self["name_task"]]
         # TODO: support custom additional validation splits
         self.defaults["validation_split"] = task_spec["validation_split"]
