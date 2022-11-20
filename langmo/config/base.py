@@ -169,6 +169,5 @@ class ConfigFinetune(LangmoConfig):
         self.defaults["freeze_encoder"] = False
         self.defaults["encoder_wrapper"] = "pooler"
         self.defaults["shuffle"] = False
-        self.defaults["num_labels"] = 3
         self.defaults["cnt_seps"] = -1
         self.defaults["save_predictions"] = False

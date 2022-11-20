@@ -33,8 +33,12 @@ class PLBase(pl.LightningModule):
 
         # set token_type_embeddings to zero and token_type_embeddings.requires_grad = False
         # if there is only one possible token_type_id
+        #try:
         if self.net.config.to_dict().get("type_vocab_size", 0) == 1:
             zero_and_freeze_param_by_name(self.net, "token_type_embeddings.weight")
+        #except:
+            # TODO: proper warning with logger here
+            #print("SOMETHING WENT WRONG WITH WREEZE TOKEN TYPE EMBEDDINGS")
 
     def configure_optimizers(self):
         # param_optimizer = list(self.net.named_parameters())

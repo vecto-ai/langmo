@@ -10,6 +10,11 @@ class BaseBERTWrapper(nn.Module):
             for param in self.net.parameters():
                 param.requires_grad = False
 
+    @property
+    def config(self):
+        # TODO: add warning here
+        return self.net.config
+
     def get_output_size(self):
         # if hasattr(self.net, "pooler"):
         #     if hasattr(self.net.pooler, "out_features"):
@@ -23,18 +28,21 @@ class BaseBERTWrapper(nn.Module):
         raise NotImplementedError("Don't use this directly.")
 
 
-class BertWithCLS(BaseBERTWrapper):
+class BertWithMeanPooler(BaseBERTWrapper):
+    def __init__(self, net, freeze):
+        super().__init__(net, freeze)
+        self.pooler = nn.Linear(self.net.config.hidden_size, self.net.config.hidden_size)
+        self.activation = nn.Tanh()
+
     def forward(self, **x):
-        res = self.net(**x)["last_hidden_state"][:, 0, :]
-        return res
+        res = self.net(**x)["last_hidden_state"].mean(1)
+        res = self.pooler(res)
+        return self.activation(res)
 
 
 class BertWithPooler(BaseBERTWrapper):
     def forward(self, **x):
-        # res = self.net(**x)["last_hidden_state"]["pooler_output"]
-        # TODO: double check that all models indeed do mean for pooler
-        # TODO: or better only add original pooler for pooled model
-        res = self.net(**x)["last_hidden_state"].mean(1)
+        res = self.net(**x)["pooler_output"]
         return res
 
 
@@ -52,6 +60,7 @@ class BertWithLSTM(BaseBERTWrapper):
         )
 
     def lstm_out_to_tensor(self, x):
+        # TODO: check if it should be one side of one direction and another one from another
         return x[0][:, -1, :]
 
     def forward(self, **x):
@@ -66,6 +75,6 @@ class BertWithLSTM(BaseBERTWrapper):
 
 def wrap_encoder(encoder, name, freeze):
     name = name.lower()
-    wrappers = {"cls": BertWithCLS, "pooler": BertWithPooler, "lstm": BertWithLSTM}
+    wrappers = {"cls": BertWithPooler, "mean_pooler": BertWithMeanPooler, "lstm": BertWithLSTM}
     class_wrapper = wrappers[name]
     return class_wrapper(encoder, freeze)

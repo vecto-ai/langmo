@@ -97,11 +97,12 @@ class GLUEConfig(ConfigFinetune):
                                            "name": "val"}]}
         task_spec.update(GLUE_TASKS[self["name_task"]])
         print("task spec", task_spec)
-        # TODO: THIS is not really defaults... should be treated differently
-        self.defaults["sent1"] = task_spec["keys"][0]
-        self.defaults["sent2"] = task_spec["keys"][1]
-        self.defaults["num_labels"] = task_spec["cnt_labels"]
         self.defaults["metric_name"] = TASKTOMETRIC[self["name_task"]]
-        self.defaults["glue_type"] = task_spec["dataset_prefix"]
+        # TODO: support custom additional validation splits
         self.defaults["validation_split"] = task_spec["validation_split"]
+        self.defaults["classifier"] = "huggingface"
+        self["sent1"] = task_spec["keys"][0]
+        self["sent2"] = task_spec["keys"][1]
+        self["glue_type"] = task_spec["dataset_prefix"]
+        self["num_labels"] = task_spec["cnt_labels"]
         self["validation_split_names"] = [split["name"] for split in task_spec["validation_split"]]
