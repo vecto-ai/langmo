@@ -19,7 +19,7 @@ CONFIG_OPTIONS = {
 }
 
 TASKTOMETRIC = {
-    "cola": "val_matthews_correlation",
+    "cola": "val_matthews_corr",
     "stsb": "val_pearson_corr",
     "mrpc": "val_accuracy",
     "qnli": "val_accuracy",
