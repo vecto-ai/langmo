@@ -121,8 +121,8 @@ class Monitor(pl.Callback):
                     f"@@@@ perf callback: validation epoch {pl_module.current_epoch} started @@@@"
                 )
             trainer._accelerator_connector.cluster_environment.barrier()
-            for split in pl_module.validation_split_names:
-                pl_module.files_predictions = [open(path_details / f"{split}_w{trainer.global_rank}.jsonl", "w")]
+            pl_module.files_predictions = [open(path_details / f"{split}_w{trainer.global_rank}.jsonl", "w")
+                                           for split in pl_module.validation_split_names]
 
     def on_validation_epoch_end(
         self, trainer: pl.Trainer, pl_module: pl.LightningModule
