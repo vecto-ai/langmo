@@ -108,12 +108,19 @@ class LangmoConfig(BaseConfig):
         # TODO: we put it here for now for simplicitly
         # this needs to be revisited when we do model parallel
         # TODO: also we whould think what we do when we resume with different number of workers
+        self._postprocess()
+        self._validate()
+
+    def _validate(self):
         for key, val in self.items():
             if key in CONFIG_OPTIONS and val not in CONFIG_OPTIONS[key]:
                 raise Exception(
                     f"Option {key} does not allow value {val}."
                     f"One among {'|'.join(CONFIG_OPTIONS[key])} must be picked"
                 )
+
+    def _postprocess(self):
+        pass
 
     def set_defaults(self):
         self.defaults = dict(
