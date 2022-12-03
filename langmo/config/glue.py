@@ -85,24 +85,39 @@ GLUE_TASKS = yaml.load(TASKS_YAML, Loader=yaml.SafeLoader)
 class GLUEConfig(ConfigFinetune):
     def set_defaults(self):
         super().set_defaults()
+        self.defaults["metric_name"] = TASKTOMETRIC[self["name_task"]]
+        self.defaults["classifier"] = "huggingface"
+        # TODO: support custom additional validation splits
+        self.defaults["validation_split"] = None
 
+    def _validate(self):
         try:
             assert self["name_task"] in GLUE_TASKS
-        except Exception:
+        except Exception as e:
             glue_tasks = list(GLUE_TASKS.keys())
-            raise AssertionError(f"Task must be one of {glue_tasks}")
-        # TODO: metric to monitor should be moved here as well
-        task_spec = {"validation_split": [{"dataset": ["glue", self["name_task"]],
-                                           "split": "validation",
-                                           "name": "val"}]}
-        task_spec.update(GLUE_TASKS[self["name_task"]])
-        print("task spec", task_spec)
-        self.defaults["metric_name"] = TASKTOMETRIC[self["name_task"]]
-        # TODO: support custom additional validation splits
-        self.defaults["validation_split"] = task_spec["validation_split"]
-        self.defaults["classifier"] = "huggingface"
-        self["sent1"] = task_spec["keys"][0]
-        self["sent2"] = task_spec["keys"][1]
-        self["glue_type"] = task_spec["dataset_prefix"]
-        self["num_labels"] = task_spec["cnt_labels"]
-        self["validation_split_names"] = [split["name"] for split in task_spec["validation_split"]]
+            raise AssertionError(f"Task must be one of {glue_tasks}") from e
+
+    def _postprocess(self):
+        _glue_postprocess(self)
+
+
+
+def _glue_postprocess(config):
+    # TODO: metric to monitor should be moved here as well
+    task_spec = {"validation_split": [{"dataset": ["glue", config["name_task"]],
+                                       "split": "validation",
+                                       "name": "val"}]}
+    task_spec.update(GLUE_TASKS[config["name_task"]])
+
+    # TODO: moving this bit into this separate _glue_postprocessing function
+    # makes it very hard to keep track of in the other bit for when the
+    # custom validation split will be implemented
+    if config.get("validation_split", None) is None:
+        config["validation_split"] = task_spec["validation_split"]
+
+    print("task spec", task_spec)
+    config["sent1"] = task_spec["keys"][0]
+    config["sent2"] = task_spec["keys"][1]
+    config["glue_type"] = task_spec["dataset_prefix"]
+    config["num_labels"] = task_spec["cnt_labels"]
+    config["validation_split_names"] = [split["name"] for split in task_spec["validation_split"]]

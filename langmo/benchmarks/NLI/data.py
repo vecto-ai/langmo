@@ -116,8 +116,8 @@ class Collator(BaseCollator):
 
 
 class NLIDataModule(BaseDataModule):
-    def __init__(self, tokenizer, params):
-        super().__init__(tokenizer, params)
+    def __init__(self, cluster_env, tokenizer, params):
+        super().__init__(cluster_env, tokenizer, params)
         self.collator = Collator(self.tokenizer, params)
 
     def setup(self, stage=None):

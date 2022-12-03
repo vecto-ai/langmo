@@ -1,6 +1,5 @@
 # pylint: disable=attribute-defined-outside-init
 from pathlib import Path
-from time import sleep
 from timeit import default_timer as timer
 
 import pytorch_lightning as pl

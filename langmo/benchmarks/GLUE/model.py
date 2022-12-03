@@ -4,10 +4,14 @@ import math
 import torch
 import torch.nn.functional as F
 import torchmetrics
-from langmo.benchmarks.base import (BaseClassificationModel,
-                                    ClassificationFinetuner, allreduce)
-from langmo.config import GLUEConfig
 from torchmetrics.functional import accuracy, pearson_corrcoef
+
+from langmo.benchmarks.base import (BaseClassificationModel,
+                                    ClassificationFinetuner)
+
+from langmo.utils.distributed import allreduce
+from langmo.config import GLUEConfig
+
 
 
 class GLUEModel(BaseClassificationModel):
@@ -35,6 +39,8 @@ class GLUEModel(BaseClassificationModel):
         # not sure if this will be persisten behavior
         logits = self(inputs)
         loss = self._compute_loss(logits, targets)
+        if self.hparams["num_labels"] == 1:
+            logits, targets = logits.reshape(-1), targets.reshape(-1)
         acc = self._compute_metric(logits, targets)
         step_metrics = {
             "train_loss": loss,
@@ -70,6 +76,8 @@ class GLUEModel(BaseClassificationModel):
         for _, metric in self.val_epoch_metrics[dataloader_idx].items():
             # TODO: This could probably be done in a better place
             metric.to(self.device)
+            if self.hparams["num_labels"] == 1:
+                logits, targets = logits.reshape(-1), targets.reshape(-1)
             metric.update(logits, targets)
         split_name = self.validation_split_names[dataloader_idx]
         loss = self._compute_loss(logits, targets)

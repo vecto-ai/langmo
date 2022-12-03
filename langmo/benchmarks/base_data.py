@@ -4,8 +4,9 @@ from torch.utils.data import DataLoader, DistributedSampler
 
 
 class BaseDataModule(pl.LightningDataModule):
-    def __init__(self, tokenizer, params):
+    def __init__(self, cluster_env, tokenizer, params):
         super().__init__()
+        self.cluster_env = cluster_env
         self.batch_size = params["batch_size"]
         self.tokenizer = tokenizer
         self.params = params
@@ -13,18 +14,18 @@ class BaseDataModule(pl.LightningDataModule):
         self.test = params["test"]
 
     def get_split_dataloader(self, dataset_name, split):
-        self.percent_start = float(self.trainer.global_rank) / float(self.trainer.world_size) * 100
-        self.percent_end = float(self.trainer.global_rank + 1) / float(self.trainer.world_size) * 100
+        self.percent_start = float(self.cluster_env.global_rank()) / float(self.cluster_env.world_size()) * 100
+        self.percent_end = float(self.cluster_env.global_rank() + 1) / float(self.cluster_env.world_size()) * 100
         shuffle = (split == "train") and (self.shuffle)
         if self.test:
             ds_size = self.batch_size * 2
-            start = self.trainer.global_rank * ds_size
+            start = self.cluster_env.global_rank() * ds_size
             split = f"{split}[{start}:{start + ds_size}]"
             dataset = self._init_dataset((dataset_name), split=split)
             sampler = None
         elif shuffle:
             dataset = self._init_dataset((dataset_name), split=split)
-            sampler = DistributedSampler(dataset, self.trainer.world_size, self.trainer.global_rank, shuffle)
+            sampler = DistributedSampler(dataset, self.cluster_env.world_size(), self.cluster_env.global_rank(), shuffle)
         else:
             split = datasets.ReadInstruction(
                 split,

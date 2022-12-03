@@ -31,8 +31,8 @@ class Collator(BaseCollator):
 
 
 class QADataModule(BaseDataModule):
-    def __init__(self, tokenizer, params):
-        super().__init__(tokenizer, params)
+    def __init__(self, cluster_env, tokenizer, params):
+        super().__init__(cluster_env, tokenizer, params)
         self.collator = Collator(self.tokenizer, params)
 
         self.max_length = params["max_length"]
