@@ -2,11 +2,12 @@ import os
 
 import pytorch_lightning as pl
 import torch
+from pytorch_lightning.callbacks import LearningRateMonitor
+from pytorch_lightning.loggers import WandbLogger
 from langmo.logger_dummy import DummyLogger
 # from langmo.callbacks.layernorm import LayerNormCallback
 # from langmo.callbacks.monitor import Monitor
-from pytorch_lightning.callbacks import LearningRateMonitor
-from pytorch_lightning.loggers import WandbLogger
+
 
 
 def get_trainer(params, cluster_env, extra_callbacks):
@@ -39,7 +40,7 @@ def get_trainer(params, cluster_env, extra_callbacks):
         num_nodes=cluster_env.cnt_nodes(),
         num_sanity_val_steps=0 if "resume" in params else params["num_sanity_val_steps"],
         max_epochs=params["cnt_epochs"],
-        strategy="ddp_find_unused_parameters_false",
+        strategy="ddp",
         precision=params["precision"],
         replace_sampler_ddp=False,
         logger=logger,

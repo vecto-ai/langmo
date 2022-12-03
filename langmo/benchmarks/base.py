@@ -1,7 +1,7 @@
-from typing import Optional
 
-import torch
-import torch.distributed as dist
+from transformers import AutoTokenizer
+from transformers import logging as tr_logging
+
 from langmo.base import PLBase
 from langmo.callbacks.model_snapshots_schedule import FinetuneMonitor
 from langmo.config import ConfigFinetune
@@ -11,8 +11,7 @@ from langmo.nn.utils import reinit_model, reinit_tensor
 from langmo.trainer import get_trainer
 from protonn.pl.cluster_mpi import MPIClusterEnvironment
 from protonn.utils import get_time_str
-from transformers import AutoTokenizer
-from transformers import logging as tr_logging
+
 
 
 class BaseClassificationModel(PLBase):
@@ -53,7 +52,7 @@ class BaseFinetuner:
         # self.tokenizer is created
         self.net, name_run = self.create_net()
         if self.params["randomize"]:
-            reinit_model(self.hparamsnet)
+            reinit_model(self.net)
             name_run += "_RND"
         name_run += f"_{'↓' if self.params['uncase'] else '◯'}_{timestamp[:-3]}"
         self.params["name_run"] = name_run
@@ -63,7 +62,7 @@ class BaseFinetuner:
         if self.params["test"]:
             self.params["cnt_epochs"] = 3
         self.data_module = class_data_module(
-            # embs.vocabulary,
+            cluster_env,
             self.tokenizer,
             params=self.params,
         )
@@ -91,24 +90,3 @@ class BaseFinetuner:
 class ClassificationFinetuner(BaseFinetuner):
     def create_net(self):
         return create_net(self.params)
-
-
-def allreduce(tensor: torch.Tensor, op: Optional[int] = None) -> torch.Tensor:
-    if op is None:
-        dist.all_reduce(tensor)
-        tensor /= dist.get_world_size()
-    else:
-        dist.all_reduce(tensor, op=op)
-    return tensor
-
-
-def aggregate_batch_stats(batch_stats, key):
-    if key in batch_stats[0]:
-        value = torch.stack([x[key] for x in batch_stats]).sum()
-    else:
-        value = torch.tensor(0)
-    # print("reducing", key, value)
-    if torch.cuda.is_available():
-        value = value.cuda()
-    value = allreduce(value, op=dist.ReduceOp.SUM)
-    return value.item()

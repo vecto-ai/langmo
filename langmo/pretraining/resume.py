@@ -48,6 +48,7 @@ def main():
     trainer = get_trainer(params, cluster_env, [Monitor()])
     model.hparams["train_logs"] = model.hparams["train_logs"][:-1]
     data_module = TextDataModule(
+        cluster_env,
         tokenizer=model.tokenizer,
         params=params,
     )

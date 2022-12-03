@@ -6,6 +6,7 @@ from threading import Thread
 
 import pytorch_lightning as pl
 import torch
+
 # from torch.utils.data import DataLoader, DistributedSampler
 from kapral.corpus import Corpus
 
@@ -215,8 +216,9 @@ class BatchIter:
 
 
 class TextDataModule(pl.LightningDataModule):
-    def __init__(self, tokenizer, params):  # , vocab, batch_size, params):
+    def __init__(self, cluster_env, tokenizer, params):  # , vocab, batch_size, params):
         super().__init__()
+        self.cluster_env = cluster_env
         self.params = params
         self.tokenizer = tokenizer
         self.corpus = Corpus(self.params["path_corpus"])

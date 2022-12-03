@@ -1,0 +1,51 @@
+cnt_epochs: 5
+uncase: False
+batch_size: 32
+max_length: 256
+path_corpus: "/storage/data/Corpora/wiki_c4_leaked/2xsep/"
+model_name: "roberta-base"
+randomize: True
+test: False
+shuffle: True
+initial_lr: 1e-4
+cnt_samples_per_epoch: 1000000
+suffix: "prefinetune"
+multitask_strategy: "parallel"
+cnt_gpus_per_node: 8
+continuous_finetune: True
+tasks:
+  mlm:
+    loss_coef: 1.0
+  cola:
+    head_config:
+      n_layers: 2
+    loss_coef: 0.1
+    test: false
+  mrpc:
+    head_config:
+      n_layers: 2
+    loss_coef: 0.1
+    test: false
+  mnli:
+    head_config:
+      n_layers: 2
+      num_labels: 3
+    loss_coef: 0.1
+    test: false
+  sst2:
+    head_config:
+      n_layers: 2
+    loss_coef: 0.1
+    test: false
+  qnli:
+    head_config:
+      n_layers: 2
+    loss_coef: 0.1
+    test: false
+  stsb:
+    head_config:
+      n_layers: 2
+      num_labels: 1
+    loss_coef: 0.1
+    test: false
+

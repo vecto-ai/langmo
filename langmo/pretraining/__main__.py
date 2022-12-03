@@ -57,11 +57,16 @@ def main():
 
     trainer = get_trainer(params, cluster_env, [Monitor()])
     params["cnt_workers"] = trainer.world_size
-    params["batch_size_effective"] = params["batch_size"] * params["cnt_workers"] * params["accumulate_batches"]
-    print(f"!!! Starting on host {socket.gethostname()}, p {trainer.global_rank} of {trainer.world_size}")
+    params["batch_size_effective"] = (
+        params["batch_size"] * params["cnt_workers"] * params["accumulate_batches"]
+    )
+    print(
+        f"!!! Starting on host {socket.gethostname()}, p {trainer.global_rank} of {trainer.world_size}"
+    )
     model = build_model(params)
 
     data_module = TextDataModule(
+        cluster_env=cluster_env,
         tokenizer=model.tokenizer,
         params=params,
     )
