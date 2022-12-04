@@ -115,7 +115,7 @@ class MultitaskModule(PLBase):
             self.log("cumulative_loss", loss.clone().detach(), sync_dist=True)
 
         if self.there_is_mlm:
-            all_mlm_loss = sum(i for i in mlm_losses.values() if i is not None)
+            all_mlm_loss = sum(i for i in mlm_losses.values() if i is not None) * self.tasks_params["mlm"]["loss_coef"]
             with torch.no_grad():
                 self.log(
                     "cumulative_mlm_loss", all_mlm_loss.clone().detach(), sync_dist=True

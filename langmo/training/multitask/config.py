@@ -88,9 +88,10 @@ class TaskConfigs(OrderedDict):
             _glue_postprocess(self["tasks"][task_name])
 
             # get num_labels from glue defaults
-            self["tasks"][task_name]["head_config"]["num_labels"] = self["tasks"][
-                task_name
-            ]["num_labels"]
+            if not "head_config" in self["tasks"][task_name]:
+                self["tasks"][task_name]["head_config"] = {}
+
+            self["tasks"][task_name]["head_config"]["num_labels"] = self["tasks"][task_name]["num_labels"]
 
             self["tasks"][task_name]["head_config"] = HeadConfig(
                 self["tasks"][task_name]["head_config"]
