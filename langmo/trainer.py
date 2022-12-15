@@ -17,6 +17,8 @@ def get_trainer(params, cluster_env, extra_callbacks):
     #     params["path_results"] = "/tmp"
     # gpus = [cluster_env.local_rank()] if params["use_gpu"] else 0
     # print(f"### trying to use gpus: {gpus} ")
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
     if params["cnt_gpus_per_node"] > 0:
         assert torch.cuda.device_count() > 0, "Asked for GPUs but none detected"
     lr_monitor = LearningRateMonitor(logging_interval="step")
