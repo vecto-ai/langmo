@@ -18,14 +18,12 @@ NUM_PROCS=$(expr ${NUM_NODES} \* ${NUM_GPUS_PER_NODE})
 MPIOPTS="-np ${NUM_PROCS} -map-by ppr:${NUM_GPUS_PER_NODE}:node -mca pml ob1 -mca btl ^openib -mca btl_tcp_if_include bond0"
 
 export TOKENIZERS_PARALLELISM=true
-export PL_TORCH_DISTRIBUTED_BACKEND=NCCL
 
 # ======== Main ===========
 
 mpirun ${MPIOPTS} \
     -x TOKENIZERS_PARALLELISM \
     -x NUM_GPUS_PER_NODE \
-    -x PL_TORCH_DISTRIBUTED_BACKEND \
     python3 -m langmo.benchmarks.QA nli.yaml
 
 # horovodrun -np 4 python3 main.py

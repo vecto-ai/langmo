@@ -2,12 +2,13 @@ import os
 
 import pytorch_lightning as pl
 import torch
+from langmo.logger_dummy import DummyLogger
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
-from langmo.logger_dummy import DummyLogger
+from pytorch_lightning.strategies import DDPStrategy
+
 # from langmo.callbacks.layernorm import LayerNormCallback
 # from langmo.callbacks.monitor import Monitor
-
 
 
 def get_trainer(params, cluster_env, extra_callbacks):
@@ -21,7 +22,7 @@ def get_trainer(params, cluster_env, extra_callbacks):
     lr_monitor = LearningRateMonitor(logging_interval="step")
     # TODO: check if making only local GPU visible makes init faster
     # gpus = [int(os.environ["RANK"])] if params["use_gpu"] else 0
-    gpus = -1 if (params["cnt_gpus_per_node"] > 0) else 0
+    # gpus = -1 if (params["cnt_gpus_per_node"] > 0) else 0
     pl.utilities.rank_zero.rank_zero_only.rank = cluster_env.global_rank()
     if "WANDB_MODE" in os.environ and os.environ["WANDB_MODE"].lower() != "disabled":
         logger = WandbLogger(
@@ -31,7 +32,9 @@ def get_trainer(params, cluster_env, extra_callbacks):
         )
     else:
         logger = DummyLogger()
+    strategy = DDPStrategy(process_group_backend=params["distributed_backend"])
     trainer = pl.Trainer(
+        strategy=strategy,
         plugins=[cluster_env],
         default_root_dir=params["path_results"],
         devices=params["devices"],
@@ -40,7 +43,6 @@ def get_trainer(params, cluster_env, extra_callbacks):
         num_nodes=cluster_env.cnt_nodes(),
         num_sanity_val_steps=0 if "resume" in params else params["num_sanity_val_steps"],
         max_epochs=params["cnt_epochs"],
-        strategy="ddp",
         precision=params["precision"],
         replace_sampler_ddp=False,
         logger=logger,
