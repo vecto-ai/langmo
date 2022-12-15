@@ -4,14 +4,11 @@ import math
 import torch
 import torch.nn.functional as F
 import torchmetrics
-from torchmetrics.functional import accuracy, pearson_corrcoef
-
 from langmo.benchmarks.base import (BaseClassificationModel,
                                     ClassificationFinetuner)
-
-from langmo.utils.distributed import allreduce
 from langmo.config import GLUEConfig
-
+from langmo.utils.distributed import allreduce
+from torchmetrics.functional import accuracy, pearson_corrcoef
 
 
 class GLUEModel(BaseClassificationModel):
@@ -24,12 +21,13 @@ class GLUEModel(BaseClassificationModel):
                 self.val_epoch_metrics.append({
                     "pearson_corr": torchmetrics.PearsonCorrCoef(),
                     "spearman_corr": torchmetrics.SpearmanCorrCoef(),
+                    # TODO: if accuracy now supports binary, why don't we use for 1 label as well
                 })
             elif num_labels > 1:
                 self.val_epoch_metrics.append({
-                    "accuracy": torchmetrics.Accuracy(num_classes=num_labels),
-                    "f1": torchmetrics.F1Score(num_classes=num_labels),
-                    "matthews_corr": torchmetrics.MatthewsCorrCoef(num_classes=num_labels),
+                    "accuracy": torchmetrics.Accuracy(num_classes=num_labels, task="multiclass"),
+                    "f1": torchmetrics.F1Score(num_classes=num_labels, task="multiclass"),
+                    "matthews_corr": torchmetrics.MatthewsCorrCoef(num_classes=num_labels, task="multiclass"),
                 })
         self.validation_split_names = params["validation_split_names"]
 
@@ -59,7 +57,10 @@ class GLUEModel(BaseClassificationModel):
         if self.hparams["num_labels"] == 1:
             return pearson_corrcoef(logits, targets)
         elif self.hparams["num_labels"] > 1:
-            return accuracy(torch.argmax(logits, -1), targets)
+            return accuracy(preds=torch.argmax(logits, -1),
+                            target=targets,
+                            task="multiclass",
+                            num_classes=self.hparams["num_labels"])
 
     # TODO: reuse logic in  test step if we do that
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
