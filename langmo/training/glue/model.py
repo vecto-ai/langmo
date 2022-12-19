@@ -4,7 +4,7 @@ import math
 import torch
 import torch.nn.functional as F
 import torchmetrics
-from langmo.benchmarks.base import (BaseClassificationModel,
+from langmo.training.base import (BaseClassificationModel,
                                     ClassificationFinetuner)
 from langmo.config import GLUEConfig
 from langmo.utils.distributed import allreduce

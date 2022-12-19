@@ -1,7 +1,7 @@
 import datasets
 import torch
 import torch.distributed as dist
-from langmo.benchmarks.base_data import BaseCollator, BaseDataModule
+from langmo.training.base_data import BaseCollator, BaseDataModule
 
 
 class GLUECollator(BaseCollator):

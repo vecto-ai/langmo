@@ -1,6 +1,6 @@
 import torch
 from datasets import ReadInstruction, load_dataset
-from langmo.benchmarks.base_data import BaseCollator, BaseDataModule
+from langmo.training.base_data import BaseCollator, BaseDataModule
 from torch.utils.data import DataLoader, DistributedSampler
 
 

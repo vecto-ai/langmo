@@ -8,7 +8,7 @@ from torch import nn, tanh
 from torchmetrics import SQuAD, MeanMetric
 from transformers import AutoModelForQuestionAnswering, PretrainedConfig, AutoConfig
 
-from langmo.benchmarks.base import BaseClassificationModel
+from langmo.training.base import BaseClassificationModel
 
 
 class QAModel(BaseClassificationModel):

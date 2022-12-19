@@ -8,7 +8,6 @@ from protonn.utils import load_json
 from .base import ConfigFinetune
 from .glue import GLUEConfig
 from .pretrain import ConfigPretrain
-from .qa import QAConfig
 
 
 def is_yaml_config(path):

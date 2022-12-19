@@ -4,6 +4,7 @@ from typing import Optional
 import torch
 import torch.distributed as dist
 
+
 def allreduce(tensor: torch.Tensor, op: Optional[int] = None) -> torch.Tensor:
     if op is None:
         dist.all_reduce(tensor)
