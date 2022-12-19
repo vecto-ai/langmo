@@ -153,6 +153,7 @@ class LangmoConfig(BaseConfig):
             snapshot_strategy="per_epoch",
             replace_hf_config={},
             seed=int(time.time()),
+            params_without_weight_decay=["bias", "gamma", "beta", "LayerNorm", "layer_norm"],
         )
         self.required_options = set()
         self.required_options.add("model_name")

@@ -1,8 +1,8 @@
 from collections import OrderedDict
-from torch import nn
-from langmo.config.pretrain import ConfigPretrain
-from langmo.config.glue import _glue_postprocess
 
+from langmo.config.glue import _glue_postprocess
+from langmo.config.pretrain import ConfigPretrain
+from torch import nn
 
 _CLASSIFICATION_HEAD_CONFIG_TEMPLATE = {
     "hidden_size": 100,
@@ -49,7 +49,6 @@ class HeadConfig(dict):
                 if key not in self:
                     self[key] = val
 
-
     def get_key(self, key):
         val = self.get(key)
         if val is not None:
@@ -88,7 +87,7 @@ class TaskConfigs(OrderedDict):
             _glue_postprocess(self["tasks"][task_name])
 
             # get num_labels from glue defaults
-            if not "head_config" in self["tasks"][task_name]:
+            if "head_config" not in self["tasks"][task_name]:
                 self["tasks"][task_name]["head_config"] = {}
 
             self["tasks"][task_name]["head_config"]["num_labels"] = self["tasks"][task_name]["num_labels"]
@@ -96,7 +95,6 @@ class TaskConfigs(OrderedDict):
             self["tasks"][task_name]["head_config"] = HeadConfig(
                 self["tasks"][task_name]["head_config"]
             )
-
 
 
 class ConfigMultitask(ConfigPretrain):
