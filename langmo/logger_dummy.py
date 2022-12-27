@@ -1,11 +1,11 @@
-from typing import Any, Callable, Dict, Mapping, Optional, Sequence, Union
+from typing import Dict, Optional, Union
 
 import torch
-from pytorch_lightning.loggers.base import LightningLoggerBase
+from pytorch_lightning.loggers.logger import Logger
 
 
 # TODO: consider making it actually doing something useful
-class DummyLogger(LightningLoggerBase):
+class DummyLogger(Logger):
     def log_hyperparams(self, * args, **kwargs):
         pass
 
