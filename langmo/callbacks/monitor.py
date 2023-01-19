@@ -161,6 +161,8 @@ class Monitor(pl.Callback):
                 path_save = Path(pl_module.hparams["path_results"]) / "resume"
                 trainer.save_checkpoint(path_save / "PL_model.ckpt")
                 pl_module.save_metadata(path_save)
+                path_last_hf = Path(pl_module.hparams["path_results"]) / "last_hf"
+                pl_module.save_as_hf(path_last_hf)
 
     # def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
     #     print("VAL BATCH END CALLBACK:", outputs)
