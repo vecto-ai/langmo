@@ -1,8 +1,16 @@
 # from langmo.nn import Siamese, TopMLP2, wrap_encoder
 
-from transformers import AutoModel, AutoModelForSequenceClassification
+from pathlib import Path
 
-from .classifier import Classifier
+import langmo
+import transformers
+from langmo.nn.classifier import PretrainedClassifier
+from protonn.utils import load_json
+from transformers import AutoModel, AutoModelForSequenceClassification
+from transformers.models.auto.configuration_auto import CONFIG_MAPPING_NAMES
+
+from .classifier import ClassificationHead, Classifier
+from .cnet import Encoder
 from .heads import *
 from .siamese import *
 from .wrappers import *
@@ -12,7 +20,20 @@ def create_net(params):
     # TODO: allow for custom classification head even if it's not siamese
     # TODO: move creation of model logit to model-related class / submodule
     # TDDO: support models with multiple classification heads
+    CONFIG_MAPPING_NAMES["langmo"] = "langmo"
+    transformers.models.langmo = langmo.nn.cnet
     name_model = params["model_name"]
+    # TODO: try if path, load config
+    # if it's our model - do custom load, else rely on HF
+    if (Path(params["model_name"]) / "config.json").is_file:
+        config = load_json(Path(params["model_name"]) / "config.json")
+        if config["model_type"] == "langmo":
+            # encoder = Encoder()
+            # head = ClassificationHead(num_labels=params["num_labels"])
+            # return Classifier(encoder, head), "langmo"
+            net = PretrainedClassifier.from_pretrained(params["model_name"])
+            return net, "langmo"
+
     if params["siamese"]:
         name_run = "siam_" + params["encoder_wrapper"] + "_"
         if params["freeze_encoder"]:

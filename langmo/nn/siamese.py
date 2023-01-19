@@ -51,12 +51,12 @@ class LSTM_Encoder(nn.Module):
         # emb.unsqueeze_(0)
         # print("emb", emb.shape)
         # output, self.hidden = self.rnn(emb, self.hidden)
-        output, self.hidden = self.rnn(emb, self.hidden)
+        output, _hidden = self.rnn(emb)
         # print("rnn out", output.shape)
         # output = self.drop(output)
         # decoded = self.decoder(output[-1])
         # print("decoded", decoded)
-        return output
+        return output[:, 0, :]
 
 # TODO: call it something more self-descriptive
 # class Net(Siamese):
