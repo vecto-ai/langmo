@@ -1,6 +1,7 @@
 # import json
 import sys
 
+from langmo.nn import create_mlm
 from transformers import pipeline
 from vecto.benchmarks.base import Benchmark as BaseBenchmark
 from vecto.utils.data import print_json
@@ -39,19 +40,26 @@ class Benchmark(BaseBenchmark):
         result["setup"]["desciption"] = "Fill masked tokens"
         result["results"] = []
         # TODO: get this from model config
-        for query in get_queries("[MASK]"):
+        mask_token = self.tokenizer.mask_token
+        for query in get_queries(mask_token):
             predicted = fill_mask(self.model, self.tokenizer, query)
             result["results"].append(predicted)
         return result
 
 
 def main():
-    from transformers import AutoModelForMaskedLM
     from transformers import AutoTokenizer
-    name_model = sys.argv[1]
-    model = AutoModelForMaskedLM.from_pretrained(name_model)
+    params = {}
+    params["model_name"] = sys.argv[1]
+    model, name_run = create_mlm(params)
+    print("running", name_run)
     model.eval()
-    tokenizer = AutoTokenizer.from_pretrained(name_model)
+    import torch
+    from pathlib import Path
+    data = torch.load(Path(params["model_name"]) / "pytorch_model.bin")
+    print("decoder", data["lm_head.decoder.weight"][0][:10])
+    print("encoder", data["encoder.embeddings.weight"][0][:10])
+    tokenizer = AutoTokenizer.from_pretrained(params["model_name"])
     benchmark = Benchmark(model, tokenizer)
     result = benchmark.run()
     print_json(result)
