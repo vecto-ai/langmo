@@ -80,7 +80,7 @@ class LMHead(nn.Module):
         # TODO: Why not in and out embeddings are tied here???
 
 
-class MLModel(PreTrainedModel):
+class MLModel(BaseCNet):
     def __init__(self, config):
         # TODO: fix this later for saving/loading
         # _keys_to_ignore_on_save = [r"lm_head.decoder.weight", r"lm_head.decoder.bias"]
@@ -94,13 +94,23 @@ class MLModel(PreTrainedModel):
         self.encoder = encoder
         self.lm_head = head
         self.loss_fct = torch.nn.CrossEntropyLoss()
+        # TODO: tie weights????
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None):
         encoded = self.encoder(input_ids)
         logits = self.lm_head(encoded)
         # torch why u not just use last dimensions and treat all preceeding as batch :-\
-        loss = self.loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1))
+        if labels is not None:
+            loss = self.loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1))
+        else:
+            loss = None
         return {"logits": logits, "loss": loss}
+
+    # def get_input_embeddings(self):
+    #     return self.encoder.embeddings.word_embeddings
+
+    # def set_input_embeddings(self, value):
+    #     self.encoder.embeddings.word_embeddings = value
 
 
 def get_mlmodel(params):
