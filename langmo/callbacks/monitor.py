@@ -154,14 +154,19 @@ class Monitor(pl.Callback):
         batch_idx,
         unused=0,
     ):
-        checkpoint_interval = pl_module.hparams["seconds_between_snapshots"]
-        if timer() - self.time_last_checkpoint > checkpoint_interval:
+        checkpoint_interval = pl_module.hparams["minutes_between_snapshots"]
+        if timer() - self.time_last_checkpoint > checkpoint_interval * 60:
             self.time_last_checkpoint = timer()
             if trainer.global_rank == 0:
-                path_save = Path(pl_module.hparams["path_results"]) / "resume"
-                trainer.save_checkpoint(path_save / "PL_model.ckpt")
-                pl_module.save_metadata(path_save)
-                path_last_hf = Path(pl_module.hparams["path_results"]) / "last_hf"
+                path_for_resume = Path(pl_module.hparams["path_results"]) / "resume"
+                trainer.save_checkpoint(path_for_resume / "PL_model.ckpt")
+                pl_module.save_metadata(path_for_resume)
+                if pl_module.hparams["overwrite_timer_snapshot"]:
+                    path_last_hf = Path(pl_module.hparams["path_results"]) / "hf_last"
+                else:
+                    samples_processed = self.pl_module.hparams["cnt_samples_processed"]
+                    folder_last_hf = str(samples_processed)
+                    path_last_hf = Path(pl_module.hparams["path_results"]) / "hf_on_timer" / folder_last_hf
                 pl_module.save_as_hf(path_last_hf)
 
     # def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):

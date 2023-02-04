@@ -69,6 +69,7 @@ class LangmoConfig(BaseConfig):
     def __init__(self, name_task, cluster_env, param_path=None):
         set_root_logger()
         super().__init__(name_task, cluster_env, param_path)
+        self["distributed_backend"] = cluster_env.distributed_backend
 
     # TODO: This os overriding parents, think how to reuse
     def read_from_yaml_and_set_default(self, path, name_task):
@@ -125,6 +126,7 @@ class LangmoConfig(BaseConfig):
     def set_defaults(self):
         self.defaults = dict(
             cnt_gpus_per_node=int(os.environ["NUM_GPUS_PER_NODE"]),
+            # TODO: read this from the environment variables
             distributed_backend="gloo",
             test=False,
             precision=32,
@@ -147,7 +149,8 @@ class LangmoConfig(BaseConfig):
             accumulate_batches=1,
             percent_warmup=6.0,
             log_every_n_steps=50,
-            seconds_between_snapshots=3600,
+            minutes_between_snapshots=60,
+            overwrite_timer_snapshot=True,
             num_sanity_val_steps=-1,
             metric_to_monitor=None,
             snapshot_strategy="per_epoch",
