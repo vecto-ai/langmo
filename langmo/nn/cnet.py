@@ -100,6 +100,7 @@ class MLModel(BaseCNet):
         encoded = self.encoder(input_ids)
         logits = self.lm_head(encoded)
         # torch why u not just use last dimensions and treat all preceeding as batch :-\
+        # TODO: here we rely on torch x-entropy ignoring label -100
         if labels is not None:
             loss = self.loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1))
         else:

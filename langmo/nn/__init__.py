@@ -46,7 +46,7 @@ def create_net(params):
     # TODO: try if path, load config
     # if it's our model - do custom load, else rely on HF
     if is_langmo_model(params["model_name"]):
-        net = PretrainedClassifier.from_pretrained(params["model_name"])
+        net = PretrainedClassifier.from_pretrained(params["model_name"], num_labels=params["num_labels"])
         return net, "langmo"
 
     if params["siamese"]:

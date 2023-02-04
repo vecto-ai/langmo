@@ -29,7 +29,7 @@ class PretrainedClassifier(BaseCNet):
         super().__init__(config)
         self.config = config
         self.encoder = Encoder(config)
-        self.classifier = ClassificationHead()
+        self.classifier = ClassificationHead(num_labels=self.config.num_labels)
         self.init_weights()
 
     def forward(self, input_ids, attention_mask=None):
