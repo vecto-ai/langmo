@@ -26,7 +26,7 @@ def get_trainer(params, cluster_env, extra_callbacks):
     # gpus = [int(os.environ["RANK"])] if params["use_gpu"] else 0
     # gpus = -1 if (params["cnt_gpus_per_node"] > 0) else 0
     pl.utilities.rank_zero.rank_zero_only.rank = cluster_env.global_rank()
-    if "WANDB_MODE" in os.environ and os.environ["WANDB_MODE"].lower() != "disabled":
+    if "WANDB_MODE" not in os.environ or os.environ["WANDB_MODE"].lower() != "disabled":
         logger = WandbLogger(
             project=params["name_project"],
             name=params["name_run"],
