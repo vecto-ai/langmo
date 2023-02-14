@@ -8,7 +8,7 @@ from transformers.modeling_utils import PreTrainedModel
 # TODO: distibguish lstm from other encoders
 class BaseConfig(PretrainedConfig):
     vocab_size = 50265
-    hidden_size = 512
+    hidden_size = 768
     initializer_range = 0.02
     cnt_layers = 6
     dropout = 0.2
