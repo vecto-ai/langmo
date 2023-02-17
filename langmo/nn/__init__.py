@@ -40,13 +40,11 @@ def create_net(params):
     # TODO: allow for custom classification head even if it's not siamese
     # TODO: move creation of model logit to model-related class / submodule
     # TDDO: support models with multiple classification heads
-    # CONFIG_MAPPING_NAMES["langmo"] = "langmo"
-    # transformers.models.langmo = langmo.nn.cnet
-    # name_model = params["model_name"]
-    # TODO: try if path, load config
-    # if it's our model - do custom load, else rely on HF
     if is_langmo_model(params["model_name"]):
-        net = PretrainedClassifier.from_pretrained(params["model_name"], num_labels=params["num_labels"])
+        net = PretrainedClassifier.from_pretrained(params["model_name"],
+                                                   num_labels=params["num_labels"],
+                                                   hidden_size=768)
+        # TODO: hidden size should be saved to config at pretraining!!!
         return net, "langmo"
 
     if params["siamese"]:
