@@ -6,7 +6,7 @@ from langmo.nn.cnet import BaseCNet, BaseConfig, Encoder
 class ClassificationHead(nn.Module):
     """Roblerta-like head for sentence-level classification tasks."""
     # TODO: use config here
-    def __init__(self, hidden_size=1024, num_labels=2, dropout=0.1):
+    def __init__(self, hidden_size, num_labels, dropout=0.1):
         super().__init__()
         self.dense = nn.Linear(hidden_size, hidden_size)
         self.dropout = nn.Dropout(dropout)
@@ -29,7 +29,8 @@ class PretrainedClassifier(BaseCNet):
         super().__init__(config)
         self.config = config
         self.encoder = Encoder(config)
-        self.classifier = ClassificationHead(num_labels=self.config.num_labels)
+        self.classifier = ClassificationHead(hidden_size=self.config.hidden_zize * 2,
+                                             num_labels=self.config.num_labels)
         self.init_weights()
 
     def forward(self, input_ids, attention_mask=None):
