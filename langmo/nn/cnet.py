@@ -4,15 +4,14 @@ from transformers import PretrainedConfig
 from transformers.modeling_utils import PreTrainedModel
 
 
-# TODO: use preoper names
-# TODO: distibguish lstm from other encoders
+# TODO: use proper names
+# TODO: distinguish lstm from other encoders
 class BaseConfig(PretrainedConfig):
     vocab_size = 50265
     hidden_size = 768
     initializer_range = 0.02
     cnt_layers = 6
     dropout = 0.2
-    cnt_directions = 2
     model_type = "langmo"
 
 
@@ -20,18 +19,49 @@ class BaseCNet(PreTrainedModel):
     config_class = BaseConfig
 
 
+class RNNLayer(nn.Module):
+    def __init__(self,
+                 nhid,
+                 dropout):
+        super().__init__()
+        self.rnn = nn.LSTM(nhid,
+                           nhid,
+                           num_layers=1,
+                           dropout=dropout,
+                           bidirectional=True,
+                           batch_first=True)
+        self.proj = nn.Linear(nhid * 2, nhid)
+        self.dropout = nn.Dropout(dropout)
+        self.layer_norm = nn.LayerNorm(nhid)
+
+    def forward(self, embeddings):
+        outs, hidden = self.rnn(embeddings)
+        projected = self.proj(outs)
+        # TODO: don't we need an activation after projection??
+        residual = embeddings + projected
+        dropouted = self.dropout(residual)
+        normed = self.layer_norm(dropouted)
+        # TODO: what is apply_chunking_to_forward() in HF roberta
+        return normed
+
+
 class Encoder(nn.Module):
     def __init__(self, config):
         super().__init__()
+        # TODO move embedding dropout and norming into Embedding layer
         self.drop = nn.Dropout(config.dropout)
         self.embeddings = nn.Embedding(config.vocab_size, config.hidden_size)
-        self.rnn = nn.LSTM(config.hidden_size, config.hidden_size, config.cnt_layers,
-                           dropout=config.dropout,
-                           bidirectional=(config.cnt_directions == 2),
-                           batch_first=True)
-        # self.decoder = nn.Linear(nhid, 2)
+        # TODO: this seemed to actually perform a bit better though slower
+        # refactor it as one of the options for the layer
+        # self.rnn = nn.LSTM(config.hidden_size,
+        #                    config.hidden_size,
+        #                    config.cnt_layers,
+        #                    dropout=config.dropout,
+        #                    bidirectional=(config.cnt_directions == 2),
+        #                    batch_first=True)
+        self.layers = nn.Sequential(*[RNNLayer(config.hidden_size, config.dropout) for _ in range(config.cnt_layers)])
+
         # self.init_weights(embs)
-        # self.embs.weight.requires_grad = False
 
     # def init_weights(self, embs):
         # initrange = 0.1
@@ -40,16 +70,9 @@ class Encoder(nn.Module):
         # self.decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, input_ids):
-        # print("in", input.shape)
         emb = self.drop(self.embeddings(input_ids))
-        # emb.unsqueeze_(0)
-        # print("emb", emb.shape)
         # output, self.hidden = self.rnn(emb, self.hidden)
-        output, _hidden = self.rnn(emb)
-        # print("rnn out", output.shape)
-        # output = self.drop(output)
-        # decoded = self.decoder(output[-1])
-        # print("decoded", decoded)
+        output = self.layers(emb)
         return output
 
 
@@ -57,11 +80,11 @@ class LMHead(nn.Module):
 
     def __init__(self, config, eps=0.00001):
         super().__init__()
-        self.dense = nn.Linear(config.hidden_size * config.cnt_directions, config.hidden_size)
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.layer_norm = nn.LayerNorm(config.hidden_size, eps=eps)
 
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size)
-        # TODO: do we really gave to do this?
+        # TODO: do we really have to do this?
         self.bias = nn.Parameter(torch.zeros(config.vocab_size))
         self.decoder.bias = self.bias
         self.vocab_size = config.vocab_size
@@ -113,8 +136,11 @@ class MLModel(BaseCNet):
     # def set_input_embeddings(self, value):
     #     self.encoder.embeddings.word_embeddings = value
 
+    # TODO: init weights
+    # init weights
+
 
 def get_mlmodel(params):
     config = BaseConfig()
-    # TODO: tie output and input embeddings
+    # TODO: tie output and input embeddings properly (now in init)
     return MLModel(config)
