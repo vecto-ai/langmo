@@ -1,5 +1,4 @@
 #!/usr/bin/bash
-
 source /local/venv/bin/activate
 
 export NUM_GPUS_PER_NODE=0
