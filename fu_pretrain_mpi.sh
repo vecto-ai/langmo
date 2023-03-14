@@ -1,8 +1,8 @@
 #!/usr/bin/bash
-#PJM -L "rscgrp=small"
+#PJM -L "rscgrp=large"
 #PJM -L elapse=24:00:00
-#PJM -L "node=48"
-#PJM --mpi "proc=48"
+#PJM -L "node=1024"
+#PJM --mpi "proc=1024"
 #PJM -j
 #PJM -g ra000012
 #PJM -S
