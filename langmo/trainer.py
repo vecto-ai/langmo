@@ -3,7 +3,7 @@ import os
 import pytorch_lightning as pl
 import torch
 from langmo.logger_dummy import DummyLogger
-from pytorch_lightning.callbacks import LearningRateMonitor
+# from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
 
@@ -21,7 +21,7 @@ def get_trainer(params, cluster_env, extra_callbacks):
     torch.backends.cudnn.allow_tf32 = True
     if params["cnt_gpus_per_node"] > 0:
         assert torch.cuda.device_count() > 0, "Asked for GPUs but none detected"
-    lr_monitor = LearningRateMonitor(logging_interval="step")
+    # lr_monitor = LearningRateMonitor(logging_interval="step")
     # TODO: check if making only local GPU visible makes init faster
     # gpus = [int(os.environ["RANK"])] if params["use_gpu"] else 0
     # gpus = -1 if (params["cnt_gpus_per_node"] > 0) else 0
@@ -55,7 +55,7 @@ def get_trainer(params, cluster_env, extra_callbacks):
         # but there is special checkpoint_callback param too....
         # callbacks=[lr_monitor, LayerNormCallback(), Monitor()],
         # TODO: layernorm doesn't work with albert
-        callbacks=[lr_monitor] + extra_callbacks,
+        callbacks=extra_callbacks,
         gradient_clip_val=params["gradient_clip_val"],
         enable_progress_bar=False,
         enable_checkpointing=False,

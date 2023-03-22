@@ -117,12 +117,14 @@ class PLBase(pl.LightningModule):
         path = Path(path) / "metadata.json"
         save_data_json(self.hparams, path)
 
-    def save_metrics_and_model(self, metrics):
-        if self.global_rank == 0:
-            print("TODO: save_metrics_and_model shoudl be done in callback")
-            self.logger.log_metrics(metrics, step=self.global_step)
-            # self.append_metrics_to_train_logs(metrics)
-            self.save_metadata()
-            if metrics["epoch"] >= 0:
-                path_hf = Path(self.hparams["path_results"]) / f"ep{metrics['epoch']}"
-                self.save_as_hf(path_hf)
+    # TODO: checking if this is used at all, removr later if not
+    # def save_metrics_and_model(self, metrics):
+    #     if self.global_rank == 0:
+    #         print("TODO: save_metrics_and_model shoudl be done in callback")
+    #         # TODO: why we log metrics there, i mean isn't per step enough?
+    #         self.logger.log_metrics(metrics, step=self.global_step)
+    #         # self.append_metrics_to_train_logs(metrics)
+    #         self.save_metadata()
+    #         if metrics["epoch"] >= 0:
+    #             path_hf = Path(self.hparams["path_results"]) / f"ep{metrics['epoch']}"
+    #             self.save_as_hf(path_hf)
