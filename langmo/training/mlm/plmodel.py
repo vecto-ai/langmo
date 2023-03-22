@@ -60,6 +60,10 @@ class PLModel(PLBase):
         self.log("true_epochs", float(cnt_epochs))
         # print("logging samples processed as", self.hparams["cnt_samples_processed"])
         self.log("samples_processed", float(self.hparams["cnt_samples_processed"]))
+        # TODO: we are not using LR monitor from PL but logging LR here
+        # to logs on the same wandb call so that wandb can render LR against processed samples
+        # TODO: move this to some hook in base PL class to reuse in finetune
+        self.log("lr", float(self.trainer.optimizers[0].param_groups[0]["lr"]))
         # print("train step done")
         # print(loss.shape)
         if batch_idx % 10000 == 0:
