@@ -68,9 +68,9 @@ def create_net(params):
     else:
         if params["classifier"] == "huggingface":
             net = AutoModelForSequenceClassification.from_pretrained(
-                name_model, num_labels=params["num_labels"]
+                params["model_name"], num_labels=params["num_labels"]
             )
-            name_run = name_model.split("pretrain")[-1]
+            name_run = params["model_name"].split("pretrain")[-1]
         # TODO: decide what classifier param ataully should be
         elif params["encoder_wrapper"] == "lstm":
             encoder = AutoModel.from_pretrained(name_model, add_pooling_layer=False)
