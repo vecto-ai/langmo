@@ -2,10 +2,12 @@ import os
 
 import pytorch_lightning as pl
 import torch
-from langmo.logger_dummy import DummyLogger
+
 # from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
+
+from langmo.logger_dummy import DummyLogger
 
 # from langmo.callbacks.layernorm import LayerNormCallback
 # from langmo.callbacks.monitor import Monitor
@@ -43,10 +45,12 @@ def get_trainer(params, cluster_env, extra_callbacks):
         accelerator=params["accelerator"],
         # num_nodes=int(os.environ["CNT_NODES"]),  # cluster_env.cnt_nodes(),
         num_nodes=cluster_env.cnt_nodes(),
-        num_sanity_val_steps=0 if "resume" in params else params["num_sanity_val_steps"],
+        num_sanity_val_steps=0
+        if "resume" in params
+        else params["num_sanity_val_steps"],
         max_epochs=params["cnt_epochs"],
         precision=params["precision"],
-        replace_sampler_ddp=False,
+        use_distributed_sampler=False,
         logger=logger,
         log_every_n_steps=params["log_every_n_steps"],
         reload_dataloaders_every_n_epochs=0,
@@ -60,7 +64,7 @@ def get_trainer(params, cluster_env, extra_callbacks):
         enable_progress_bar=False,
         enable_checkpointing=False,
         # TODO: figure out what is this
-        track_grad_norm=1,
+        # track_grad_norm=1, # TODO: https://lightning.ai/pages/releases/2.0.0/
         # detect_anomaly=True, # This is very slow!
         # profiler="simple",
         # plugins="deepspeed_stage_2",

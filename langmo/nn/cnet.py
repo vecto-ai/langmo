@@ -24,23 +24,28 @@ class RNNLayer(nn.Module):
                  nhid,
                  dropout):
         super().__init__()
-        self.rnn = nn.LSTM(nhid,
-                           nhid,
-                           num_layers=1,
-                           dropout=dropout,
-                           bidirectional=True,
-                           batch_first=True)
-        self.proj = nn.Linear(nhid * 2, nhid)
+        cnt_heads = 6
+        hidden_size = 128
+        self.rnn = nn.ModuleList([nn.LSTM(input_size=nhid,
+                                          hidden_size=hidden_size,
+                                          num_layers=1,
+                                          dropout=dropout,
+                                          bidirectional=True,
+                                          batch_first=True) for _ in range(cnt_heads)])
+        self.intermediate = nn.Linear(hidden_size * 2 * cnt_heads, nhid * 4)
+        self.output = nn.Linear(nhid * 4, nhid)
         self.dropout = nn.Dropout(dropout)
         self.layer_norm = nn.LayerNorm(nhid)
 
     def forward(self, embeddings):
-        outs, hidden = self.rnn(embeddings)
-        projected = self.proj(outs)
-        # TODO: don't we need an activation after projection??
-        residual = embeddings + projected
-        dropouted = self.dropout(residual)
-        normed = self.layer_norm(dropouted)
+        outs = [h(embeddings)[0] for h in self.rnn]
+        concatenated = torch.cat(outs, dim=2)
+        intermediate = nn.functional.gelu(self.intermediate(concatenated))
+        projected = self.output(intermediate)
+        dropouted = self.dropout(projected)
+        # TODO: weighted residual connection?
+        residual = embeddings + dropouted
+        normed = self.layer_norm(residual)
         # TODO: what is apply_chunking_to_forward() in HF roberta
         return normed
 
