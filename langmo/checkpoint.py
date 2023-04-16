@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import pytorch_lightning as pl
+import lightning as pl
 from protonn.distributed import dist_adapter as da
 
 

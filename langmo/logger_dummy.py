@@ -1,7 +1,7 @@
 from typing import Dict, Optional, Union
 
 import torch
-from pytorch_lightning.loggers.logger import Logger
+from lightning.pytorch.loggers.logger import Logger
 
 
 # TODO: consider making it actually doing something useful

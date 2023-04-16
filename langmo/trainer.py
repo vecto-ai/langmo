@@ -1,13 +1,12 @@
 import os
 
-import pytorch_lightning as pl
+import lightning as pl
+import lightning_utilities
 import torch
-
-# from pytorch_lightning.callbacks import LearningRateMonitor
-from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.strategies import DDPStrategy
-
 from langmo.logger_dummy import DummyLogger
+# from pytorch_lightning.callbacks import LearningRateMonitor
+from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.strategies import DDPStrategy
 
 # from langmo.callbacks.layernorm import LayerNormCallback
 # from langmo.callbacks.monitor import Monitor
@@ -27,7 +26,7 @@ def get_trainer(params, cluster_env, extra_callbacks):
     # TODO: check if making only local GPU visible makes init faster
     # gpus = [int(os.environ["RANK"])] if params["use_gpu"] else 0
     # gpus = -1 if (params["cnt_gpus_per_node"] > 0) else 0
-    pl.utilities.rank_zero.rank_zero_only.rank = cluster_env.global_rank()
+    lightning_utilities.core.rank_zero.rank_zero_only.rank = cluster_env.global_rank()
     if "WANDB_MODE" not in os.environ or os.environ["WANDB_MODE"].lower() != "disabled":
         logger = WandbLogger(
             project=params["name_project"],

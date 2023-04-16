@@ -1,14 +1,14 @@
+import json
 from functools import reduce
 from pathlib import Path
-import json
 
 import numpy as np
 import torch
-from torch import nn, tanh
-from torchmetrics import SQuAD, MeanMetric
-from transformers import AutoModelForQuestionAnswering, PretrainedConfig, AutoConfig
-
 from langmo.training.base import BaseClassificationModel
+from torch import nn, tanh
+from torchmetrics import MeanMetric, SQuAD
+from transformers import (AutoConfig, AutoModelForQuestionAnswering,
+                          PretrainedConfig)
 
 
 class QAModel(BaseClassificationModel):
@@ -21,6 +21,7 @@ class QAModel(BaseClassificationModel):
         self.val_loss = MeanMetric()
         self.example_to_features = {}
         self.sample_count = 0
+        self.validation_step_outputs = []
 
     def forward(self, inputs):
         return self.net(**inputs)
@@ -46,16 +47,17 @@ class QAModel(BaseClassificationModel):
 
         self.val_loss.update(outs["loss"])
         # here we retain many infos from all batches for validation_epoch_end
-        return {
+        self.validation_step_outputs.append({
             "start_logits": outs["start_logits"].detach(),
             "end_logits": outs["end_logits"].detach(),
             "offset_mapping": other_features["offset_mapping"],
             "context": other_features["context"],
             "answers": other_features["answers"],
             "has_ans_logits": outs["has_ans_logits"].detach(),
-        }
+        })
 
-    def validation_epoch_end(self, validation_step_outputs):
+    def on_validation_epoch_end(self):
+        validation_step_outputs = self.validation_step_outputs
         start_logits = gather_outputs(validation_step_outputs, "start_logits")
         end_logits = gather_outputs(validation_step_outputs, "end_logits")
         has_ans_logits = gather_outputs(validation_step_outputs, "has_ans_logits")
@@ -109,6 +111,7 @@ class QAModel(BaseClassificationModel):
         self.squad_metric.reset()
         self.example_to_features = {}
         self.sample_count = 0
+        self.validation_step_outputs.clear()
 
     def _logit_grid_search(self, start_logit, end_logit, context, offsets, candidate_answer):
         # takes top self.n_best (start/end)_logits

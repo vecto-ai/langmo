@@ -1,5 +1,5 @@
 import datasets
-import pytorch_lightning as pl
+import lightning as pl
 from torch.utils.data import DataLoader, DistributedSampler
 
 
