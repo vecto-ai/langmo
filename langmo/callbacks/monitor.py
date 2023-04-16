@@ -2,8 +2,9 @@
 from pathlib import Path
 from timeit import default_timer as timer
 
-import pytorch_lightning as pl
-from protonn.utils import num_to_str_with_suffix
+import lightning as pl
+
+# from protonn.utils import num_to_str_with_suffix
 
 # TODO: proper logging
 
@@ -27,7 +28,7 @@ class Monitor(pl.Callback):
     def maybe_save_metadata_and_hf(self, trainer, pl_module):
         if trainer.global_rank != 0:
             return
-        path_new_checkpoint = self._get_ckecpoint_folder()
+        path_new_checkpoint = pl_module._get_ckecpoint_folder()
 
         if pl_module.hparams["snapshot_strategy"] == "none":
             return
@@ -39,29 +40,20 @@ class Monitor(pl.Callback):
             self._save_best_only(path_new_checkpoint, pl_module)
         print("saving done")
 
-    def _get_ckecpoint_folder(self):
-        epoch_log = self.pl_module.hparams["train_logs"][-1]
-        dir_checkpoints = Path(self.pl_module.hparams["path_results"]) / "checkpoints"
-        # TODO: here we default to 0 due to on_train/validation_epoch_end
-        # order in pytorch_lightning
-        n_smpl = num_to_str_with_suffix(epoch_log.get("cnt_samples_processed", 0))
-        dir_current = f"ep_{epoch_log['epoch']:03d}_smpl_{n_smpl}"
-        return dir_checkpoints / dir_current
-
     def setup(self, trainer, pl_module, stage=None):
         self.pl_module = pl_module
         self.hparams = pl_module.hparams
         # TODO: check what happens on resume
-        if "train_logs" not in self.hparams:
-            self.hparams["train_logs"] = []
-            self.hparams["cnt_samples_processed"] = 0
-            self.hparams["train_logs"].append({})
-            self.hparams["train_logs"][-1]["epoch"] = -1
-            self.hparams["train_logs"][-1]["epoch_time"] = 0.0
-            self.hparams["train_logs"][-1]["cnt_samples_processed"] = 0
-            self.epoch = -1
-            self.maybe_save_metadata_and_hf(trainer, pl_module)
-        self.epoch = trainer.current_epoch
+        # if "train_logs" not in self.hparams:
+        #     self.hparams["train_logs"] = []
+        #     self.hparams["cnt_samples_processed"] = 0
+        #     self.hparams["train_logs"].append({})
+        #     self.hparams["train_logs"][-1]["epoch"] = -1
+        #     self.hparams["train_logs"][-1]["epoch_time"] = 0.0
+        #     self.hparams["train_logs"][-1]["cnt_samples_processed"] = 0
+        #     self.epoch = -1
+        #     self.maybe_save_metadata_and_hf(trainer, pl_module)
+        # self.epoch = trainer.current_epoch
         self.time_last_checkpoint = timer()
         self.metric_to_monitor = pl_module.hparams["metric_to_monitor"]
         # check if we are not resuimg
@@ -94,7 +86,7 @@ class Monitor(pl.Callback):
         epoch_time = self.hparams["train_logs"][-1]["epoch_time"]
         if trainer.global_rank == 0:
             print(
-                f"@@@@ perf callback: train epoch {pl_module.current_epoch}"
+                f"@@@@ perf callback: train epoch {pl_module.current_epoch} "
                 f"end, done in {epoch_time} sec"
             )
             pl_module.save_metadata(pl_module.hparams["path_results"])
@@ -110,18 +102,8 @@ class Monitor(pl.Callback):
         self.time_end = timer()
         self.epoch = -1 if trainer.sanity_checking else trainer.current_epoch
         self.hparams["train_logs"][-1]["epoch"] = self.epoch
-        path_details = self._get_ckecpoint_folder() / "predictions"
         # this is kinda ugly. having separate callback would have been better,
         # but then we have to return predictions from each validation step
-        if self.hparams["save_predictions"]:
-            if trainer.global_rank == 0:
-                path_details.mkdir(parents=True, exist_ok=True)
-                print(
-                    f"@@@@ perf callback: validation epoch {pl_module.current_epoch} started @@@@"
-                )
-            trainer._accelerator_connector.cluster_environment.barrier()
-            pl_module.files_predictions = [open(path_details / f"{split}_w{trainer.global_rank}.jsonl", "w")
-                                           for split in pl_module.validation_split_names]
 
     def on_validation_epoch_end(
         self, trainer: pl.Trainer, pl_module: pl.LightningModule

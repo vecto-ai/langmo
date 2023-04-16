@@ -1,4 +1,3 @@
-
 from langmo.base import PLBase
 from langmo.callbacks.model_snapshots_schedule import FinetuneMonitor
 from langmo.config import ConfigFinetune
@@ -64,6 +63,7 @@ class BaseFinetuner:
             self.tokenizer,
             params=self.params,
         )
+        # TODO: fix finetune monitor
         self.trainer = get_trainer(self.params, cluster_env, extra_callbacks=[FinetuneMonitor()])
         # TODO: Please use the DeviceStatsMonitor callback directly instead.
         # TODO: sync_batchnorm: bool = False, to params

@@ -2,10 +2,10 @@
 import os
 from pathlib import Path
 
-import pytorch_lightning as pl
+import lightning as pl
 import torch
 # from apex.optimizers import FusedLAMB
-from protonn.utils import save_data_json
+from protonn.utils import num_to_str_with_suffix, save_data_json
 from torch.optim import AdamW
 
 # from transformers.optimization import AdamW
@@ -22,6 +22,9 @@ class PLBase(pl.LightningModule):
             self.tokenizer = tokenizer
         if params is not None:
             self.hparams.update(params)
+        # TODO: check if this works on resume
+        self.hparams["cnt_samples_processed"] = 0
+        self.init_train_logs()
 
     def setup(self, stage):
         if self.global_rank == 0:
@@ -117,6 +120,12 @@ class PLBase(pl.LightningModule):
         path = Path(path) / "metadata.json"
         save_data_json(self.hparams, path)
 
+    def _get_ckecpoint_folder(self):
+        epoch_log = self.hparams["train_logs"][-1]
+        dir_checkpoints = Path(self.hparams["path_results"]) / "checkpoints"
+        n_smpl = num_to_str_with_suffix(self.hparams["cnt_samples_processed"])
+        dir_current = f"ep_{epoch_log['epoch']:03d}_smpl_{n_smpl}"
+        return dir_checkpoints / dir_current
     # TODO: checking if this is used at all, removr later if not
     # def save_metrics_and_model(self, metrics):
     #     if self.global_rank == 0:
@@ -128,3 +137,12 @@ class PLBase(pl.LightningModule):
     #         if metrics["epoch"] >= 0:
     #             path_hf = Path(self.hparams["path_results"]) / f"ep{metrics['epoch']}"
     #             self.save_as_hf(path_hf)
+
+    def init_train_logs(self):
+        if "train_logs" not in self.hparams:
+            self.hparams["train_logs"] = []
+            self.hparams["cnt_samples_processed"] = 0
+            self.hparams["train_logs"].append({})
+            self.hparams["train_logs"][-1]["epoch"] = -1
+            self.hparams["train_logs"][-1]["epoch_time"] = 0.0
+            self.hparams["train_logs"][-1]["cnt_samples_processed"] = 0

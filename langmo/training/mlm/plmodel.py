@@ -52,7 +52,7 @@ class PLModel(PLBase):
         # )
         # TODO: move this to train_epoch_end when it is fixed
         # self.log("epoch", self.current_epoch)
-        cnt_epochs = float(self.trainer.train_dataloader.loaders.cnt_restarts)
+        cnt_epochs = float(self.trainer.train_dataloader.cnt_restarts)
         self.hparams["cnt_samples_processed"] += (
             self.hparams["batch_size"] * self.hparams["cnt_workers"]
         )
@@ -71,7 +71,7 @@ class PLModel(PLBase):
         self.metric_loss.update(loss)
         return loss
 
-    def training_epoch_end(self, *args, **kwargs):
+    def on_training_epoch_end(self, *args, **kwargs):
         # if self.global_rank == 0:
             # print("args:", args)
             # print("kwargs:", kwargs)
@@ -94,7 +94,7 @@ class PLModel(PLBase):
     #     # print("val step done")
     #     return loss
 
-    def validation_epoch_end(self, outputs):
+    def on_validation_epoch_end(self, outputs):
         if self.global_rank == 0:
             print(f"########### main: validation epoch end ###############")
         # self.trainer.datamodule.val_rng_reset()

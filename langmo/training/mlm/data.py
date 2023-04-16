@@ -4,7 +4,7 @@ from collections import namedtuple
 from queue import Queue
 from threading import Thread
 
-import pytorch_lightning as pl
+import lightning as pl
 import torch
 
 # from torch.utils.data import DataLoader, DistributedSampler
