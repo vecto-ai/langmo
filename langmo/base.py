@@ -43,6 +43,26 @@ class PLBase(pl.LightningModule):
             # TODO: proper warning with logger here
             print("SOMETHING WENT WRONG WITH WREEZE TOKEN TYPE EMBEDDINGS")
 
+    def get_cnt_training_steps(self):
+        params = self.hparams
+        # batch_size = self.hparams["batch_size_effective"]
+        if hasattr(self.trainer.datamodule, "cnt_train_samples"):
+            self.hparams[
+                "cnt_samples_per_epoch"
+            ] = self.trainer.datamodule.cnt_train_samples
+        samples_per_epoch = params["cnt_samples_per_epoch"]
+        steps_total = 0
+        schedule = [(0, 1)]
+        for epoch in self.hparams["accumulate_batches"]:
+            schedule.append((epoch, params["accumulate_batches"][epoch]))
+        schedule.append((params["cnt_epochs"], schedule[-1][1]))
+        for i in range(len(schedule) - 1):
+            epochs_in_span = schedule[i + 1][0] - schedule[i][0]
+            batch_in_span = params["batch_size"] * params["cnt_workers"] * schedule[i][1]
+            steps_in_epoch = (batch_in_span + samples_per_epoch - 1) / batch_in_span + 1
+            steps_total += steps_in_epoch * epochs_in_span
+        return int(steps_total)
+
     def configure_optimizers(self):
         # param_optimizer = list(self.net.named_parameters())
         param_optimizer = [
@@ -83,22 +103,12 @@ class PLBase(pl.LightningModule):
         #     betas=(self.hparams["beta1"], self.hparams["beta2"]),
         # )
         # optimizer.clip_grad_norm(1.0)
-        cnt_epochs = self.hparams["cnt_epochs"]
-        batch_size = self.hparams["batch_size_effective"]
-        print("BATCH EFFECTIVE", batch_size)
-        if hasattr(self.trainer.datamodule, "cnt_train_samples"):
-            self.hparams[
-                "cnt_samples_per_epoch"
-            ] = self.trainer.datamodule.cnt_train_samples
-        samples_per_epoch = self.hparams["cnt_samples_per_epoch"]
-        # print(f"!!!!!!!! samples per epoch: {samples_per_epoch}")
-        training_steps = (
-            int((batch_size + samples_per_epoch) * cnt_epochs / batch_size) + 1
-        )
+
         # print(f"!!!!!!!! expected steps: {training_steps}")
         # TODO: get rough estimation of training steps here
         # maybe after first epoch is trained - reset iterators?
         pct_start = self.hparams["percent_warmup"] / 100.0
+        training_steps = self.get_cnt_training_steps()
         # print("setting training_steps as", training_steps)
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer,

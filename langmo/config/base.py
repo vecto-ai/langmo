@@ -146,7 +146,7 @@ class LangmoConfig(BaseConfig):
             initial_lr=0.0,
             tokenizer_name=None,
             gradient_clip_val=0.0,
-            accumulate_batches=1,
+            accumulate_batches={1: 1},
             percent_warmup=6.0,
             log_every_n_steps=50,
             minutes_between_snapshots=60,

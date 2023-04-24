@@ -92,17 +92,15 @@ class GLUEModel(BaseClassificationModel):
         # return metrics_step
 
     def on_validation_epoch_start(self):
-        print("#### VAL START, ep ", self.current_epoch)
+        if self.global_rank == 0:
+            print("#### VAL START, ep ", self.current_epoch)
         path_details = self._get_ckecpoint_folder() / "predictions"
         if self.hparams["save_predictions"]:
             if self.global_rank == 0:
                 path_details.mkdir(parents=True, exist_ok=True)
-                print(
-                    f"@@@@ perf callback: validation epoch {self.current_epoch} started @@@@"
-                )
-        self.trainer._accelerator_connector.cluster_environment.barrier()
-        self.files_predictions = [open(path_details / f"{split}_w{self.global_rank}.jsonl", "w")
-                                  for split in self.validation_split_names]
+            self.trainer._accelerator_connector.cluster_environment.barrier()
+            self.files_predictions = [open(path_details / f"{split}_w{self.global_rank}.jsonl", "w")
+                                      for split in self.validation_split_names]
 
     def on_validation_epoch_end(self):
         last_epoch_log = self.hparams["train_logs"][-1]
