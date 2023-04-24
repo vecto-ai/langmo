@@ -4,6 +4,7 @@ import lightning as pl
 import lightning_utilities
 import torch
 from langmo.logger_dummy import DummyLogger
+from lightning.pytorch.callbacks import GradientAccumulationScheduler
 # from pytorch_lightning.callbacks import LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.strategies import DDPStrategy
@@ -18,6 +19,7 @@ def get_trainer(params, cluster_env, extra_callbacks):
     #     params["path_results"] = "/tmp"
     # gpus = [cluster_env.local_rank()] if params["use_gpu"] else 0
     # print(f"### trying to use gpus: {gpus} ")
+    extra_callbacks.append(GradientAccumulationScheduler(params["accumulate_batches"]))
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
     if params["cnt_gpus_per_node"] > 0:
@@ -68,6 +70,6 @@ def get_trainer(params, cluster_env, extra_callbacks):
         # profiler="simple",
         # plugins="deepspeed_stage_2",
         # plugins=[cluster_env],
-        accumulate_grad_batches=params["accumulate_batches"],
+        # accumulate_grad_batches=,
     )
     return trainer

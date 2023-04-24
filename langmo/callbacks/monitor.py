@@ -29,6 +29,7 @@ class Monitor(pl.Callback):
         if trainer.global_rank != 0:
             return
         path_new_checkpoint = pl_module._get_ckecpoint_folder()
+        path_new_checkpoint.mkdir(parents=True, exist_ok=True)
 
         if pl_module.hparams["snapshot_strategy"] == "none":
             return
