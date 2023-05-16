@@ -10,7 +10,7 @@ class BaseConfig(PretrainedConfig):
     vocab_size = 50265
     hidden_size = 768
     initializer_range = 0.02
-    cnt_layers = 6
+    cnt_layers = 8
     dropout = 0.2
     model_type = "langmo"
 

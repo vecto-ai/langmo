@@ -6,3 +6,6 @@ transformers
 protonn
 wandb
 humanfriendly
+lightning
+langdetect
+
