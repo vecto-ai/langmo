@@ -2,13 +2,12 @@ cnt_epochs: 20
 uncase: False
 batch_size: 48
 max_length: 256
-path_corpus: "/home/u10121/data_team/NLP/corpora/shuffled/wiki_c4_256"
-path_val_corpus: "/groups/gcb50300/data/NLP/corpora/raw_text/eng/brown"
+path_corpus: "/home/ra000012/data/NLP/corpora/shuffled/wiki_c4_256"
 model_name: "./data/models/roberta-base"
 # model_name: "prajjwal1/bert-mini"
 test: False
 precision: "FP32"
-path_results: "/home/u10121/data_team/NLP_outs"
+path_results: "/home/ra000012/data/NLP_outs"
 create_unique_path: true
 beta1: 0.9
 beta2: 0.98
@@ -17,6 +16,5 @@ initial_lr: 0.000001
 max_lr: 0.0005
 cnt_samples_per_epoch: 100000000
 # cnt_samples_per_epoch: 200000
-accumulate_batches: 2
 gradient_clip_val: 6.0
 log_every_n_steps: 100
