@@ -72,6 +72,7 @@ class LangmoConfig(BaseConfig):
         self["distributed_backend"] = cluster_env.distributed_backend
 
     # TODO: This os overriding parents, think how to reuse
+    # TODO: we have near identical method in PROTONN
     def read_from_yaml_and_set_default(self, path, name_task):
         _logger = logging.getLogger(__name__)
         user_config = load_yaml_config(path)
@@ -155,7 +156,7 @@ class LangmoConfig(BaseConfig):
             metric_to_monitor=None,
             snapshot_strategy="per_epoch",
             replace_hf_config={},
-            seed=int(time.time()),
+            seed=0,
             params_without_weight_decay=["bias", "gamma", "beta", "LayerNorm", "layer_norm"],
         )
         self.required_options = set()
