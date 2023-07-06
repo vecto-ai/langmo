@@ -96,11 +96,13 @@ class GLUEModel(BaseClassificationModel):
             print("#### VAL START, ep ", self.current_epoch)
         path_details = self._get_ckecpoint_folder() / "predictions"
         if self.hparams["save_predictions"]:
-            if self.global_rank == 0:
-                path_details.mkdir(parents=True, exist_ok=True)
-            self.trainer._accelerator_connector.cluster_environment.barrier()
-            self.files_predictions = [open(path_details / f"{split}_w{self.global_rank}.jsonl", "w")
-                                      for split in self.validation_split_names]
+            self.files_predictions = []
+            for split in self.validation_split_names:
+                path_split = path_details / f"{split}"
+                if self.global_rank == 0:
+                    path_split.mkdir(parents=True, exist_ok=True)
+                self.trainer._accelerator_connector.cluster_environment.barrier()
+                self.files_predictions.append(open(path_split / f"w_{self.global_rank}.jsonl", "w"))
 
     def on_validation_epoch_end(self):
         last_epoch_log = self.hparams["train_logs"][-1]
