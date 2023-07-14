@@ -92,6 +92,7 @@ class PLBase(pl.LightningModule):
             optimizer_grouped_parameters,
             lr=self.hparams["initial_lr"],
             eps=self.hparams["eps"],
+            # TODO: double check if wd working when in grouped params
             # weight_decay=self.hparams["weight_decay"],
             betas=(self.hparams["beta1"], self.hparams["beta2"]),
         )
