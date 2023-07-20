@@ -3,15 +3,15 @@ import json
 import string
 
 from kapral.corpus import BufferCorpus
-from kapral.corpus.iterators import DirIterator
 from kapral.utils.data import detect_archive_format_and_open
 from langdetect import detect_langs
 from langdetect.lang_detect_exception import LangDetectException
 
 
-class JSONLDocIter:
+class DocFromJSONFileIter:
+
     def __init__(self, path):
-        self.file_iter = DirIterator(path)
+        self.path = path
         self._gen = self.gen()
 
     def __iter__(self):
@@ -21,11 +21,28 @@ class JSONLDocIter:
         return next(self._gen)
 
     def gen(self):
-        for file_name in self.file_iter:
-            print("processing", file_name)
-            with detect_archive_format_and_open(file_name) as stream:
-                for line in stream:
-                    yield json.loads(line)["text"]
+        with detect_archive_format_and_open(self.path) as stream:
+            for line in stream:
+                yield json.loads(line)["text"]
+
+
+# class JSONLDocIter:
+#     def __init__(self, path):
+#         self.file_iter = DirIterator(path)
+#         self._gen = self.gen()
+
+#     def __iter__(self):
+#         return self
+
+#     def __next__(self):
+#         return next(self._gen)
+
+#     def gen(self):
+#         for file_name in self.file_iter:
+#             print("processing", file_name)
+#             with detect_archive_format_and_open(file_name) as stream:
+#                 for line in stream:
+#                     yield json.loads(line)["text"]
 
 
 class QualityFilter:

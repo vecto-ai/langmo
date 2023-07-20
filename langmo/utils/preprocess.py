@@ -6,41 +6,61 @@ from timeit import default_timer as timer
 
 import humanfriendly
 from kapral.corpus import Corpus
+from kapral.corpus.iterators import DirIterator
 from transformers import AutoTokenizer
 
-from .json_reader import JSONLDocIter, QualityFilter
+from .json_reader import DocFromJSONFileIter  # QualityFilter
+
+
+class HybridIter:
+    def __init__(self, path):
+        self.file_iter = DirIterator(path)
+        self._gen = self.gen()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self._gen)
+
+    def gen(self):
+        for file_name in self.file_iter:
+            print("processing", file_name)
+            if "json" in str(file_name):
+                doc_iter = DocFromJSONFileIter(file_name)
+            else:
+                doc_iter = Corpus(file_name).get_document_iterator()
+            for doc in doc_iter:
+                yield doc
 
 
 def main():
     parser = argparse.ArgumentParser(description='Split texts into training sequences of token ids')
     parser.add_argument('name_tokenizer', type=str, help='tokenizer name')
     parser.add_argument('max_length', type=int, help='sequence length')
-    parser.add_argument('path', type=str, help='corpus path')
-    parser.add_argument('path_out', type=str, help='output path')
+    parser.add_argument('path_src', type=str, help='corpus path')
+    parser.add_argument('path_dst', type=str, help='output path')
     parser.add_argument('--max_samples', type=int, help='limit number of samples', default=-1)
     args = parser.parse_args()
     name_tokenizer = args.name_tokenizer
     max_length = args.max_length
-    path = Path(args.path)
-    path_out = Path(args.path_out) / name_tokenizer / str(max_length)
-    path_out.mkdir(parents=True, exist_ok=True)
-    path_out = path_out / "tokenized.jsonl"
+    path_src = Path(args.path)
+    path_dst = Path(args.path_dst) / name_tokenizer / str(max_length)
+    path_dst.mkdir(parents=True, exist_ok=True)
     time_start = timer()
     tokenizer = AutoTokenizer.from_pretrained(name_tokenizer)
     line_buffer = [tokenizer.cls_token_id]
     cnt_samples_written = 0
     proba_shortening = 0.1
-    if "json" in str(next(path.iterdir())):
-        print("detected JSONL files")
-        dirty_doc_iter = JSONLDocIter(path)
-        doc_iter = QualityFilter().get_document_iterator(dirty_doc_iter)
-    else:
-        corpus = Corpus(path)
-        doc_iter = corpus.get_document_iterator()
     allowed_underfill = 10
     min_doc_length = 5
     min_truncation_length = 5
-    with open(path_out, "w") as f_out:
+    doc_iter = HybridIter(path_src)
+    # for f in DirIterator(path):
+    #     path_out = path_root / f RALTEIVE TO args.path
+
+    # return
+    with open(path_dst / "tokenized.json", "w") as f_out:
         for doc in doc_iter:
             if len(line_buffer) > min_doc_length:
                 line_buffer += [tokenizer.sep_token_id]
