@@ -49,7 +49,7 @@ def get_trainer(params, cluster_env, extra_callbacks):
         num_sanity_val_steps=0
         if "resume" in params
         else params["num_sanity_val_steps"],
-        max_epochs=params["cnt_epochs"],
+        max_epochs=params["cnt_epochs"] - 1,
         precision=params["precision"],
         use_distributed_sampler=False,
         logger=logger,

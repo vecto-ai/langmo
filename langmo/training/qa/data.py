@@ -121,7 +121,8 @@ class QADataModule(BaseDataModule):
 
     def preprocess_training_examples(self, examples):
         questions = [q.strip() for q in examples["question"]]
-
+        # question then context ordering is done according to HF example, not sure if it's the best :-\
+        # https://huggingface.co/docs/transformers/tasks/question_answering
         inputs = self.tokenizer(
             questions,
             examples["context"],
@@ -147,6 +148,7 @@ class QADataModule(BaseDataModule):
         for i in range(len(inputs["input_ids"])):
             offset = offset_mapping[i]
             sample_idx = sample_map[i]
+            # the idea is that the long context gets split into multiple sequences of max length
             answer = answers[sample_idx]
             context = contexts[sample_idx]
             new_contexts.append(context)
