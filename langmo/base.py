@@ -7,7 +7,7 @@ import torch
 # from apex.optimizers import FusedLAMB
 from protonn.utils import num_to_str_with_suffix, save_data_json
 from torch.optim import AdamW
-
+import math
 # from transformers.optimization import AdamW
 from .utils.model_utils import zero_and_freeze_param_by_name
 
@@ -59,7 +59,7 @@ class PLBase(pl.LightningModule):
         for i in range(len(schedule) - 1):
             epochs_in_span = schedule[i + 1][0] - schedule[i][0]
             batch_in_span = params["batch_size"] * params["cnt_workers"] * schedule[i][1]
-            steps_in_epoch = (batch_in_span + samples_per_epoch - 1) / batch_in_span + 1
+            steps_in_epoch = math.ceil(samples_per_epoch / batch_in_span)
             steps_total += steps_in_epoch * epochs_in_span
         return int(steps_total)
 
