@@ -44,7 +44,7 @@ def main():
     args = parser.parse_args()
     name_tokenizer = args.name_tokenizer
     max_length = args.max_length
-    path_src = Path(args.path)
+    path_src = Path(args.path_src)
     path_dst = Path(args.path_dst) / name_tokenizer / str(max_length)
     path_dst.mkdir(parents=True, exist_ok=True)
     time_start = timer()
@@ -58,7 +58,6 @@ def main():
     doc_iter = HybridIter(path_src)
     # for f in DirIterator(path):
     #     path_out = path_root / f RALTEIVE TO args.path
-
     # return
     with open(path_dst / "tokenized.json", "w") as f_out:
         for doc in doc_iter:

@@ -23,7 +23,7 @@ class DocFromJSONFileIter:
     def gen(self):
         with detect_archive_format_and_open(self.path) as stream:
             for line in stream:
-                yield json.loads(line)["text"]
+                yield BufferCorpus(json.loads(line)["text"])
 
 
 # class JSONLDocIter:
