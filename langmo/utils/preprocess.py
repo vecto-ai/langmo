@@ -59,7 +59,7 @@ def main():
     # for f in DirIterator(path):
     #     path_out = path_root / f RALTEIVE TO args.path
     # return
-    with open(path_dst / "tokenized.json", "w") as f_out:
+    with open(path_dst / "tokenized.jsonl", "w") as f_out:
         for doc in doc_iter:
             if len(line_buffer) > min_doc_length:
                 line_buffer += [tokenizer.sep_token_id]
