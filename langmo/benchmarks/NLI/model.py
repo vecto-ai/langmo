@@ -2,10 +2,8 @@ import torch
 import torch.nn.functional as F
 from torchmetrics.functional import accuracy
 
-from langmo.benchmarks.base import (BaseClassificationModel,
-                                    aggregate_batch_stats)
-
-from langmo.utils.distributed import allreduce
+from langmo.training.base import BaseClassificationModel
+from langmo.utils.distributed import aggregate_batch_stats, allreduce
 
 from .data import labels_entail, labels_heuristics
 

@@ -19,3 +19,7 @@ class DummyLogger(Logger):
     @property
     def version(self) -> str:
         return "0"
+
+    @property
+    def experiment(self):
+        return None
