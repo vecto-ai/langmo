@@ -10,7 +10,7 @@ max_lr: 2.e-5
 siamese: true
 freeze_encoder: false
 num_sanity_val_steps: 5
-encoder_wrapper: "pooler"
+encoder_wrapper: "mean_pooler"
 weight_decay: 0.01
 eps: 1.e-8
 shuffle: true

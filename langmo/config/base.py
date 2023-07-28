@@ -4,11 +4,12 @@ import time
 from pathlib import Path
 
 import yaml
-from langmo.log_helper import set_root_logger
-from langmo.utils import parse_float
 from protonn.experiment_config import BaseConfig
 from protonn.utils import get_time_str
 from transformers import set_seed
+
+from langmo.log_helper import set_root_logger
+from langmo.utils import parse_float
 
 CONFIG_OPTIONS = {
     "snapshot_strategy": ["per_epoch", "best_only", "none"],
@@ -128,6 +129,7 @@ class LangmoConfig(BaseConfig):
         self.defaults = dict(
             cnt_gpus_per_node=int(os.environ["NUM_GPUS_PER_NODE"]),
             # TODO: read this from the environment variables
+            classifier="huggingface",
             distributed_backend="gloo",
             test=False,
             precision=32,

@@ -1,4 +1,5 @@
-from langmo.benchmarks.base import ClassificationFinetuner
+from langmo.training.base import ClassificationFinetuner
+
 from .data import NLIDataModule
 from .model import NLIModel
 
@@ -10,4 +11,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    raise UserWarning(f"{__file__} shouldn't be executed directly (it's deprecated)")

@@ -1,36 +1,23 @@
-import unittest
+import os
 import subprocess
+import sys
+import unittest
+from pathlib import Path
 from shutil import rmtree
 
-import sys
-import os
-from pathlib import Path
+import nltk
+
+nltk.download("punkt")
+nltk.download("stopwords")
 
 
-class DoesRunTestCase:
-    def __init__(self):
-        self.py_exec = Path(sys.executable).name
-
-    def does_NLI_fine_tune_run(self, path):
-        subprocess.run([self.py_exec, "-m", "langmo.benchmarks.NLI", path], check=True)
-
-    def does_GLUE_fine_tune_run(self, path, task):
-        subprocess.run([self.py_exec, "-m", "langmo.benchmarks.GLUE", path, task], check=True)
-
-    def does_QA_fine_tune_run(self, path, task):
-        subprocess.run([self.py_exec, "-m", "langmo.benchmarks.QA", path, task], check=True)
-
-    def does_pretrain_run(self, path):
-        subprocess.run([self.py_exec, "-m", "langmo.pretraining", path], check=True)
-
-
-class Tests(unittest.TestCase):
-    def setUp(self):
+class LangmoTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
         Path("./data/tokenized").mkdir(exist_ok=True, parents=True)
-        self.tester_does_run = DoesRunTestCase()
         subprocess.run(
             [
-                self.tester_does_run.py_exec,
+                sys.executable,
                 "-m",
                 "langmo.utils.preprocess",
                 "bert-base-uncased",
@@ -41,38 +28,50 @@ class Tests(unittest.TestCase):
             check=True,
         )
         os.environ["NUM_GPUS_PER_NODE"] = "0"
-        os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] = "GLOO"
+        os.environ["PROTONN_DISTRIBUTED_BACKEND"] = "gloo"
         os.environ["WANDB_MODE"] = "disabled"
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(cls):
         rmtree("./tests/test_output", ignore_errors=True)
         rmtree("./tests/test_data/tokenized", ignore_errors=True)
 
-    def test_does_run_pretrain(self):
-        self.tester_does_run.does_pretrain_run("./tests/test_params/pretraining_minimal_test.yaml")
+    @staticmethod
+    def run_langmo(module, *args):
+        cmd = [sys.executable, "-m", f"langmo.{module}", *args]
+        print(f"cmd: {' '.join(cmd)}")
+        subprocess.run(cmd, check=True)
 
-    def test_does_run_fine_tune(self):
-        self.tester_does_run.does_NLI_fine_tune_run(
-            "./tests/test_params/fine_tune_minimal_test.yaml"
-        )
-        self.tester_does_run.does_GLUE_fine_tune_run(
-            "./tests/test_params/fine_tune_minimal_test.yaml", "rte"
-        )
-        self.tester_does_run.does_QA_fine_tune_run(
-            "./tests/test_params/fine_tune_minimal_test.yaml", "squad"
-        )
-        self.tester_does_run.does_QA_fine_tune_run(
-            "./tests/test_params/fine_tune_minimal_test.yaml", "squad_v2"
-        )
+    # @unittest.skip("Temporarily disable")
+    def test_pretrain(self):
+        self.run_langmo("training.mlm", "./tests/test_params/pretraining_minimal_test.yaml")
 
-    def test_does_run_siamese(self):
-        self.tester_does_run.does_NLI_fine_tune_run(
-            "tests/test_params/fine_tune_siamese_minimal_test.yaml"
-        )
-        self.tester_does_run.does_GLUE_fine_tune_run(
-            "tests/test_params/fine_tune_siamese_minimal_test.yaml", "rte"
-        )
+    # @unittest.skip("Temporarily disable")
+    def test_GLUE_MNLI(self):
+        yaml = "./tests/test_params/fine_tune_minimal_test.yaml"
+        self.run_langmo("training.glue", yaml, "mnli")
 
+    # @unittest.skip("TODO")
+    def test_GLUE_MNLI_siamese(self):
+        yaml = "tests/test_params/fine_tune_siamese_minimal_test.yaml"
+        self.run_langmo("training.glue", yaml, "mnli")
 
-if __name__ == "__main__":
-    unittest.main()
+    # @unittest.skip("Temporarily disable")
+    def test_GLUE_RTE(self):
+        yaml = "tests/test_params/fine_tune_minimal_test.yaml"
+        self.run_langmo("training.glue", yaml, "rte")
+
+    # @unittest.skip("Temporarily disable")
+    def test_GLUE_RTE_siamese(self):
+        yaml = "tests/test_params/fine_tune_siamese_minimal_test.yaml"
+        self.run_langmo("training.glue", yaml, "rte")
+
+    # @unittest.skip("TODO")
+    def test_QA_squad(self):
+        yaml = "tests/test_params/fine_tune_minimal_test.yaml"
+        self.run_langmo("training.qa", yaml, "squad")
+
+    # @unittest.skip("TODO")
+    def test_QA_squad_v2(self):
+        yaml = "tests/test_params/fine_tune_minimal_test.yaml"
+        self.run_langmo("training.qa", yaml, "squad_v2")

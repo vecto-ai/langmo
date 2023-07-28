@@ -2,14 +2,15 @@
 
 from pathlib import Path
 
-# import langmo
-# import transformers
-from langmo.nn.classifier import PretrainedClassifier
-from langmo.nn.cnet import MLModel
 from protonn.utils import load_json
 from transformers import (AutoModel, AutoModelForMaskedLM,
                           AutoModelForSequenceClassification)
 from transformers.models.auto.configuration_auto import CONFIG_MAPPING_NAMES
+
+# import langmo
+# import transformers
+from langmo.nn.classifier import PretrainedClassifier
+from langmo.nn.cnet import MLModel
 
 from .classifier import ClassificationHead, Classifier
 from .heads import *
@@ -41,9 +42,9 @@ def create_net(params):
     # TODO: move creation of model logit to model-related class / submodule
     # TDDO: support models with multiple classification heads
     if is_langmo_model(params["model_name"]):
-        net = PretrainedClassifier.from_pretrained(params["model_name"],
-                                                   num_labels=params["num_labels"],
-                                                   hidden_size=768)
+        net = PretrainedClassifier.from_pretrained(
+            params["model_name"], num_labels=params["num_labels"], hidden_size=768
+        )
         # TODO: hidden size should be saved to config at pretraining!!!
         return net, "langmo"
 
@@ -51,8 +52,8 @@ def create_net(params):
         name_run = "siam_" + params["encoder_wrapper"] + "_"
         if params["freeze_encoder"]:
             name_run += "fr_"
-        name_run += name_model
-        encoder = AutoModel.from_pretrained(name_model, add_pooling_layer=False)
+        name_run += params["model_name"]
+        encoder = AutoModel.from_pretrained(params["model_name"], add_pooling_layer=False)
         wrapped_encoder = wrap_encoder(
             encoder, name=params["encoder_wrapper"], freeze=params["freeze_encoder"]
         )

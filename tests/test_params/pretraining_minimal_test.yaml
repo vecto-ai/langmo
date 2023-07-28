@@ -15,4 +15,3 @@ initial_lr: 1e-5
 cnt_samples_per_epoch: 100
 # use_gpu: False
 suffix: test
-seconds_between_snapshots: 40
