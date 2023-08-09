@@ -51,10 +51,8 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(name_tokenizer)
     line_buffer = [tokenizer.cls_token_id]
     cnt_samples_written = 0
-    proba_shortening = 0.1
     allowed_underfill = 10
     min_doc_length = 5
-    min_truncation_length = 5
     doc_iter = HybridIter(path_src)
     # for f in DirIterator(path):
     #     path_out = path_root / f RALTEIVE TO args.path
@@ -75,9 +73,6 @@ def main():
                 line_buffer += [tokenizer.sep_token_id]
                 if len(line_buffer) > max_length - allowed_underfill:
                     line_buffer = line_buffer[:max_length]
-                    if random.random() < proba_shortening:
-                        len_shortened = random.randint(min_truncation_length, len(line_buffer))
-                        line_buffer = line_buffer[: len_shortened]
                     line_buffer += [tokenizer.pad_token_id] * (max_length - len(line_buffer))
                     serialized = json.dumps(line_buffer)
                     f_out.write(serialized)
