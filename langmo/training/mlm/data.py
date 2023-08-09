@@ -6,7 +6,6 @@ from threading import Thread
 
 import lightning as pl
 import torch
-
 # from torch.utils.data import DataLoader, DistributedSampler
 from kapral.corpus import Corpus
 
@@ -51,6 +50,7 @@ class BatchIter:
                 self.params["cnt_samples_processed"]
                 - self.params["train_logs"][-2]["cnt_samples_processed"]
             )
+            # TODO: this is gonna break now that accum batch size is per epoch
             self.cnt_batches_produced = cnt_samples_seen_in_last_epoch / (
                 self.params["batch_size"] * self.params["cnt_workers"]
             )
@@ -58,7 +58,7 @@ class BatchIter:
             self.cnt_batches_produced = 0
 
     def prepare_dummy_batch(self):
-        # this is for perf measrumenet w/o IO bottleneck
+        # this is for perf measuremenet w/o IO bottleneck
         self.dummy_batch = TBatch(
             input_ids=torch.zeros(
                 (self.batch_size, self.max_length), dtype=torch.int64
@@ -77,7 +77,7 @@ class BatchIter:
         if self.cnt_batches_produced >= self.batches_per_epoch:
             self.cnt_batches_produced = 0
             raise StopIteration()
-        batch = self._queue.get(block=True, timeout=300)
+        batch = self._queue.get(block=True, timeout=400)
         # print(self._queue.qsize())
         if batch is None:
             # self._thread.join()
@@ -88,15 +88,22 @@ class BatchIter:
     def mask_line(self, line, tokenizer, ignore_token_id, generator=None):
         proba_masking = self.params["proba_masking"]
         proba_random = self.params["proba_random"]
+        proba_shortening = self.params["proba_shortening"]
         proba_original = proba_random
+        min_truncation_length = 5
+        pad_token_id = tokenizer.pad_token_id
+        # TODO: move to params
+        if random.random() < proba_shortening:
+            len_shortened = random.randint(min_truncation_length, len(line))
+            for i in range(len_shortened, len(line)):
+                line[i] = pad_token_id
         token_ids = torch.LongTensor(line)
         labels = token_ids.clone()
-
         rolls = torch.rand(token_ids.shape, generator=generator)
         ## NOTE this line makes ratio of masked tokens slightly lower
         ## than each proba_ is set to, however it is a small amount
         if self.params["mask_special_tokens"]:
-            mask_non_special = line != tokenizer.pad_token_id
+            mask_non_special = line != pad_token_id
         else:
             mask_non_special = torch.tensor(
                 [i not in tokenizer.all_special_ids for i in line]
@@ -187,12 +194,12 @@ class BatchIter:
             labels=torch.stack(batch_labels),
         )
 
-    def randomly_shoren_line(self, line):
-        proba_shortening = 0.1
-        min_length = 5
-        if random.random() < proba_shortening:
-            line = line[: random.randint(min_length, len(line))]
-        return line
+    # def randomly_shorten_line(self, line):
+    #     proba_shortening = 0.1
+    #     min_length = 5
+    #     if random.random() < proba_shortening:
+    #         line = line[: random.randint(min_length, len(line))]
+    #     return line
 
     def read_next_batch(self):
         batch = []
