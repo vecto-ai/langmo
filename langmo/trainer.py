@@ -3,11 +3,12 @@ import os
 import lightning as pl
 import lightning_utilities
 import torch
-from langmo.logger_dummy import DummyLogger
 from lightning.pytorch.callbacks import GradientAccumulationScheduler
 # from pytorch_lightning.callbacks import LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.strategies import DDPStrategy
+
+from langmo.logger_dummy import DummyLogger
 
 # from langmo.callbacks.layernorm import LayerNormCallback
 # from langmo.callbacks.monitor import Monitor
@@ -46,10 +47,8 @@ def get_trainer(params, cluster_env, extra_callbacks):
         accelerator=params["accelerator"],
         # num_nodes=int(os.environ["CNT_NODES"]),  # cluster_env.cnt_nodes(),
         num_nodes=cluster_env.cnt_nodes(),
-        num_sanity_val_steps=0
-        if "resume" in params
-        else params["num_sanity_val_steps"],
-        max_epochs=params["cnt_epochs"] - 1,
+        num_sanity_val_steps=0 if "resume" in params else params["num_sanity_val_steps"],
+        max_epochs=params["cnt_epochs"],
         precision=params["precision"],
         use_distributed_sampler=False,
         logger=logger,
