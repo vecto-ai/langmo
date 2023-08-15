@@ -17,6 +17,7 @@ class MaskTestCase:
             "cnt_workers": 1,
             "proba_masking": 0.12,
             "proba_random": 0.015,
+            "proba_shortening": 0.0,
             "mask_special_tokens": mask_special_tokens,
         }
         self.batch_iter = BatchIter(
