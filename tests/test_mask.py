@@ -88,7 +88,6 @@ class Tests(unittest.TestCase):
         self.tester_special_tokens = MaskTestCase(mask_special_tokens=False)
         self.tester_pad_token = MaskTestCase(mask_special_tokens=True)
 
-    @unittest.skip("Temporarily disable")
     def test_mask_special_tokens(self):
         (
             n_masked_ratio,
@@ -102,7 +101,6 @@ class Tests(unittest.TestCase):
         # test that all the 15% of labels are counted in the loss
         self.assertAlmostEqual(n_loss_counted_ratio, 0.15, places=2)
 
-    @unittest.skip("Temporarily disable")
     def test_mask_pad_token(self):
         (
             n_masked_ratio,

@@ -42,36 +42,33 @@ class LangmoTests(unittest.TestCase):
         print(f"cmd: {' '.join(cmd)}")
         subprocess.run(cmd, check=True)
 
-    # @unittest.skip("Temporarily disable")
     def test_pretrain(self):
         self.run_langmo("training.mlm", "./tests/test_params/pretraining_minimal_test.yaml")
 
-    # @unittest.skip("Temporarily disable")
     def test_GLUE_MNLI(self):
         yaml = "./tests/test_params/fine_tune_minimal_test.yaml"
         self.run_langmo("training.glue", yaml, "mnli")
 
-    # @unittest.skip("TODO")
     def test_GLUE_MNLI_siamese(self):
         yaml = "tests/test_params/fine_tune_siamese_minimal_test.yaml"
         self.run_langmo("training.glue", yaml, "mnli")
 
-    # @unittest.skip("Temporarily disable")
     def test_GLUE_RTE(self):
         yaml = "tests/test_params/fine_tune_minimal_test.yaml"
         self.run_langmo("training.glue", yaml, "rte")
 
-    # @unittest.skip("Temporarily disable")
     def test_GLUE_RTE_siamese(self):
         yaml = "tests/test_params/fine_tune_siamese_minimal_test.yaml"
         self.run_langmo("training.glue", yaml, "rte")
 
-    # @unittest.skip("TODO")
     def test_QA_squad(self):
         yaml = "tests/test_params/fine_tune_minimal_test.yaml"
         self.run_langmo("training.qa", yaml, "squad")
 
-    # @unittest.skip("TODO")
     def test_QA_squad_v2(self):
         yaml = "tests/test_params/fine_tune_minimal_test.yaml"
         self.run_langmo("training.qa", yaml, "squad_v2")
+
+
+if __name__ == "__main__":
+    unittest.main()

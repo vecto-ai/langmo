@@ -1,4 +1,5 @@
 # TODO: cnt workers should be put once to params instead of using hvd
+import math
 import os
 from pathlib import Path
 
@@ -7,7 +8,7 @@ import torch
 # from apex.optimizers import FusedLAMB
 from protonn.utils import num_to_str_with_suffix, save_data_json
 from torch.optim import AdamW
-import math
+
 # from transformers.optimization import AdamW
 from .utils.model_utils import zero_and_freeze_param_by_name
 
@@ -47,9 +48,7 @@ class PLBase(pl.LightningModule):
         params = self.hparams
         # batch_size = self.hparams["batch_size_effective"]
         if hasattr(self.trainer.datamodule, "cnt_train_samples"):
-            self.hparams[
-                "cnt_samples_per_epoch"
-            ] = self.trainer.datamodule.cnt_train_samples
+            self.hparams["cnt_samples_per_epoch"] = self.trainer.datamodule.cnt_train_samples
         samples_per_epoch = params["cnt_samples_per_epoch"]
         steps_total = 0
         schedule = [(0, 1)]
@@ -61,27 +60,21 @@ class PLBase(pl.LightningModule):
             batch_in_span = params["batch_size"] * params["cnt_workers"] * schedule[i][1]
             steps_in_epoch = math.ceil(samples_per_epoch / batch_in_span)
             steps_total += steps_in_epoch * epochs_in_span
-        return int(steps_total)
+        return steps_total
 
     def configure_optimizers(self):
         # param_optimizer = list(self.net.named_parameters())
-        param_optimizer = [
-            param for param in self.net.named_parameters() if param[1].requires_grad
-        ]
+        param_optimizer = [param for param in self.net.named_parameters() if param[1].requires_grad]
 
         no_decay = self.hparams["params_without_weight_decay"]
 
         optimizer_grouped_parameters = [
             {
-                "params": [
-                    p for n, p in param_optimizer if not any(nd in n for nd in no_decay)
-                ],
+                "params": [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
                 "weight_decay": self.hparams["weight_decay"],
             },
             {
-                "params": [
-                    p for n, p in param_optimizer if any(nd in n for nd in no_decay)
-                ],
+                "params": [p for n, p in param_optimizer if any(nd in n for nd in no_decay)],
                 "weight_decay": 0.0,
             },
         ]
@@ -137,6 +130,7 @@ class PLBase(pl.LightningModule):
         n_smpl = num_to_str_with_suffix(self.hparams["cnt_samples_processed"])
         dir_current = f"ep_{epoch_log['epoch']:03d}_smpl_{n_smpl}"
         return dir_checkpoints / dir_current
+
     # TODO: checking if this is used at all, removr later if not
     # def save_metrics_and_model(self, metrics):
     #     if self.global_rank == 0:
