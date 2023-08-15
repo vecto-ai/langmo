@@ -1,4 +1,4 @@
-from langmo.config.base import LangmoConfig
+from langmo.config.base import LangmoConfig, CALLBACK_DEFAULTS
 
 
 class ConfigPretrain(LangmoConfig):
@@ -10,3 +10,4 @@ class ConfigPretrain(LangmoConfig):
         self.defaults["path_val_corpus"] = None
         self.required_options.add("path_corpus")
         self.required_options.add("cnt_samples_per_epoch")
+        self.defaults["callbacks"] = CALLBACK_DEFAULTS["mlm"]

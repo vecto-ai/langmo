@@ -39,6 +39,17 @@ TASKTOMETRIC = {
 }
 
 
+CALLBACK_DEFAULTS = {
+    "mlm": {
+        "monitor": {
+            "working_directory": None,
+            "module": "langmo.callbacks.monitor",
+            "class_name": "Monitor"
+        }
+    }
+}
+
+
 def load_yaml_file(path):
     with open(path, "r") as cfg:
         data = yaml.load(cfg, Loader=yaml.SafeLoader)
@@ -160,6 +171,7 @@ class LangmoConfig(BaseConfig):
             replace_hf_config={},
             seed=0,
             params_without_weight_decay=["bias", "gamma", "beta", "LayerNorm", "layer_norm"],
+            callbacks=None
         )
         self.required_options = set()
         self.required_options.add("model_name")
