@@ -1,6 +1,6 @@
 import socket
 
-from langmo.callbacks.model_snapshots_schedule import Monitor
+from langmo.utils.resolve_callbacks import init_callbacks
 from langmo.config import ConfigPretrain as Config
 from langmo.log_helper import set_root_logger
 from langmo.trainer import get_trainer
@@ -58,7 +58,8 @@ def main():
     params["name_run"] = get_run_name(params)
     cluster_env.barrier()
 
-    trainer = get_trainer(params, cluster_env, [Monitor()])
+    callbacks = init_callbacks(params["callbacks"])
+    trainer = get_trainer(params, cluster_env, callbacks)
     params["cnt_workers"] = trainer.world_size
     # TODO: get current accumulation of batched dynamically and log per epoch
     # params["batch_size_effective"] = (
