@@ -44,7 +44,7 @@ CALLBACK_DEFAULTS = {
         "monitor": {
             "working_directory": None,
             "module": "langmo.callbacks.monitor",
-            "class_name": "Monitor"
+            "class_name": "Monitor",
         }
     }
 }
@@ -108,11 +108,11 @@ class LangmoConfig(BaseConfig):
 
         self.update(user_config)
         name_project = name_task
+        if self["test"]:
+            name_project += "_test"
+            self["cnt_epochs"] = 3
         if "suffix" in user_config:
             name_project += f"_{user_config['suffix']}"
-        else:
-            if self["test"]:
-                name_project += "_test"
         self["name_project"] = name_project
         self["timestamp"] = get_time_str()
         # Convert to "FP16" to (int) 16
@@ -171,7 +171,7 @@ class LangmoConfig(BaseConfig):
             replace_hf_config={},
             seed=0,
             params_without_weight_decay=["bias", "gamma", "beta", "LayerNorm", "layer_norm"],
-            callbacks=None
+            callbacks=None,
         )
         self.required_options = set()
         self.required_options.add("model_name")
