@@ -1,0 +1,13 @@
+cnt_epochs: 2
+uncase: False
+batch_size: 2
+max_length: 128
+model_name: "nreimers/BERT-Mini_L-4_H-256_A-4"
+test: True
+path_results: ./tests/test_output
+initial_lr: 1e-5
+suffix: test
+minutes_between_snapshots: 40
+ddp_strategy_params:
+  find_unused_parameters: true
+  process_group_backend: nvcc
