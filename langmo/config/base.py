@@ -81,7 +81,10 @@ class LangmoConfig(BaseConfig):
     def __init__(self, name_task, cluster_env, param_path=None):
         set_root_logger()
         super().__init__(name_task, cluster_env, param_path)
-        self["distributed_backend"] = cluster_env.distributed_backend
+        if "process_group_backend" in self["ddp_strategy_params"]:
+            _logger = logging.getLogger(__name__)
+            _logger.warning(f"'ddp_strategy_params.process_group_backend' was defined in the config file but will be ignore! Environment variable 'PROTONN_DISTRIBUTED_BACKEND={cluster_env.distributed_backend}' takes precedence!")
+        self["ddp_strategy_params"]["process_group_backend"] = cluster_env.distributed_backend
 
     # TODO: This os overriding parents, think how to reuse
     # TODO: we have near identical method in PROTONN
@@ -107,6 +110,7 @@ class LangmoConfig(BaseConfig):
                 self[key] = value
 
         self.update(user_config)
+
         name_project = name_task
         if self["test"]:
             name_project += "_test"
@@ -141,7 +145,6 @@ class LangmoConfig(BaseConfig):
             cnt_gpus_per_node=int(os.environ["NUM_GPUS_PER_NODE"]),
             # TODO: read this from the environment variables
             classifier="huggingface",
-            distributed_backend="gloo",
             test=False,
             precision=32,
             batch_size=32,
@@ -172,6 +175,7 @@ class LangmoConfig(BaseConfig):
             seed=0,
             params_without_weight_decay=["bias", "gamma", "beta", "LayerNorm", "layer_norm"],
             callbacks=None,
+            ddp_strategy_params={}
         )
         self.required_options = set()
         self.required_options.add("model_name")

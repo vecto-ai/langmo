@@ -38,7 +38,7 @@ def get_trainer(params, cluster_env, extra_callbacks):
         )
     else:
         logger = DummyLogger()
-    strategy = DDPStrategy(process_group_backend=params["distributed_backend"])
+    strategy = DDPStrategy(**params["ddp_strategy_params"])
     trainer = pl.Trainer(
         strategy=strategy,
         plugins=[cluster_env],
