@@ -1,6 +1,5 @@
 import argparse
 import json
-import random
 from pathlib import Path
 from timeit import default_timer as timer
 
