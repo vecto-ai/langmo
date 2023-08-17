@@ -14,7 +14,6 @@ class PLModel(PLBase):
         print("%%%%%%%%%%%%% WE ARE IN INIT OF PL MODEL")
         self.pylogger = getLogger(__name__)
         self.metric_loss = MeanMetric()
-        # self.hparams["cnt_samples_processed"] = 0
 
     def forward(self, batch):
         result = self.net(**batch._asdict())
