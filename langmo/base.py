@@ -125,10 +125,10 @@ class PLBase(pl.LightningModule):
         save_data_json(self.hparams, path)
 
     def _get_ckecpoint_folder(self):
-        epoch_log = self.hparams["train_logs"][-1]
+        cnt_snapshost = len(self.hparams["train_logs"]) - 1
         dir_checkpoints = Path(self.hparams["path_results"]) / "checkpoints"
         n_smpl = num_to_str_with_suffix(self.hparams["cnt_samples_processed"])
-        dir_current = f"ep_{epoch_log['epoch']:03d}_smpl_{n_smpl}"
+        dir_current = f"snap_{cnt_snapshost:03d}_smpl_{n_smpl}"
         return dir_checkpoints / dir_current
 
     def init_train_logs(self):

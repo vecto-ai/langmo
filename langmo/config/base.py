@@ -4,12 +4,11 @@ import time
 from pathlib import Path
 
 import yaml
+from langmo.log_helper import set_root_logger
+from langmo.utils import parse_float
 from protonn.experiment_config import BaseConfig
 from protonn.utils import get_time_str
 from transformers import set_seed
-
-from langmo.log_helper import set_root_logger
-from langmo.utils import parse_float
 
 CONFIG_OPTIONS = {
     "snapshot_strategy": ["per_epoch", "best_only", "none"],
@@ -175,6 +174,7 @@ class LangmoConfig(BaseConfig):
             seed=0,
             params_without_weight_decay=["bias", "gamma", "beta", "LayerNorm", "layer_norm"],
             callbacks=None,
+            snapshot_schedule=None,
             ddp_strategy_params={}
         )
         self.required_options = set()

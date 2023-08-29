@@ -1,8 +1,3 @@
-from protonn.pl.cluster_mpi import MPIClusterEnvironment
-from protonn.utils import get_time_str
-from transformers import AutoTokenizer
-from transformers import logging as tr_logging
-
 from langmo.base import PLBase
 from langmo.callbacks.model_snapshots_schedule import FinetuneMonitor
 from langmo.config import ConfigFinetune
@@ -10,16 +5,14 @@ from langmo.nn import create_net
 # from langmo.nn.heads import get_downstream_head
 from langmo.nn.utils import reinit_model, reinit_tensor
 from langmo.trainer import get_trainer
+from protonn.pl.cluster_mpi import MPIClusterEnvironment
+from protonn.utils import get_time_str
+from transformers import AutoTokenizer
+from transformers import logging as tr_logging
 
 
 class BaseClassificationModel(PLBase):
     def forward(self, inputs):
-        current_batch_size = (
-            inputs["input_ids"].shape[0]
-            if not self.hparams["siamese"]
-            else inputs["left"]["input_ids"].shape[0]
-        )
-        self.hparams["cnt_samples_processed"] += current_batch_size * self.hparams["cnt_workers"]
         return self.net(**inputs)["logits"]
 
     # TODO: this seems to be wrong and also not used

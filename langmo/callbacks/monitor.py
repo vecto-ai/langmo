@@ -28,12 +28,11 @@ class Monitor(pl.Callback):
     def maybe_save_metadata_and_hf(self, trainer, pl_module):
         if trainer.global_rank != 0:
             return
-        path_new_checkpoint = pl_module._get_ckecpoint_folder()
-        path_new_checkpoint.mkdir(parents=True, exist_ok=True)
-
         if pl_module.hparams["snapshot_strategy"] == "none":
             return
 
+        path_new_checkpoint = pl_module._get_ckecpoint_folder()
+        path_new_checkpoint.mkdir(parents=True, exist_ok=True)
         print("saving to ", path_new_checkpoint)
         if pl_module.hparams["snapshot_strategy"] == "per_epoch":
             self._save_hf_and_metadata(path_new_checkpoint, pl_module)
@@ -46,74 +45,58 @@ class Monitor(pl.Callback):
         self.pl_module = pl_module
         self.hparams = pl_module.hparams
         pl_module.init_train_logs()
-        print(self.hparams["train_logs"])
-        # TODO: this runs on resyme beause model state incl logs gets restored after callback is set....
+        self.epoch = self.hparams["train_logs"][-1]["epoch"]
+        # TODO: this runs on resume because model state
+        # includingg logs gets restored after callback is set....
+        # TODO: aren't we rewriting first snapshot on resume???
         if len(self.hparams["train_logs"]) == 1:
+            print("@@@@@@@@@@@@ SAVING -1")
             self.maybe_save_metadata_and_hf(trainer, pl_module)
-        # self.epoch = trainer.current_epoch
+        self.epoch = trainer.current_epoch
         self.time_last_checkpoint = timer()
+        self.time_start = timer()
         self.metric_to_monitor = pl_module.hparams["metric_to_monitor"]
+        if self.hparams["snapshot_schedule"] is not None:
+            self.hparams["train_logs"].append({})
 
     def on_train_epoch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
-        # TODO: think of better name
-        if "is_resume" in self.hparams:
-            self.hparams.pop("is_resume")
-        else:
-            self.hparams["train_logs"].append({})
-        # TODO: check if current epoch is recovered correctly from checkpoint
-        self.hparams["train_logs"][-1]["epoch"] = trainer.current_epoch
-        self.epoch = trainer.current_epoch
         if trainer.global_rank == 0:
-            print(
-                f"@@@@ perf callback: train epoch epoch {pl_module.current_epoch} started @@@@"
-            )
-        self.time_start = timer()
+            print(f"@@@@ perf callback: train epoch epoch {pl_module.current_epoch} started @@@@")
+        self.epoch = trainer.current_epoch
+        if self.hparams["snapshot_schedule"] is None:
+            self.time_start = timer()
+            if "is_resume" in self.hparams:
+                self.hparams.pop("is_resume")
+            else:
+                self.hparams["train_logs"].append({})
+            self.hparams["train_logs"][-1]["epoch"] = trainer.current_epoch
 
     def on_train_epoch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
-        # TODO: this is here since we are trying to remove validation epoch
-        self.update_epoch_time()
-        epoch_time = self.hparams["train_logs"][-1]["epoch_time"]
-        self.hparams["train_logs"][-1]["samples_per_second"] = (
-            self.hparams["cnt_samples_per_epoch"] / epoch_time
-        )
-        self.hparams["train_logs"][-1]["samples_per_second_worker"] = (
-            self.hparams["train_logs"][-1]["samples_per_second"]
-            / self.hparams["cnt_workers"]
-        )
-        self.hparams["train_logs"][-1]["cnt_samples_processed"] = self.hparams[
-            "cnt_samples_processed"
-        ]
-        if trainer.global_rank == 0:
-            print(
-                f"@@@@ perf callback: train epoch {pl_module.current_epoch} "
-                f"end, done in {epoch_time} sec"
-            )
-            pl_module.save_metadata(pl_module.hparams["path_results"])
-        self.maybe_save_metadata_and_hf(trainer, pl_module)
+        if self.hparams["snapshot_schedule"] is None:
+            print(f"TRAIN ep={self.epoch} snap={len(self.hparams['train_logs'])} END saving")
+            self.save_snapshot(trainer, pl_module)
 
-    def on_validation_epoch_start(
-        self, trainer: pl.Trainer, pl_module: pl.LightningModule
-    ):
+    def on_validation_epoch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
         # in PL train epoch start hook activates, then all training batches are processed
         # then validation epoch starts, then all val batches,
         # then val epoch ends, then train epoch ends
         # so we are placing "end training epoch" hook at start of val epoch
         self.time_end = timer()
         self.epoch = -1 if trainer.sanity_checking else trainer.current_epoch
-        self.hparams["train_logs"][-1]["epoch"] = self.epoch
-        # this is kinda ugly. having separate callback would have been better,
-        # but then we have to return predictions from each validation step
 
     def on_validation_epoch_end(
         self, trainer: pl.Trainer, pl_module: pl.LightningModule
     ):
         print(
-            f"@@@@ perf callback: validation epoch epoch {pl_module.current_epoch}"
-            f" ended wrkr {trainer.global_rank} @@@@"
+            f"@@@@ perf callback: validation epoch {pl_module.current_epoch} ended"
+            f"on wrkr {trainer.global_rank} @@@@"
         )
         if self.hparams["save_predictions"]:
             for f in pl_module.files_predictions:
                 f.close()
+        if self.epoch == -1:
+            self.maybe_save_metadata_and_hf(trainer, pl_module)
+            self.hparams["train_logs"].append({})
         # pl_module.files_detail = [open(path_details / f"pred_{split}_w{pl_module.global_rank}.json", "w")
         #     for split in pl_module.validation_split_names]
         # if trainer.global_rank == 0:
@@ -125,6 +108,16 @@ class Monitor(pl.Callback):
         #     / "checkpoints"
         #     / str_cnt_sampels
         # )
+        print(self.hparams["train_logs"])
+
+    def save_snapshot(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
+        self.update_epoch_time()
+        epoch_log = self.hparams["train_logs"][-1]
+        epoch_time = epoch_log["time_from_last_snapshot"]
+        epoch_log["samples_per_second"] = self.hparams["cnt_samples_per_epoch"] / epoch_time
+        epoch_log["samples_per_second_worker"] = epoch_log["samples_per_second"] / self.hparams["cnt_workers"]
+        epoch_log["cnt_samples_processed"] = self.hparams["cnt_samples_processed"]
+        self.maybe_save_metadata_and_hf(trainer, pl_module)
 
     def update_epoch_time(self):
         epoch_log = self.hparams["train_logs"][-1]
@@ -134,13 +127,13 @@ class Monitor(pl.Callback):
             time_before_resume = 0
         time_end = timer()
         time_after_resume = time_end - self.time_start
-        epoch_log["epoch_time"] = time_after_resume + time_before_resume
+        epoch_log["time_from_last_snapshot"] = time_after_resume + time_before_resume
+        epoch_log["cnt_samples_processed"] = self.hparams["cnt_samples_processed"]
         self.time_start = timer()
 
     def save_resume_checkpoint(self, trainer, pl_module):
         # TODO: can't we just make it on init point to the same variable?
         self.update_epoch_time()
-        self.hparams["train_logs"][-1]["cnt_samples_processed"] = self.hparams["cnt_samples_processed"]
         if trainer.global_rank == 0:
             path_for_resume = Path(pl_module.hparams["path_results"]) / "resume"
             trainer.save_checkpoint(path_for_resume / "PL_model.ckpt")
@@ -153,6 +146,32 @@ class Monitor(pl.Callback):
                 path_last_hf = Path(pl_module.hparams["path_results"]) / "hf_on_timer" / folder_last_hf
             pl_module.save_as_hf(path_last_hf)
 
+    def is_time_to_save_on_cnt_samples(self):
+        train_log = self.hparams["train_logs"]
+        cnt_samples_prcocessed = self.hparams["cnt_samples_processed"]
+        cnt_samples_from_last_snapshot = cnt_samples_prcocessed - train_log[-2]["cnt_samples_processed"]
+        # cache this when we save snapshot
+        # chech if dictionary is sorted
+        for threshold, schedule in self.hparams["snapshot_schedule"].items():
+            if threshold >= cnt_samples_prcocessed:
+                break
+            current_scedule = schedule
+        return cnt_samples_from_last_snapshot >= current_scedule
+
+    def maybe_save_on_cnt_samples(self, trainer, pl_module):
+        if self.hparams["snapshot_schedule"] is None:
+            return
+        if self.is_time_to_save_on_cnt_samples():
+            self.hparams["train_logs"][-1]["epoch"] = trainer.current_epoch
+            self.save_snapshot(trainer, pl_module)
+            self.hparams["train_logs"].append({})
+
+    def maybe_save_on_timer(self, trainer, pl_module):
+        checkpoint_interval = pl_module.hparams["minutes_between_snapshots"]
+        if timer() - self.time_last_checkpoint > checkpoint_interval * 60:
+            self.time_last_checkpoint = timer()
+            self.save_resume_checkpoint(trainer, pl_module)
+
     def on_train_batch_end(
         self,
         trainer: pl.Trainer,
@@ -162,9 +181,6 @@ class Monitor(pl.Callback):
         batch_idx,
         unused=0,
     ):
-        checkpoint_interval = pl_module.hparams["minutes_between_snapshots"]
-        if timer() - self.time_last_checkpoint > checkpoint_interval * 60:
-            self.time_last_checkpoint = timer()
-            self.save_resume_checkpoint(trainer, pl_module)
-    # def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
-    #     print("VAL BATCH END CALLBACK:", outputs)
+        self.maybe_save_on_cnt_samples(trainer, pl_module)
+        self.maybe_save_on_timer(trainer, pl_module)
+        pass
