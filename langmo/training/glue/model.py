@@ -37,6 +37,13 @@ class GLUEModel(BaseClassificationModel):
         inputs, targets = batch[0]
         # 0 is there seince PL returns tuple of batched from all dataloaders
         # not sure if this will be persisten behavior
+        current_batch_size = (
+            inputs["input_ids"].shape[0]
+            if not self.hparams["siamese"]
+            else inputs["left"]["input_ids"].shape[0]
+        )
+        self.hparams["cnt_samples_processed"] += current_batch_size * self.hparams["cnt_workers"]
+
         logits = self(inputs)
         loss = self._compute_loss(logits, targets)
         if self.hparams["num_labels"] == 1:

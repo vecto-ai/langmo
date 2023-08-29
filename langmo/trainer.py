@@ -68,6 +68,5 @@ def get_trainer(params, cluster_env, extra_callbacks):
         # profiler="simple",
         # plugins="deepspeed_stage_2",
         # plugins=[cluster_env],
-        # accumulate_grad_batches=,
     )
     return trainer
