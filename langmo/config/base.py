@@ -1,6 +1,6 @@
 import logging
 import os
-import time
+# import time
 from pathlib import Path
 
 import yaml
@@ -48,6 +48,16 @@ CALLBACK_DEFAULTS = {
     }
 }
 
+DEFAULT_OPTIMIZER = {
+    "class_name": "AdamW",
+    "module": "torch.optim",
+    "working_directory": None,
+    "params": {
+        "betas": (0.9, 0.999),
+        "eps": 1e-6,
+    }
+}
+
 
 def load_yaml_file(path):
     with open(path, "r") as cfg:
@@ -84,6 +94,11 @@ class LangmoConfig(BaseConfig):
             _logger = logging.getLogger(__name__)
             _logger.warning(f"'ddp_strategy_params.process_group_backend' was defined in the config file but will be ignore! Environment variable 'PROTONN_DISTRIBUTED_BACKEND={cluster_env.distributed_backend}' takes precedence!")
         self["ddp_strategy_params"]["process_group_backend"] = cluster_env.distributed_backend
+
+        if "working_directory" not in self["optimizer"]:
+            self["optimizer"]["working_directory"] = None
+        if "params" not in self["optimizer"]:
+            self["optimizer"]["params"] = {}
 
     # TODO: This os overriding parents, think how to reuse
     # TODO: we have near identical method in PROTONN
@@ -154,10 +169,7 @@ class LangmoConfig(BaseConfig):
             create_unique_path=True,
             uncase=False,
             cnt_epochs=5,
-            eps=1e-6,
             weight_decay=0,
-            beta1=0.9,
-            beta2=0.999,
             max_lr=5e-5,
             initial_lr=0.0,
             tokenizer_name=None,
@@ -175,7 +187,8 @@ class LangmoConfig(BaseConfig):
             params_without_weight_decay=["bias", "gamma", "beta", "LayerNorm", "layer_norm"],
             callbacks=None,
             snapshot_schedule=None,
-            ddp_strategy_params={}
+            ddp_strategy_params={},
+            optimizer=DEFAULT_OPTIMIZER
         )
         self.required_options = set()
         self.required_options.add("model_name")

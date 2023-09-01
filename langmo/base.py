@@ -1,16 +1,12 @@
-# TODO: cnt workers should be put once to params instead of using hvd
 import math
 import os
 from pathlib import Path
 
 import lightning as pl
 import torch
-# from apex.optimizers import FusedLAMB
+from langmo.utils.dynamic_import_module import load_class
+from langmo.utils.model_utils import zero_and_freeze_param_by_name
 from protonn.utils import num_to_str_with_suffix, save_data_json
-from torch.optim import AdamW
-
-# from transformers.optimization import AdamW
-from .utils.model_utils import zero_and_freeze_param_by_name
 
 
 class PLBase(pl.LightningModule):
@@ -81,13 +77,14 @@ class PLBase(pl.LightningModule):
         # no_decay = [n for n, p in param_optimizer if any(nd in n for nd in no_decay)]
         # print("no decay", no_decay)
         # print(optimizer_grouped_parameters)
-        optimizer = AdamW(
+        # TODO: double check if wd working when in grouped params
+        # weight_decay=self.hparams["weight_decay"],
+        optimizer_params = self.hparams["optimizer"].pop("params")
+        class_optimizer = load_class(** self.hparams["optimizer"])
+        optimizer = class_optimizer(
             optimizer_grouped_parameters,
             lr=self.hparams["initial_lr"],
-            eps=self.hparams["eps"],
-            # TODO: double check if wd working when in grouped params
-            # weight_decay=self.hparams["weight_decay"],
-            betas=(self.hparams["beta1"], self.hparams["beta2"]),
+            ** optimizer_params
         )
         # optimizer = FusedLAMB(
         #     optimizer_grouped_parameters,
