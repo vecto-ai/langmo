@@ -1,0 +1,17 @@
+cnt_epochs: 2
+uncase: False
+batch_size: 2
+max_length: 128
+model_name: "nreimers/BERT-Mini_L-4_H-256_A-4"
+test: True
+path_results: ./tests/test_output
+path_corpus: "./tests/test_data/tokenized/sense/bert-base-uncased/128/"
+path_val_corpus: "./tests/test_data/sense/sense.txt"
+initial_lr: 1e-5
+suffix: test
+minutes_between_snapshots: 40
+cnt_samples_per_epoch: 10
+optimizer:
+  class_name: "SGD"
+  module: "optim"
+  working_directory: "../.optim_test/"
