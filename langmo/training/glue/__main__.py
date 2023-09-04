@@ -1,7 +1,7 @@
 import sys
-from .data import GLUEDataModule
-from .model import GLUEModel, GLUEFinetuner
 
+from .data import GLUEDataModule
+from .model import GLUEFinetuner, GLUEModel
 
 name_task = sys.argv[2]
 

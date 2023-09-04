@@ -9,7 +9,7 @@ class Iterator:
         self.cnt_samples = len(train)
         self.batches = []
         for i in range(0, len(train), size_batch):
-            batch = train[i:i + size_batch]
+            batch = train[i : i + size_batch]
             self.batches.append(self.zero_pad_batch(batch))
 
     def zero_pad_item(self, sample, max_len):

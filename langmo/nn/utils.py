@@ -8,7 +8,7 @@ def reinit_tensor(tensor):
 
 
 def reinit_parameter(param):
-    if hasattr(param, 'weight'):
+    if hasattr(param, "weight"):
         reinit_tensor(param.weight.data)
 
 

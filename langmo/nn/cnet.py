@@ -20,18 +20,23 @@ class BaseCNet(PreTrainedModel):
 
 
 class RNNLayer(nn.Module):
-    def __init__(self,
-                 nhid,
-                 dropout):
+    def __init__(self, nhid, dropout):
         super().__init__()
         cnt_heads = 6
         hidden_size = 128
-        self.rnn = nn.ModuleList([nn.LSTM(input_size=nhid,
-                                          hidden_size=hidden_size,
-                                          num_layers=1,
-                                          dropout=dropout,
-                                          bidirectional=True,
-                                          batch_first=True) for _ in range(cnt_heads)])
+        self.rnn = nn.ModuleList(
+            [
+                nn.LSTM(
+                    input_size=nhid,
+                    hidden_size=hidden_size,
+                    num_layers=1,
+                    dropout=dropout,
+                    bidirectional=True,
+                    batch_first=True,
+                )
+                for _ in range(cnt_heads)
+            ]
+        )
         self.intermediate = nn.Linear(hidden_size * 2 * cnt_heads, nhid * 4)
         self.output = nn.Linear(nhid * 4, nhid)
         self.dropout = nn.Dropout(dropout)
@@ -69,10 +74,10 @@ class Encoder(nn.Module):
         # self.init_weights(embs)
 
     # def init_weights(self, embs):
-        # initrange = 0.1
-        # self.embs.weight.data = torch.from_numpy(embs.matrix)
-        # self.decoder.bias.data.zero_()
-        # self.decoder.weight.data.uniform_(-initrange, initrange)
+    # initrange = 0.1
+    # self.embs.weight.data = torch.from_numpy(embs.matrix)
+    # self.decoder.bias.data.zero_()
+    # self.decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, input_ids):
         emb = self.drop(self.embeddings(input_ids))
@@ -82,7 +87,6 @@ class Encoder(nn.Module):
 
 
 class LMHead(nn.Module):
-
     def __init__(self, config, eps=0.00001):
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)

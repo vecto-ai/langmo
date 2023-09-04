@@ -1,22 +1,27 @@
+import logging
 import os
+from textwrap import dedent
+from typing import Dict, List, Optional
+
+from lightning import Callback
 
 from .dynamic_import_module import load_class
-from typing import Dict, Optional, List
-from lightning import Callback
-import logging
-from textwrap import dedent
 
 
 def log_callback(name: str, params: Dict[str, str], init_params: Dict[str, str]):
     logger = logging.getLogger(__name__)
-    logger.info(dedent(f"""
+    logger.info(
+        dedent(
+            f"""
         Attached Callback | {name}: {{
             \tworking_directory: {params["working_directory"] if params["working_directory"] is not None else os.getcwd()},
             \tmodule: {params["module"]},
             \tclass_name: {params["class_name"]},
             \tparams: {init_params}
         }}
-    """))
+    """
+        )
+    )
 
 
 def init_callbacks(callback_configs: Dict) -> List[Callback]:
@@ -43,4 +48,3 @@ def init_callbacks(callback_configs: Dict) -> List[Callback]:
         callbacks.append(klass)
         log_callback(name, module_params, init_params)
     return callbacks
-

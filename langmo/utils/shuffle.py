@@ -6,7 +6,7 @@ from pathlib import Path
 def main():
     if len(sys.argv) < 3:
         print("usage: shuffle.py path_in path_out")
-        return (-1)
+        return -1
     print("this is in-memory shuffler, be sure you have enough RAM")
     path_in = Path(sys.argv[1])
     path_out = Path(sys.argv[2])

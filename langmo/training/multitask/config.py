@@ -1,8 +1,9 @@
 from collections import OrderedDict
 
+from torch import nn
+
 from langmo.config.glue import _glue_postprocess
 from langmo.config.pretrain import ConfigPretrain
-from torch import nn
 
 _CLASSIFICATION_HEAD_CONFIG_TEMPLATE = {
     "hidden_size": 100,
@@ -19,7 +20,7 @@ _REGRESSION_HEAD_CONFIG_TEMPLATE = {
     "activation": "tanh",
     "dropout_p": 0.1,
     "num_labels": 1,
-    "loss": "mse_loss"
+    "loss": "mse_loss",
 }
 
 _HEAD_ACTIVATION_MAP = {
@@ -92,9 +93,7 @@ class TaskConfigs(OrderedDict):
 
             self["tasks"][task_name]["head_config"]["num_labels"] = self["tasks"][task_name]["num_labels"]
 
-            self["tasks"][task_name]["head_config"] = HeadConfig(
-                self["tasks"][task_name]["head_config"]
-            )
+            self["tasks"][task_name]["head_config"] = HeadConfig(self["tasks"][task_name]["head_config"])
 
 
 class ConfigMultitask(ConfigPretrain):

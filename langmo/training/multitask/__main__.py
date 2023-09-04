@@ -1,6 +1,6 @@
 from .config import ConfigMultitask
 from .data import MultitaskDataModule
-from .model import MultitaskModule, MultitaskFinetuner
+from .model import MultitaskFinetuner, MultitaskModule
 
 
 def main():

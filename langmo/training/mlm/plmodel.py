@@ -2,9 +2,10 @@ from logging import getLogger
 from time import sleep
 
 import torch
-from langmo.base import PLBase
 from protonn.utils import get_time_str
 from torchmetrics import MeanMetric
+
+from langmo.base import PLBase
 
 
 class PLModel(PLBase):
@@ -23,9 +24,7 @@ class PLModel(PLBase):
         # print("train step start")
         assert self.hparams["batch_size"] == len(batch.input_ids)
         if self.hparams["test"] and batch_idx < 5:
-            print(
-                f"proc {self.global_rank}/{self.local_rank}, model on {self.device}, batch on {batch[0].device}"
-            )
+            print(f"proc {self.global_rank}/{self.local_rank}, model on {self.device}, batch on {batch[0].device}")
             print("inpts", self.tokenizer.decode(batch.input_ids[0]))
             print()
             print("lbls", batch.labels[0])
@@ -52,9 +51,7 @@ class PLModel(PLBase):
         # TODO: move this to train_epoch_end when it is fixed
         # self.log("epoch", self.current_epoch)
         cnt_epochs = float(self.trainer.train_dataloader.cnt_restarts)
-        self.hparams["cnt_samples_processed"] += (
-            self.hparams["batch_size"] * self.hparams["cnt_workers"]
-        )
+        self.hparams["cnt_samples_processed"] += self.hparams["batch_size"] * self.hparams["cnt_workers"]
         self.log("loss", loss, sync_dist=True)
         self.log("true_epochs", float(cnt_epochs))
         # print("logging samples processed as", self.hparams["cnt_samples_processed"])
@@ -72,11 +69,11 @@ class PLModel(PLBase):
 
     def on_training_epoch_end(self, *args, **kwargs):
         # if self.global_rank == 0:
-            # print("args:", args)
-            # print("kwargs:", kwargs)
-            # metrics = {}
-            # self.add_epoch_id_to_metrics(metrics)
-            # self.append_metrics_to_train_logs(metrics)
+        # print("args:", args)
+        # print("kwargs:", kwargs)
+        # metrics = {}
+        # self.add_epoch_id_to_metrics(metrics)
+        # self.append_metrics_to_train_logs(metrics)
         self.pylogger.info(f"training epoch end")
         self.hparams["train_logs"][-1]["loss"] = self.metric_loss.compute().item()
         sleep(1)

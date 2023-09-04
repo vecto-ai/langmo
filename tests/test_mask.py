@@ -62,9 +62,7 @@ class MaskTestCase:
                 global_mask = global_mask & ~(input_tensor == special_tok_id)
         else:
             mask = (
-                mask
-                & ~(masked_tensor == self.tokenizer.pad_token_id)
-                & ~(masked_tensor == self.tokenizer.mask_token_id)
+                mask & ~(masked_tensor == self.tokenizer.pad_token_id) & ~(masked_tensor == self.tokenizer.mask_token_id)
             )
             global_mask = global_mask & ~(input_tensor == self.tokenizer.pad_token_id)
 

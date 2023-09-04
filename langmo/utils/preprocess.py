@@ -34,12 +34,12 @@ class HybridIter:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Split texts into training sequences of token ids')
-    parser.add_argument('name_tokenizer', type=str, help='tokenizer name')
-    parser.add_argument('max_length', type=int, help='sequence length')
-    parser.add_argument('path_src', type=str, help='corpus path')
-    parser.add_argument('path_dst', type=str, help='output path')
-    parser.add_argument('--max_samples', type=int, help='limit number of samples', default=-1)
+    parser = argparse.ArgumentParser(description="Split texts into training sequences of token ids")
+    parser.add_argument("name_tokenizer", type=str, help="tokenizer name")
+    parser.add_argument("max_length", type=int, help="sequence length")
+    parser.add_argument("path_src", type=str, help="corpus path")
+    parser.add_argument("path_dst", type=str, help="output path")
+    parser.add_argument("--max_samples", type=int, help="limit number of samples", default=-1)
     args = parser.parse_args()
     name_tokenizer = args.name_tokenizer
     max_length = args.max_length
@@ -65,9 +65,11 @@ def main():
             sent_iter = doc.get_sentence_iterator()
             # TODO: check if this cleans up formatting
             for sentence in sent_iter:
-                tokens = tokenizer(sentence,
-                                   add_special_tokens=False,
-                                   return_attention_mask=False,)["input_ids"]
+                tokens = tokenizer(
+                    sentence,
+                    add_special_tokens=False,
+                    return_attention_mask=False,
+                )["input_ids"]
                 line_buffer += tokens
                 line_buffer += [tokenizer.sep_token_id]
                 if len(line_buffer) > max_length - allowed_underfill:

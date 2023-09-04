@@ -6,14 +6,13 @@ from threading import Thread
 
 import lightning as pl
 import torch
+
 # from torch.utils.data import DataLoader, DistributedSampler
 from kapral.corpus import Corpus
 
 IGNORE_TOKEN_ID = -100
 
-TBatch = namedtuple(
-    "TBatch", ["input_ids", "token_type_ids", "attention_mask", "labels"]
-)
+TBatch = namedtuple("TBatch", ["input_ids", "token_type_ids", "attention_mask", "labels"])
 
 
 def shuffle_tensor(tensor, generator):
@@ -29,9 +28,7 @@ class BatchIter:
         self.batch_size = params["batch_size"]
         self.max_length = params["max_length"]
         self.tokenizer = tokenizer
-        self.batches_per_epoch = params["cnt_samples_per_epoch"] / (
-            params["batch_size"] * params["cnt_workers"]
-        )
+        self.batches_per_epoch = params["cnt_samples_per_epoch"] / (params["batch_size"] * params["cnt_workers"])
         print("required samples per epoch", params["cnt_samples_per_epoch"])
         print("batch size", params["batch_size"])
         print("cnt_workers", params["cnt_workers"])
@@ -47,8 +44,7 @@ class BatchIter:
         if "train_logs" in self.params and len(self.params["train_logs"]) > 1:
             # this is resume
             cnt_samples_seen_in_last_epoch = (
-                self.params["cnt_samples_processed"]
-                - self.params["train_logs"][-2]["cnt_samples_processed"]
+                self.params["cnt_samples_processed"] - self.params["train_logs"][-2]["cnt_samples_processed"]
             )
             # TODO: this is gonna break now that accum batch size is per epoch
             self.cnt_batches_produced = cnt_samples_seen_in_last_epoch / (
@@ -60,13 +56,9 @@ class BatchIter:
     def prepare_dummy_batch(self):
         # this is for perf measuremenet w/o IO bottleneck
         self.dummy_batch = TBatch(
-            input_ids=torch.zeros(
-                (self.batch_size, self.max_length), dtype=torch.int64
-            ),
+            input_ids=torch.zeros((self.batch_size, self.max_length), dtype=torch.int64),
             token_type_ids=None,
-            attention_mask=torch.ones(
-                (self.batch_size, self.max_length), dtype=torch.int64
-            ),
+            attention_mask=torch.ones((self.batch_size, self.max_length), dtype=torch.int64),
             labels=torch.zeros((self.batch_size, self.max_length), dtype=torch.int64),
         )
 
@@ -105,16 +97,10 @@ class BatchIter:
         if self.params["mask_special_tokens"]:
             mask_non_special = line != pad_token_id
         else:
-            mask_non_special = torch.tensor(
-                [i not in tokenizer.all_special_ids for i in line]
-            )
+            mask_non_special = torch.tensor([i not in tokenizer.all_special_ids for i in line])
 
         mask_with_mask = (rolls < proba_masking) & mask_non_special
-        mask_with_random = (
-            (rolls < proba_masking + proba_random)
-            & (rolls > proba_masking)
-            & mask_non_special
-        )
+        mask_with_random = (rolls < proba_masking + proba_random) & (rolls > proba_masking) & mask_non_special
         mask_with_original = (
             (rolls < proba_masking + proba_random + proba_original)
             & (rolls > proba_masking + proba_random)
@@ -125,9 +111,7 @@ class BatchIter:
 
         token_ids[mask_with_mask] = tokenizer.mask_token_id
         token_ids[mask_with_random] = random_tokens[mask_with_random]
-        labels[
-            ~(mask_with_mask | mask_with_random | mask_with_original)
-        ] = ignore_token_id
+        labels[~(mask_with_mask | mask_with_random | mask_with_original)] = ignore_token_id
 
         # TODO: check if we have too few or too many masks?
         # wasn't constant number if mask positions better?
@@ -151,9 +135,7 @@ class BatchIter:
             input_ids = json.loads(line)
             assert len(input_ids) <= self.max_length, f"got seq of len {len(input_ids)}"
             # input_ids = [self.tokenizer.cls_token_id] + input_ids
-            masked_ids, labels = self.mask_line(
-                input_ids, self.tokenizer, self.ignore_token_id
-            )
+            masked_ids, labels = self.mask_line(input_ids, self.tokenizer, self.ignore_token_id)
             attention_mask = torch.ones_like(masked_ids)
             if len(masked_ids) < self.max_length:
                 pad = torch.ones(self.max_length - len(masked_ids), dtype=torch.int64)
@@ -309,9 +291,7 @@ class TextDataModule(pl.LightningDataModule):
             )
         return TBatch(
             input_ids=ids,
-            token_type_ids=encoded["token_type_ids"]
-            if "token_type_ids" in encoded
-            else None,
+            token_type_ids=encoded["token_type_ids"] if "token_type_ids" in encoded else None,
             attention_mask=encoded["attention_mask"],
             labels=encoded["labels"],
         )

@@ -1,13 +1,13 @@
+from pathlib import Path
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import vecto
+from protonn.utils import load_json
 from torch.optim.lr_scheduler import StepLR
 
-from pathlib import Path
-from protonn.utils import load_json
-import vecto
 from .data import load_corpus
-
 
 SIZE_EMB = 256
 
@@ -64,7 +64,7 @@ def load_model(path):
     vocab.load(path / "vocab")
     corpus_ids = load_corpus(params["path_corpus"], vocab)
     net, optimizer, scheduler = init_model(vocab.cnt_words)
-    net.load_state_dict(checkpoint['model_state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+    net.load_state_dict(checkpoint["model_state_dict"])
+    optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
     return net, optimizer, scheduler, params, vocab, corpus_ids

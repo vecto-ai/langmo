@@ -4,9 +4,10 @@ from pathlib import Path
 
 import lightning as pl
 import torch
+from protonn.utils import num_to_str_with_suffix, save_data_json
+
 from langmo.utils.dynamic_import_module import load_class
 from langmo.utils.model_utils import zero_and_freeze_param_by_name
-from protonn.utils import num_to_str_with_suffix, save_data_json
 
 
 class PLBase(pl.LightningModule):
@@ -80,12 +81,8 @@ class PLBase(pl.LightningModule):
         # TODO: double check if wd working when in grouped params
         # weight_decay=self.hparams["weight_decay"],
         optimizer_params = self.hparams["optimizer"].pop("params")
-        class_optimizer = load_class(** self.hparams["optimizer"])
-        optimizer = class_optimizer(
-            optimizer_grouped_parameters,
-            lr=self.hparams["initial_lr"],
-            ** optimizer_params
-        )
+        class_optimizer = load_class(**self.hparams["optimizer"])
+        optimizer = class_optimizer(optimizer_grouped_parameters, lr=self.hparams["initial_lr"], **optimizer_params)
         # optimizer = FusedLAMB(
         #     optimizer_grouped_parameters,
         #     lr=self.hparams["initial_lr"],

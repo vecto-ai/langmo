@@ -84,12 +84,9 @@ class Monitor(pl.Callback):
         self.time_end = timer()
         self.epoch = -1 if trainer.sanity_checking else trainer.current_epoch
 
-    def on_validation_epoch_end(
-        self, trainer: pl.Trainer, pl_module: pl.LightningModule
-    ):
+    def on_validation_epoch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
         print(
-            f"@@@@ perf callback: validation epoch {pl_module.current_epoch} ended"
-            f"on wrkr {trainer.global_rank} @@@@"
+            f"@@@@ perf callback: validation epoch {pl_module.current_epoch} ended" f"on wrkr {trainer.global_rank} @@@@"
         )
         if self.hparams["save_predictions"]:
             for f in pl_module.files_predictions:

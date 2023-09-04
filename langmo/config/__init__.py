@@ -13,6 +13,7 @@ from .pretrain import ConfigPretrain
 def is_yaml_config(path):
     return path.is_file() and path.suffix in {".yaml", ".yml"}
 
+
 # def is_resume_run(path):
 #     _logger = logging.getLogger(__name__)
 #     _logger.info("resuming the experiment")

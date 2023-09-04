@@ -58,6 +58,7 @@ class LSTM_Encoder(nn.Module):
         # print("decoded", decoded)
         return output[:, 0, :]
 
+
 # TODO: call it something more self-descriptive
 # class Net(Siamese):
 #     def __init__(self, embs):

@@ -32,4 +32,3 @@ mpirun ${MPIOPTS} \
     -x HOROVOD_CACHE_CAPACITY \
     python3 -m langmo.pretraining.resume /groups/gcb50300/DL_outs/NLP/pretrain/roberta-base/22.06.28_14.16_bs4096_lr0.0096_s1656393386_a0062
 #    python3 -m langmo.pretraining pretrain_shared.yaml
-

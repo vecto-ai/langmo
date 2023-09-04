@@ -14,10 +14,12 @@ shared words to the total number of words in the prediction, and recall is the r
 number of shared words to the total number of words in the ground truth
 """
 import sys
+
 from langmo.training.base import BaseFinetuner
+
 from .config import QAConfig
-from .model import QAModel, QANet
 from .data import QADataModule as DataModule
+from .model import QAModel, QANet
 
 
 class QAFinetuner(BaseFinetuner):

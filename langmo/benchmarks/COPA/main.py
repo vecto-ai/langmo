@@ -1,13 +1,15 @@
+import json
+
 import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-import json
 import vecto
 import vecto.embeddings
-from vecto.corpus.tokenization import word_tokenize_txt
-from data import Iterator
 from model import Net
+from vecto.corpus.tokenization import word_tokenize_txt
+
+from data import Iterator
 
 
 def get_batch():
@@ -93,7 +95,7 @@ def main():
         net.to("cuda")
 
     # optimizer = optim.SGD(net.parameters(), lr=0.1)
-    #optimizer = optim.Adam(net.parameters(), lr=0.1)
+    # optimizer = optim.Adam(net.parameters(), lr=0.1)
     optimizer = optim.Adam([param for param in net.parameters() if param.requires_grad == True], lr=0.001)
     cnt_epochs = 100
     for i in range(cnt_epochs):
@@ -102,5 +104,5 @@ def main():
         print(loss, accuracy, loss_val, accuracy_val)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

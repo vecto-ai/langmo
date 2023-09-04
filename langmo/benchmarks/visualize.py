@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+
 # import json
 from pathlib import Path
 
@@ -27,11 +28,12 @@ def read_finetunes(path, name_metric="val_acc_matched"):
         logs_clean = [d[name_metric] for d in data_run["train_logs"][1:]]
         # print(logs_clean)
         df = pd.Series(logs_clean)
-        #df.set_index("epoch", inplace=True)
+        # df.set_index("epoch", inplace=True)
         # TODO: returning just the first one for the time being
         # print(df.T)
         return df
-        #[0][name_metric]
+        # [0][name_metric]
+
 
 # def get_pretrain_samples_per_batch(path):
 #     pretrain_paths = map(
@@ -60,8 +62,8 @@ def read_checkpoints(path, task):
         #     "acc": logs_finetune#["val_acc_matched"]
         # }
         # data.append(data_checkpoiunt)
-    #paths = list(gen_finetune_paths(path, task))
-    #for path_metadata in paths:
+    # paths = list(gen_finetune_paths(path, task))
+    # for path_metadata in paths:
     #    with open(path_metadata) as f:
     #        data = json.load(f)
     #        print(data["train_logs"])

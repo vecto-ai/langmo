@@ -1,27 +1,29 @@
+import datetime
 import os
 import random
 import sys
 import uuid
 from pathlib import Path
-import datetime
+from timeit import default_timer as timer
+
+import matplotlib
+import numpy as np
+import vecto.benchmarks
 import vecto.corpus
 import vecto.embeddings.dense
 from vecto.embeddings.dense import WordEmbeddingsDense
-import vecto.benchmarks
-import numpy as np
-from timeit import default_timer as timer
-import matplotlib
-matplotlib.use('pdf')
-from matplotlib import pyplot as plt
-from protonn.utils import get_time_str
-from protonn.utils import save_data_json
+
+matplotlib.use("pdf")
 import platform
+
 import torch
 import torch.nn.functional as F
-from .model import Net, init_model, load_model
+from matplotlib import pyplot as plt
+from protonn.utils import get_time_str, save_data_json
+
 from .data import load_corpus
 from .generate import generate
-
+from .model import Net, init_model, load_model
 
 pos_corpus = 0
 cnt_epochs = 300
@@ -63,16 +65,22 @@ def make_snapshot(net, optimizer, scheduler, id_epoch, vocab, params):
     command_eval = f"cd {path_this_module}\npython3 -m langmo.evaluate {path_embeddings} {path_eval_results}"
     # schedule_eval_script(command_eval)
 
-    torch.save({'epoch': id_epoch,
-                'model_state_dict': net.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'scheduler_state_dict': scheduler.state_dict()},
-                os.path.join(params["path_results"], "model_last.pkl"))
+    torch.save(
+        {
+            "epoch": id_epoch,
+            "model_state_dict": net.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "scheduler_state_dict": scheduler.state_dict(),
+        },
+        os.path.join(params["path_results"], "model_last.pkl"),
+    )
     embeddings.normalize()
-    seeds = ["the meaning of life is",
-             "once upon a time",
-             "this is the point of my proposal",
-             "man is to woman as king is to"]
+    seeds = [
+        "the meaning of life is",
+        "once upon a time",
+        "this is the point of my proposal",
+        "man is to woman as king is to",
+    ]
 
     with open(os.path.join(params["path_results"], name_snapshot, "generated.txt"), "w") as f:
         for seed in seeds:
@@ -90,10 +98,12 @@ def train_epoch(corpus_ids, optimizer, net, params):
     pos_corpus = 0
     losses_epoch = []
     # TODO: iterate oven number of batches with non-sequential sampling
-    max_pos_corpus = corpus_ids.shape[0] \
-        - params["len_sequence"] \
-        - params["offset_negative"] \
+    max_pos_corpus = (
+        corpus_ids.shape[0]
+        - params["len_sequence"]
+        - params["offset_negative"]
         - params["offset_negative_max_random_add"]
+    )
     if pos_corpus > max_pos_corpus:
         RuntimeError("training corpus too short")
     while pos_corpus < max_pos_corpus:
@@ -112,15 +122,15 @@ def train_batch(corpus_ids, optimizer, net, params):
     # print(pos_corpus)
     for _ in range(params["len_sequence"]):
         # TODO: sample sequences from different parts of the corpus
-        batch = corpus_ids[pos_corpus:pos_corpus + batch_size]
+        batch = corpus_ids[pos_corpus : pos_corpus + batch_size]
         predicted = net(batch)
-        #print(predicted)
-        #exit(-1)
+        # print(predicted)
+        # exit(-1)
         pos_corpus += 1
-    targets_positive = corpus_ids[pos_corpus: pos_corpus + batch_size]
-    loss_positive = - F.cosine_similarity(predicted, net.embed(targets_positive)).sum()
+    targets_positive = corpus_ids[pos_corpus : pos_corpus + batch_size]
+    loss_positive = -F.cosine_similarity(predicted, net.embed(targets_positive)).sum()
     pos_start_negative = pos_corpus + offset_negative + random.randint(0, params["offset_negative_max_random_add"])
-    targets_negative = corpus_ids[pos_start_negative: pos_start_negative + batch_size]
+    targets_negative = corpus_ids[pos_start_negative : pos_start_negative + batch_size]
     loss_negative = F.cosine_similarity(predicted, net.embed(targets_negative)).sum()
     loss = loss_positive + loss_negative
     loss.backward()
@@ -153,7 +163,7 @@ def main():
         os.makedirs(params["path_results"], exist_ok=True)
         params["time_start_training"] = timer()
         print("pre-heating for bs")
-        batch = corpus_ids[0: params["batch_size"]]
+        batch = corpus_ids[0 : params["batch_size"]]
         predicted = net(batch)
         make_snapshot(net, optimizer, scheduler, 0, vocab, params)
     else:  # load
@@ -167,13 +177,14 @@ def main():
         loss_epoch = train_epoch(corpus_ids, optimizer, net, params)
         params["loss_history"].append(loss_epoch)
         time_end = timer()
-        time_total = (time_end - params["time_start_training"])
-        print(id_epoch,
-              f"loss: {params['loss_history'][-1]:.4f}",
-              f"lr: {optimizer.param_groups[0]['lr']:.5f}",
-              f"time ep: {time_end - time_start:.3f}s",
-              f"time total: {datetime.timedelta(seconds=time_total)}",
-              )
+        time_total = time_end - params["time_start_training"]
+        print(
+            id_epoch,
+            f"loss: {params['loss_history'][-1]:.4f}",
+            f"lr: {optimizer.param_groups[0]['lr']:.5f}",
+            f"time ep: {time_end - time_start:.3f}s",
+            f"time total: {datetime.timedelta(seconds=time_total)}",
+        )
         plt.plot(np.arange(len(params["loss_history"])), params["loss_history"])
         plt.xlabel("iter")
         plt.ylabel("loss")

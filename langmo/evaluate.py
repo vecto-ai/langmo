@@ -1,11 +1,12 @@
+import logging
 import os
 import sys
-import logging
-from vecto.embeddings import load_from_dir
+
 from vecto.benchmarks.analogy import Benchmark as Analogy
 from vecto.benchmarks.analogy import get_mean_accuracy, get_mean_reciprocal_rank
 from vecto.data import get_dataset_by_name
-from vecto.utils.data import save_json, jsonify
+from vecto.embeddings import load_from_dir
+from vecto.utils.data import jsonify, save_json
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)

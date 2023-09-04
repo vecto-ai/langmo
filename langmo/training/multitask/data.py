@@ -1,7 +1,10 @@
 from collections import OrderedDict
+
 from transformers import DataCollatorForLanguageModeling
+
+from langmo.benchmarks.GLUE.data import GLUECollator, GLUEDataModule
 from langmo.pretraining.data import TextDataModule
-from langmo.benchmarks.GLUE.data import GLUEDataModule, GLUECollator
+
 from .config import TaskConfigs
 
 
@@ -13,9 +16,7 @@ class MultitaskDataModule(TextDataModule):
         self.tasks_datamodules = OrderedDict()  # useless for python >= 3.8
         for task_name, task_params in self.tasks_params.items():
             if task_name != "mlm":
-                self.tasks_datamodules[task_name] = GLUEDataModule(
-                    self.cluster_env, self.tokenizer, task_params
-                )
+                self.tasks_datamodules[task_name] = GLUEDataModule(self.cluster_env, self.tokenizer, task_params)
 
     def setup(self, stage=None):
         super().setup(stage=stage)
@@ -33,10 +34,7 @@ class MultitaskDataModule(TextDataModule):
         # optimizers about how to pick cnt_samples_per_epoch
         self.cnt_train_samples = max(
             [self.params.get("cnt_samples_per_epoch", 0)]
-            + [
-                datamodule.cnt_train_samples
-                for datamodule in self.tasks_datamodules.values()
-            ]
+            + [datamodule.cnt_train_samples for datamodule in self.tasks_datamodules.values()]
         )
 
     def train_dataloader(self):
@@ -55,9 +53,7 @@ class MultitaskDataModule(TextDataModule):
         dataloaders = OrderedDict()
         for name_task, taskdatamodule in self.tasks_datamodules.items():
             dataloaders[name_task] = taskdatamodule.val_dataloader()[0]
-        return SequentialMultitaskDataLoader(
-            self.params, dataloaders, is_validation=True
-        )
+        return SequentialMultitaskDataLoader(self.params, dataloaders, is_validation=True)
 
 
 class MultitaskDataLoader:
@@ -66,9 +62,7 @@ class MultitaskDataLoader:
         self.dataloaders = dataloaders
         self.dataloaders_epochs = {i: 0 for i in self.dataloaders}
         self.current_step = 0
-        self.batches_per_epoch = params["cnt_samples_per_epoch"] / (
-            params["batch_size"] * params["cnt_workers"]
-        )
+        self.batches_per_epoch = params["cnt_samples_per_epoch"] / (params["batch_size"] * params["cnt_workers"])
         self.is_validation = is_validation
         self._batch_generator = self._init_batch_generator()
 
@@ -92,10 +86,7 @@ class MultitaskDataLoader:
 
 class ParallelMultitaskDataLoader(MultitaskDataLoader):
     def _init_batch_generator(self):
-        self.running_dataloaders = {
-            task_name: iter(dataloader)
-            for task_name, dataloader in self.dataloaders.items()
-        }
+        self.running_dataloaders = {task_name: iter(dataloader) for task_name, dataloader in self.dataloaders.items()}
         while len(self.running_dataloaders) > 0:
             out = OrderedDict()
             for task_name in list(self.running_dataloaders):
@@ -106,9 +97,7 @@ class ParallelMultitaskDataLoader(MultitaskDataLoader):
                     if (not self.params["continuous_finetune"]) or self.is_validation:
                         del self.running_dataloaders[task_name]
                     else:
-                        self.running_dataloaders[task_name] = iter(
-                            self.dataloaders[task_name]
-                        )
+                        self.running_dataloaders[task_name] = iter(self.dataloaders[task_name])
 
             if len(out) == 0:
                 if not self.params["continuous_finetune"]:
@@ -121,10 +110,7 @@ class ParallelMultitaskDataLoader(MultitaskDataLoader):
 
 class SequentialMultitaskDataLoader(MultitaskDataLoader):
     def _init_batch_generator(self):
-        self.running_dataloaders = {
-            task_name: iter(dataloader)
-            for task_name, dataloader in self.dataloaders.items()
-        }
+        self.running_dataloaders = {task_name: iter(dataloader) for task_name, dataloader in self.dataloaders.items()}
         self.mlm_dataloader = self.running_dataloaders.pop("mlm", None)
         self.mlm_done = False
         while True:
@@ -160,7 +146,5 @@ class MultitaskGLUECollator(GLUECollator):
         (
             features["input_ids"],
             features["labels"],
-        ) = self.mlm_collator.torch_mask_tokens(
-            features["input_ids"], features.pop("special_tokens_mask", None)
-        )
+        ) = self.mlm_collator.torch_mask_tokens(features["input_ids"], features.pop("special_tokens_mask", None))
         return features, labels

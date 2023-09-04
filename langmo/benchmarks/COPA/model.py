@@ -26,7 +26,7 @@ class Net(nn.Module):
         # print("emb", emb.shape)
         output, self.hidden = self.rnn(emb, self.hidden)
         # print("rnn out", output.shape)
-        #output = self.drop(output)
+        # output = self.drop(output)
         decoded = self.decoder(output[-1])
         # print("decoded", decoded)
         return decoded
