@@ -1,12 +1,14 @@
 import sys
 from pathlib import Path
 
-from langmo.callbacks.model_snapshots_schedule import Monitor
-# from langmo.config import ConfigResume as Config
-from langmo.trainer import get_trainer
 from protonn.pl.cluster_mpi import MPIClusterEnvironment
 from protonn.utils import load_json
 from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
+
+from langmo.callbacks.model_snapshots_schedule import Monitor
+
+# from langmo.config import ConfigResume as Config
+from langmo.trainer import get_trainer
 
 from .data import TextDataModule
 from .plmodel import PLModel

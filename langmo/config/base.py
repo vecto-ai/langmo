@@ -1,14 +1,16 @@
 import logging
 import os
+
 # import time
 from pathlib import Path
 
 import yaml
-from langmo.log_helper import set_root_logger
-from langmo.utils import parse_float
 from protonn.experiment_config import BaseConfig
 from protonn.utils import get_time_str
 from transformers import set_seed
+
+from langmo.log_helper import set_root_logger
+from langmo.utils import parse_float
 
 CONFIG_OPTIONS = {
     "snapshot_strategy": ["per_epoch", "best_only", "none"],
@@ -55,7 +57,7 @@ DEFAULT_OPTIMIZER = {
     "params": {
         "betas": (0.9, 0.999),
         "eps": 1e-6,
-    }
+    },
 }
 
 
@@ -92,7 +94,9 @@ class LangmoConfig(BaseConfig):
         super().__init__(name_task, cluster_env, param_path)
         if "process_group_backend" in self["ddp_strategy_params"]:
             _logger = logging.getLogger(__name__)
-            _logger.warning(f"'ddp_strategy_params.process_group_backend' was defined in the config file but will be ignore! Environment variable 'PROTONN_DISTRIBUTED_BACKEND={cluster_env.distributed_backend}' takes precedence!")
+            _logger.warning(
+                f"'ddp_strategy_params.process_group_backend' was defined in the config file but will be ignore! Environment variable 'PROTONN_DISTRIBUTED_BACKEND={cluster_env.distributed_backend}' takes precedence!"
+            )
         self["ddp_strategy_params"]["process_group_backend"] = cluster_env.distributed_backend
 
         if "working_directory" not in self["optimizer"]:
@@ -188,7 +192,7 @@ class LangmoConfig(BaseConfig):
             callbacks=None,
             snapshot_schedule=None,
             ddp_strategy_params={},
-            optimizer=DEFAULT_OPTIMIZER
+            optimizer=DEFAULT_OPTIMIZER,
         )
         self.required_options = set()
         self.required_options.add("model_name")

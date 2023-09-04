@@ -1,8 +1,8 @@
 import numpy as np
-# import vecto.vocabulary
-from vecto.corpus.tokenization import word_tokenize_txt
 from vecto.corpus import DirSlidingWindowCorpus
-from vecto.corpus.tokenization import DEFAULT_TOKENIZER, DEFAULT_JAP_TOKENIZER
+
+# import vecto.vocabulary
+from vecto.corpus.tokenization import DEFAULT_JAP_TOKENIZER, DEFAULT_TOKENIZER, word_tokenize_txt
 
 
 class FilePairIter:
@@ -22,9 +22,9 @@ class FilePairIter:
     def gen_from_ids(self, ids):
         for i in range(len(ids)):
             for j in range(max(0, i - self.window_size), i):
-                yield(ids[j], ids[i])
+                yield (ids[j], ids[i])
             for j in range(i + 1, min(len(ids), i + self.window_size + 1)):
-                yield(ids[j], ids[i])
+                yield (ids[j], ids[i])
 
     def clean_ids(self, ids):
         for i in range(ids.shape[0]):
@@ -53,13 +53,10 @@ class FilePairIter:
                 context = []
 
 
-class LousyRingBuffer():
+class LousyRingBuffer:
     def __init__(self, shape_batch, cnt_items, max_id=1000):
         # self.buf = np.zeros((cnt_items, *shape_batch), dtype=np.int64)
-        self.buf = np.random.randint(0,
-                                     high=max_id,
-                                     size=(cnt_items, *shape_batch),
-                                     dtype=np.int64)
+        self.buf = np.random.randint(0, high=max_id, size=(cnt_items, *shape_batch), dtype=np.int64)
         self.pos = 0
 
     def pop(self):
@@ -72,20 +69,23 @@ class LousyRingBuffer():
         self.pos = (self.pos + 1) % self.buf.shape[0]
 
 
-class DirWindowIterator():
-    def __init__(self, path, vocab, window_size, batch_size, language='eng', repeat=True):
+class DirWindowIterator:
+    def __init__(self, path, vocab, window_size, batch_size, language="eng", repeat=True):
         self.path = path
         self.vocab = vocab
         self.window_size = window_size
         self.language = language
-        if language == 'jap':
-            self.dswc = DirSlidingWindowCorpus(self.path, tokenizer=DEFAULT_JAP_TOKENIZER,
-                                               left_ctx_size=self.window_size,
-                                               right_ctx_size=self.window_size)
+        if language == "jap":
+            self.dswc = DirSlidingWindowCorpus(
+                self.path,
+                tokenizer=DEFAULT_JAP_TOKENIZER,
+                left_ctx_size=self.window_size,
+                right_ctx_size=self.window_size,
+            )
         else:
-            self.dswc = DirSlidingWindowCorpus(self.path, tokenizer=DEFAULT_TOKENIZER,
-                                               left_ctx_size=self.window_size,
-                                               right_ctx_size=self.window_size)
+            self.dswc = DirSlidingWindowCorpus(
+                self.path, tokenizer=DEFAULT_TOKENIZER, left_ctx_size=self.window_size, right_ctx_size=self.window_size
+            )
         self.batch_size = batch_size
         self._repeat = repeat
         self.epoch = 0
@@ -108,20 +108,26 @@ class DirWindowIterator():
             except StopIteration:
                 self.epoch += 1
                 self.is_new_epoch = True
-                if self.language == 'jap':
-                    self.dswc = DirSlidingWindowCorpus(self.path, tokenizer=DEFAULT_JAP_TOKENIZER,
-                                                       left_ctx_size=self.window_size,
-                                                       right_ctx_size=self.window_size)
+                if self.language == "jap":
+                    self.dswc = DirSlidingWindowCorpus(
+                        self.path,
+                        tokenizer=DEFAULT_JAP_TOKENIZER,
+                        left_ctx_size=self.window_size,
+                        right_ctx_size=self.window_size,
+                    )
                 else:
-                    self.dswc = DirSlidingWindowCorpus(self.path, tokenizer=DEFAULT_TOKENIZER,
-                                                       left_ctx_size=self.window_size,
-                                                       right_ctx_size=self.window_size)
+                    self.dswc = DirSlidingWindowCorpus(
+                        self.path,
+                        tokenizer=DEFAULT_TOKENIZER,
+                        left_ctx_size=self.window_size,
+                        right_ctx_size=self.window_size,
+                    )
             if self.epoch > 0 and self.cnt_words_total < 3:
                 print("corpus empty")
                 raise RuntimeError("Corpus is empty")
 
-        self.center = self.vocab.get_id(next_value['current'])
-        self.context = [self.vocab.get_id(w) for w in next_value['context']]
+        self.center = self.vocab.get_id(next_value["current"])
+        self.context = [self.vocab.get_id(w) for w in next_value["context"]]
 
         # append -1 to ensure the size of context are equal
         while len(self.context) < self.window_size * 2:

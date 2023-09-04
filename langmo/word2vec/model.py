@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 from .data import LousyRingBuffer
 
 initrange = 0.01
@@ -68,9 +69,9 @@ class W2V_NS(nn.Module):
         self.emb_in.weight.data.uniform_(-initrange, initrange)
         self.emb_out.weight.data.uniform_(-initrange, initrange)
         size_old_context = 2000
-        self.buf_old_context = LousyRingBuffer((params["window_size"] * 2, params["batch_size"]),
-                                               size_old_context,
-                                               size_vocab)
+        self.buf_old_context = LousyRingBuffer(
+            (params["window_size"] * 2, params["batch_size"]), size_old_context, size_vocab
+        )
 
     def forward(self, center, context):
         self.buf_old_context.push(context.cpu().numpy())

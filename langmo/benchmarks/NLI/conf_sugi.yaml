@@ -4,4 +4,3 @@ path_train: "/mnt/storage/data/NLP/datasets/comprehension/SNLI/snli_1.0_train.js
 path_val: "/mnt/storage/data/NLP/datasets/comprehension/SNLI/snli_1.0_dev.jsonl"
 cnt_epochs: 4
 test: true
-    

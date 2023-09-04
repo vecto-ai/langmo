@@ -1,4 +1,5 @@
 import yaml
+
 from langmo.config.base import TASKTOMETRIC, ConfigFinetune
 
 TASKS_YAML = """
@@ -101,12 +102,9 @@ class GLUEConfig(ConfigFinetune):
         _glue_postprocess(self)
 
 
-
 def _glue_postprocess(config):
     # TODO: metric to monitor should be moved here as well
-    task_spec = {"validation_split": [{"dataset": ["glue", config["name_task"]],
-                                       "split": "validation",
-                                       "name": "val"}]}
+    task_spec = {"validation_split": [{"dataset": ["glue", config["name_task"]], "split": "validation", "name": "val"}]}
     task_spec.update(GLUE_TASKS[config["name_task"]])
 
     # TODO: moving this bit into this separate _glue_postprocessing function

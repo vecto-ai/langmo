@@ -14,8 +14,8 @@ def def_value():
 
 
 def main():
-    parser = argparse.ArgumentParser(description='generate report from snapshots')
-    parser.add_argument('path', type=str, help='path to the root folder')
+    parser = argparse.ArgumentParser(description="generate report from snapshots")
+    parser.add_argument("path", type=str, help="path to the root folder")
     args = parser.parse_args()
     path = Path(args.path)
     experiments = [x for x in path.iterdir() if x.is_dir()]

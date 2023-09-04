@@ -1,18 +1,21 @@
-import numpy as np
-import sys
+import datetime
 import os
-import yaml
+import sys
+from timeit import default_timer as timer
+
+import numpy as np
 import torch
 import torch.optim as optim
-import datetime
 import vecto.vocabulary
-from vecto.embeddings.dense import WordEmbeddingsDense
+import yaml
 from protonn.utils import save_data_json
-from timeit import default_timer as timer
-from langmo.utils import get_unique_results_path
-from .model import W2V_SM, W2V_NS
-from .data import DirWindowIterator, FilePairIter
+from vecto.embeddings.dense import WordEmbeddingsDense
+
 from langmo.evaluate import report_neigbours
+from langmo.utils import get_unique_results_path
+
+from .data import DirWindowIterator, FilePairIter
+from .model import W2V_NS, W2V_SM
 
 
 def save_and_eval_embeddings(weights, vocab, id_epoch, params, name):
@@ -37,16 +40,8 @@ def make_snapshot(net, id_epoch, vocab, params):
     net.cpu()
     save_data_json(params, os.path.join(params["path_results"], "metadata.json"))
     vocab.save_to_dir(os.path.join(params["path_results"], "vocab"))
-    save_and_eval_embeddings(net.emb_in.weight.data.cpu().numpy(),
-                             vocab,
-                             id_epoch,
-                             params,
-                             "in")
-    save_and_eval_embeddings(net.decoder.emb_out.weight.data.cpu().numpy(),
-                             vocab,
-                             id_epoch,
-                             params,
-                             "out")
+    save_and_eval_embeddings(net.emb_in.weight.data.cpu().numpy(), vocab, id_epoch, params, "in")
+    save_and_eval_embeddings(net.decoder.emb_out.weight.data.cpu().numpy(), vocab, id_epoch, params, "out")
     # path_eval_results = os.path.join(params["path_results"], name_snapshot, "eval")
     # path_this_module = Path(__file__).parent.parent
     if torch.cuda.is_available():
@@ -118,12 +113,9 @@ def main():
     optimizer = optim.Adam([param for param in net.parameters() if param.requires_grad is True])
 
     print(vocab.cnt_words)
-    it = DirWindowIterator(params["path_corpus"],
-                           vocab,
-                           params["window_size"],
-                           params["batch_size"],
-                           language='eng',
-                           repeat=True)
+    it = DirWindowIterator(
+        params["path_corpus"], vocab, params["window_size"], params["batch_size"], language="eng", repeat=True
+    )
     # it = FilePairIter(params["path_corpus"], vocab, params)
     # it = FilePairIter("/mnt/storage/data/NLP/corpora/brown/brown.txt", vocab, params)
     for i in range(params["cnt_epochs"]):

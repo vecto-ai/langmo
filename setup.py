@@ -7,22 +7,23 @@ class Package(setup_boilerplate.Package):
 
     """Package metadata."""
 
-    name = 'langmo'
-    description = 'toolbox for various tasks in the area of vector space models of computational linguistic'
+    name = "langmo"
+    description = "toolbox for various tasks in the area of vector space models of computational linguistic"
     url = "http://vecto.space"
     classifiers = [
-        'Development Status :: 3 - Alpha',
-        'Environment :: Console',
-        'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: Apache Software License',
-        'Natural Language :: English',
-        'Operating System :: POSIX',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3 :: Only',
-        'Topic :: Text Processing :: Linguistic']
-    keywords = ['NLP', 'linguistics', 'language']
+        "Development Status :: 3 - Alpha",
+        "Environment :: Console",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: Apache Software License",
+        "Natural Language :: English",
+        "Operating System :: POSIX",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3 :: Only",
+        "Topic :: Text Processing :: Linguistic",
+    ]
+    keywords = ["NLP", "linguistics", "language"]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     Package.setup()

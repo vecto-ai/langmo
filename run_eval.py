@@ -1,6 +1,7 @@
-from pathlib import Path
-from langmo import evaluate
 import sys
+from pathlib import Path
+
+from langmo import evaluate
 
 path = Path(sys.argv[1])
 for folder in path.iterdir():

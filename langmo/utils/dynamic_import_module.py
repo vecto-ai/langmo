@@ -1,7 +1,7 @@
 import os
-from importlib.util import spec_from_file_location, module_from_spec
-from typing import Optional
 import sys
+from importlib.util import module_from_spec, spec_from_file_location
+from typing import Optional
 
 
 def set_sys_path(working_directory: Optional[str]):

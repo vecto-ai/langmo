@@ -16,11 +16,7 @@ class BaseNStepCallback(pl.Callback):
     def get_path_destination(self, trainer):
         global_step = trainer.global_step
         epoch = trainer.current_epoch
-        path_destination = (
-            Path(trainer.model.hparams["path_results"])
-            / self.prefix
-            / f"epoch{epoch}_step{global_step}"
-        )
+        path_destination = Path(trainer.model.hparams["path_results"]) / self.prefix / f"epoch{epoch}_step{global_step}"
         return path_destination
 
 

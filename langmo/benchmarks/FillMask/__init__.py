@@ -1,10 +1,11 @@
 # import json
 import sys
 
-from langmo.nn import create_mlm
 from transformers import pipeline
 from vecto.benchmarks.base import Benchmark as BaseBenchmark
 from vecto.utils.data import print_json
+
+from langmo.nn import create_mlm
 
 
 # TODO: we don't know which is mask token
@@ -18,10 +19,7 @@ def get_queries(mask_token):
 
 
 def fill_mask(model, tokenizer, query):
-    fill_mask = pipeline(
-        "fill-mask",
-        model=model,
-        tokenizer=tokenizer)
+    fill_mask = pipeline("fill-mask", model=model, tokenizer=tokenizer)
     result = fill_mask(query)
     return result
 
@@ -49,13 +47,16 @@ class Benchmark(BaseBenchmark):
 
 def main():
     from transformers import AutoTokenizer
+
     params = {}
     params["model_name"] = sys.argv[1]
     model, name_run = create_mlm(params)
     print("running", name_run)
     model.eval()
-    import torch
     from pathlib import Path
+
+    import torch
+
     data = torch.load(Path(params["model_name"]) / "pytorch_model.bin")
     print("decoder", data["lm_head.decoder.weight"][0][:10])
     print("encoder", data["encoder.embeddings.weight"][0][:10])

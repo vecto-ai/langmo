@@ -4,11 +4,11 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from langmo.training.base import BaseClassificationModel
 from torch import nn, tanh
 from torchmetrics import MeanMetric, SQuAD
-from transformers import (AutoConfig, AutoModelForQuestionAnswering,
-                          PretrainedConfig)
+from transformers import AutoConfig, AutoModelForQuestionAnswering, PretrainedConfig
+
+from langmo.training.base import BaseClassificationModel
 
 
 class QAModel(BaseClassificationModel):
@@ -47,14 +47,16 @@ class QAModel(BaseClassificationModel):
 
         self.val_loss.update(outs["loss"])
         # here we retain many infos from all batches for validation_epoch_end
-        self.validation_step_outputs.append({
-            "start_logits": outs["start_logits"].detach(),
-            "end_logits": outs["end_logits"].detach(),
-            "offset_mapping": other_features["offset_mapping"],
-            "context": other_features["context"],
-            "answers": other_features["answers"],
-            "has_ans_logits": outs["has_ans_logits"].detach(),
-        })
+        self.validation_step_outputs.append(
+            {
+                "start_logits": outs["start_logits"].detach(),
+                "end_logits": outs["end_logits"].detach(),
+                "offset_mapping": other_features["offset_mapping"],
+                "context": other_features["context"],
+                "answers": other_features["answers"],
+                "has_ans_logits": outs["has_ans_logits"].detach(),
+            }
+        )
 
     def on_validation_epoch_end(self):
         validation_step_outputs = self.validation_step_outputs
@@ -127,13 +129,8 @@ class QAModel(BaseClassificationModel):
                 if not self._check_in_bounds(start_index, end_index, offsets):
                     continue
 
-                if (
-                    "logit_score" not in candidate_answer
-                    or logit_score - candidate_answer["logit_score"] > 0.0
-                ):
-                    candidate_answer["prediction_text"] = context[
-                        offsets[start_index][0] : offsets[end_index][1]
-                    ]
+                if "logit_score" not in candidate_answer or logit_score - candidate_answer["logit_score"] > 0.0:
+                    candidate_answer["prediction_text"] = context[offsets[start_index][0] : offsets[end_index][1]]
                     candidate_answer["logit_score"] = logit_score
 
         # logit_zero = start_logit[0] + end_logit[0]
@@ -181,14 +178,9 @@ class QANet(nn.Module):
         conf_dict = config.to_dict()
         if "classifier_dropout" in conf_dict:
             classifier_dropout = (
-                config.classifier_dropout
-                if config.classifier_dropout is not None
-                else config.hidden_dropout_prob
+                config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
             )
-        elif (
-            "classifier_dropout_prob" in conf_dict
-            and conf_dict["classifier_dropout_prob"] is not None
-        ):
+        elif "classifier_dropout_prob" in conf_dict and conf_dict["classifier_dropout_prob"] is not None:
             classifier_dropout = config.classifier_dropout_prob
 
         self.dropout = nn.Dropout(classifier_dropout)

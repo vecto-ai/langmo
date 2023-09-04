@@ -1,29 +1,30 @@
 import os
+import subprocess
+import sys
 import unittest
 from shutil import copytree, rmtree
 
+import nltk
 from protonn.pl.cluster_mpi import MPIClusterEnvironment
+from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
 
 from langmo.callbacks.model_snapshots_schedule import Monitor
 from langmo.config import ConfigPretrain as Config
 from langmo.config.base import LangmoConfig
 from langmo.trainer import get_trainer
-from langmo.utils.resolve_callbacks import init_callbacks
-from transformers import AutoConfig, AutoTokenizer, AutoModelForMaskedLM
-from langmo.training.mlm.plmodel import PLModel
 from langmo.training.mlm.data import TextDataModule
-import nltk
-import sys
-import subprocess
+from langmo.training.mlm.plmodel import PLModel
+from langmo.utils.resolve_callbacks import init_callbacks
 
-nltk.download('punkt')
+nltk.download("punkt")
 
 
 def build_model(params):
     tokenizer = AutoTokenizer.from_pretrained(params["tokenizer_name"])
     if params["model_name"] == "cnet":
         from langmo.nn.cnet import get_mlmodel
+
         net = get_mlmodel(params)
     else:
         config = AutoConfig.from_pretrained(params["model_name"])
@@ -93,10 +94,7 @@ class Optimizer(unittest.TestCase):
 
         model.pylogger.info("calling fit")
         trainer.fit(model, data_module)
-        self.assertEqual(
-            model.optimizers().__class__.__name__,
-            "LightningSGD"
-        )
+        self.assertEqual(model.optimizers().__class__.__name__, "LightningSGD")
 
 
 if __name__ == "__main__":

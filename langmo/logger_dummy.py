@@ -6,7 +6,7 @@ from lightning.pytorch.loggers.logger import Logger
 
 # TODO: consider making it actually doing something useful
 class DummyLogger(Logger):
-    def log_hyperparams(self, * args, **kwargs):
+    def log_hyperparams(self, *args, **kwargs):
         pass
 
     def log_metrics(self, metrics: Dict[str, Union[torch.Tensor, float]], step: Optional[int] = None) -> None:

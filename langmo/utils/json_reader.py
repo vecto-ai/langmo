@@ -9,7 +9,6 @@ from langdetect.lang_detect_exception import LangDetectException
 
 
 class DocFromJSONFileIter:
-
     def __init__(self, path):
         self.path = path
         self._gen = self.gen()
@@ -55,7 +54,7 @@ class QualityFilter:
         except LangDetectException:
             return False
         lang = langs[0]
-        if lang.lang != 'en' or lang.prob < 0.9:
+        if lang.lang != "en" or lang.prob < 0.9:
             return False
         return True
 

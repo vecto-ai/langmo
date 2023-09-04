@@ -90,9 +90,7 @@ class NLIModel(BaseClassificationModel):
                     cnt_questions = aggregate_batch_stats(lst_split, f"cnt_questions_{split_name}")
                     if cnt_questions > 0:
                         metrics[f"cnt_correct_{name_dataset}_{split_name}"] = cnt_correct
-                        metrics[f"val_acc_{name_dataset}_{split_name}"] = (
-                            cnt_correct / cnt_questions
-                        )
+                        metrics[f"val_acc_{name_dataset}_{split_name}"] = cnt_correct / cnt_questions
                     cnt_correct_label += cnt_correct
                     cnt_questions_label += cnt_questions
                 if cnt_questions_label > 0:

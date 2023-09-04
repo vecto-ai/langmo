@@ -1,10 +1,12 @@
 import torch
 import torch.nn as nn
+
 from langmo.nn.cnet import BaseCNet, BaseConfig, Encoder
 
 
 class ClassificationHead(nn.Module):
     """Roblerta-like head for sentence-level classification tasks."""
+
     # TODO: use config here
     def __init__(self, hidden_size, num_labels, dropout=0.1):
         super().__init__()
@@ -29,8 +31,7 @@ class PretrainedClassifier(BaseCNet):
         super().__init__(config)
         self.config = config
         self.encoder = Encoder(config)
-        self.classifier = ClassificationHead(hidden_size=self.config.hidden_size,
-                                             num_labels=self.config.num_labels)
+        self.classifier = ClassificationHead(hidden_size=self.config.hidden_size, num_labels=self.config.num_labels)
         self.init_weights()
 
     def forward(self, input_ids, attention_mask=None):
@@ -82,7 +83,7 @@ class Classifier(BaseCNet):
 #         # TODO: save encoder part
 #         print("save poretrained not implemented")
 
-    # TODO: make issue in torch for not supporting properties
-    # @property
-    # def config(self):
-    #     return self.encoder.config
+# TODO: make issue in torch for not supporting properties
+# @property
+# def config(self):
+#     return self.encoder.config

@@ -48,4 +48,3 @@ tasks:
       num_labels: 1
     loss_coef: 0.1
     test: false
-

@@ -3,8 +3,7 @@
 from pathlib import Path
 
 from protonn.utils import load_json
-from transformers import (AutoModel, AutoModelForMaskedLM,
-                          AutoModelForSequenceClassification)
+from transformers import AutoModel, AutoModelForMaskedLM, AutoModelForSequenceClassification
 from transformers.models.auto.configuration_auto import CONFIG_MAPPING_NAMES
 
 # import langmo
@@ -54,9 +53,7 @@ def create_net(params):
             name_run += "fr_"
         name_run += params["model_name"]
         encoder = AutoModel.from_pretrained(params["model_name"], add_pooling_layer=False)
-        wrapped_encoder = wrap_encoder(
-            encoder, name=params["encoder_wrapper"], freeze=params["freeze_encoder"]
-        )
+        wrapped_encoder = wrap_encoder(encoder, name=params["encoder_wrapper"], freeze=params["freeze_encoder"])
         # TODO: add different heads support
         net = Siamese(
             wrapped_encoder,
@@ -75,9 +72,7 @@ def create_net(params):
         # TODO: decide what classifier param ataully should be
         elif params["encoder_wrapper"] == "lstm":
             encoder = AutoModel.from_pretrained(name_model, add_pooling_layer=False)
-            wrapped_encoder = wrap_encoder(
-                encoder, name=params["encoder_wrapper"], freeze=params["freeze_encoder"]
-            )
+            wrapped_encoder = wrap_encoder(encoder, name=params["encoder_wrapper"], freeze=params["freeze_encoder"])
             head = TopMLP2(
                 in_size=wrapped_encoder.get_output_size(),
                 cnt_classes=params["num_labels"],

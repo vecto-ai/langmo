@@ -51,4 +51,3 @@ LD_PRELOAD=$PREFIX/opt/lib/libtcmalloc.so OMP_NUM_THREADS=48 \
     -x WANDB_MODE \
     python3 -m langmo.training.mlm pretrain.yaml
 EOF
-

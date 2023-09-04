@@ -21,7 +21,7 @@ Pretraining a model::
 
     mpirun -np N python -m langmo.pretraining config.yaml
 
-langmo saves 2 types of snapshots: in pytorch_ligning format 
+langmo saves 2 types of snapshots: in pytorch_ligning format
 
 To resume crashed/aborted pretraining session:
 
@@ -74,7 +74,7 @@ To configure langmo the user has to create the following file:
 
 ./configs/langmo.yaml with entry "submit_command" correspoding to a job submission command of a given cluster. If the file is not present, the jobs will not be submitted to the job queue, but executed immediately one by one on the same node.
 
-./configs/auto_finetune.inc - the content of this file will be copied to the beginning of the job scripts. Place here directive for e.g. slurm job scheduler such as 
+./configs/auto_finetune.inc - the content of this file will be copied to the beginning of the job scripts. Place here directive for e.g. slurm job scheduler such as
 which resource group to use, how many nodes to allocate, time limit etc. Set up all necessary environment variables, particulalry NUM_GPUS_PER_NODE and
 PL_TORCH_DISTRIBUTED_BACKED (MPI, NCCL or GLOO). Finally add mpirun command with necessay option and end the file with new line.
 Command to invoke langmo in the right way will be added automatically.

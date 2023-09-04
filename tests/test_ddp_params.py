@@ -1,5 +1,6 @@
-import unittest
 import os
+import unittest
+
 from protonn.pl.cluster_mpi import MPIClusterEnvironment
 from transformers import logging as tr_logging
 

@@ -1,15 +1,15 @@
 import math
 
 import torch
-from torch import nn
-from torch.nn import functional as F
-from torch.nn import ModuleDict
 import torchmetrics
-from transformers import AutoModelForMaskedLM, AutoModel
+from torch import nn
+from torch.nn import ModuleDict
+from torch.nn import functional as F
+from transformers import AutoModel, AutoModelForMaskedLM
 
 from langmo.base import PLBase
-from langmo.utils.distributed import allreduce
 from langmo.benchmarks.base import BaseFinetuner
+from langmo.utils.distributed import allreduce
 
 from .config import TaskConfigs
 
@@ -58,9 +58,7 @@ class MultitaskModule(PLBase):
                 self.val_epoch_metrics[task_name] = {
                     "accuracy": torchmetrics.Accuracy(num_classes=num_labels),
                     "f1": torchmetrics.F1Score(num_classes=num_labels),
-                    "matthews_corr": torchmetrics.MatthewsCorrCoef(
-                        num_classes=num_labels
-                    ),
+                    "matthews_corr": torchmetrics.MatthewsCorrCoef(num_classes=num_labels),
                 }
         self.there_is_mlm = "mlm" in self.tasks_params
 
@@ -106,9 +104,7 @@ class MultitaskModule(PLBase):
                     )
 
         loss = sum(
-            self.tasks_params[task_name]["loss_coef"] * losses[task_name]
-            for task_name in losses
-            if task_name != "mlm"
+            self.tasks_params[task_name]["loss_coef"] * losses[task_name] for task_name in losses if task_name != "mlm"
         )
 
         with torch.no_grad():
@@ -117,9 +113,7 @@ class MultitaskModule(PLBase):
         if self.there_is_mlm:
             all_mlm_loss = sum(i for i in mlm_losses.values() if i is not None) * self.tasks_params["mlm"]["loss_coef"]
             with torch.no_grad():
-                self.log(
-                    "cumulative_mlm_loss", all_mlm_loss.clone().detach(), sync_dist=True
-                )
+                self.log("cumulative_mlm_loss", all_mlm_loss.clone().detach(), sync_dist=True)
             loss += all_mlm_loss
 
         return loss
@@ -170,13 +164,9 @@ class MultitaskModule(PLBase):
             loss = allreduce(loss)
 
             metrics[f"{task_name}_loss"] = loss.item()
-            for metric_name, compute_metric in self.val_epoch_metrics[
-                task_name
-            ].items():
+            for metric_name, compute_metric in self.val_epoch_metrics[task_name].items():
                 computed = compute_metric.compute().item()
-                metrics[f"{task_name}_{metric_name}"] = (
-                    computed if math.isfinite(computed) else 0
-                )
+                metrics[f"{task_name}_{metric_name}"] = computed if math.isfinite(computed) else 0
                 compute_metric.reset()
 
         self.log_dict(metrics, sync_dist=True)
@@ -200,11 +190,7 @@ class ClassificationHead(nn.Module):
                 head_params.get_key("activation")(),
                 nn.Dropout(head_params.get_key("dropout_p")),
             ]
-        module_list.append(
-            nn.Linear(
-                head_params.get_key("hidden_size"), head_params.get_key("num_labels")
-            )
-        )
+        module_list.append(nn.Linear(head_params.get_key("hidden_size"), head_params.get_key("num_labels")))
         self.head = nn.ModuleList(module_list)
         self.loss = head_params.get_key("loss")()
 

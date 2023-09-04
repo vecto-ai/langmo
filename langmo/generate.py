@@ -1,21 +1,22 @@
+import datetime
 import os
 import random
 import sys
 import uuid
 from pathlib import Path
-import datetime
-import vecto.corpus
-import vecto.embeddings.dense
-from vecto.embeddings.dense import WordEmbeddingsDense
-import vecto.benchmarks
-import numpy as np
 from timeit import default_timer as timer
+
+import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
+import vecto.benchmarks
+import vecto.corpus
+import vecto.embeddings.dense
 from torch.optim.lr_scheduler import StepLR
+from vecto.embeddings.dense import WordEmbeddingsDense
+
 from .model import Net, load_model
-import torch
 
 
 # TODO: insert UNK token

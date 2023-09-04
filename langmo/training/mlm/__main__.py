@@ -1,12 +1,13 @@
 import socket
 
-from langmo.utils.resolve_callbacks import init_callbacks
-from langmo.config import ConfigPretrain as Config
-from langmo.log_helper import set_root_logger
-from langmo.trainer import get_trainer
 from protonn.pl.cluster_mpi import MPIClusterEnvironment
 from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
+
+from langmo.config import ConfigPretrain as Config
+from langmo.log_helper import set_root_logger
+from langmo.trainer import get_trainer
+from langmo.utils.resolve_callbacks import init_callbacks
 
 from .data import TextDataModule
 from .plmodel import PLModel
@@ -20,6 +21,7 @@ def build_model(params):
     tokenizer = AutoTokenizer.from_pretrained(params["tokenizer_name"])
     if params["model_name"] == "cnet":
         from langmo.nn.cnet import get_mlmodel
+
         net = get_mlmodel(params)
     else:
         config = AutoConfig.from_pretrained(params["model_name"])
@@ -65,9 +67,7 @@ def main():
     # params["batch_size_effective"] = (
     #     params["batch_size"] * params["cnt_workers"] * params["accumulate_batches"]
     # )
-    print(
-        f"!!! Starting on host {socket.gethostname()}, p {trainer.global_rank} of {trainer.world_size}"
-    )
+    print(f"!!! Starting on host {socket.gethostname()}, p {trainer.global_rank} of {trainer.world_size}")
     model = build_model(params)
 
     data_module = TextDataModule(
