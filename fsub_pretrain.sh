@@ -1,53 +1,73 @@
 #!/usr/bin/bash
 
-PREFIX="/home/ra000012/data/fj-pytorch-builds/v1.10"
 NODES=128
 ELAPSE="8:30:00"
+YAML_FILE=$1
+LOCAL_PYTORCH_TGZ=/home/ra000012/data/NLP/local-v1.13-langmo-mod.tgz
+GROUP=ra000012
+X_PARAM="-x PJM_LLIO_GFSCACHE=/vol0004"
+# useful variables: PJM_JOBNAME PJM_JOBID PJM_JOBDIR
 
-jobname="$(basename $0)"
-jobname="${jobname%.*}"
-jobname="${jobname##*_}"
+# jobname: as it appears in `pjstat`.
+jobname="langmo-N${NODES}-${YAML_FILE}"
 
+# outprefix: where all the output (stdout, stderr) is dumped.
 outprefix="NLP_outs/${jobname}"
 
-# PJM_JOBNAME PJM_JOBID PJM_JOBDIR
+# Create ${outprefix} if it doesn't exist!
 [ -e "${outprefix}" ] || mkdir -p "${outprefix}"
 
-cat << EOF | pjsub
+if [ ${NODES} -gt 348 ]; then
+    rscgrp="large";
+else
+    rscgrp="small";
+fi
+if email=$(git config --get user.email); then
+    email_args="-m b,e --mail-list ${email}"
+else
+    echo "$0 WARNING: git email not set!"
+fi
+
+PJSUB_ARGS=(
+    -g ${GROUP}
+    ${X_PARAM}
+    -N ${jobname}
+    -L "rscgrp=${rscgrp}"
+    -L "elapse=${ELAPSE}"
+    -L "node=${NODES}"
+    --mpi "proc=${NODES}"
+    -o ${outprefix}/%j.stdout
+    -e ${outprefix}/%j.stderr
+    --spath ${outprefix}/%j.stat
+    --llio localtmp-size=40Gi
+    -j -S
+    ${email_args}
+)
+
+cat << EOF | pjsub ${PJSUB_ARGS[@]}
 #!/usr/bin/bash
-#PJM -N $jobname
-#PJM -g ra000012
-#PJM -x PJM_LLIO_GFSCACHE=/vol0004
-#PJM -L "rscgrp=small"
-#PJM -L "elapse=${ELAPSE}"
-#PJM -L "node=${NODES}"
-#PJM --mpi "proc=${NODES}"
-#PJM -j
-#PJM -S
-#PJM -o ${outprefix}/%j.stdout
-#PJM -e ${outprefix}/%j.stderr
-#PJM --spath ${outprefix}/%j.stat
 
-# #PJM --llio sharedtmp-size=80Gi
+# Prepare venv!
+cp ${LOCAL_PYTORCH_TGZ} /local/
+cd /local
+pigz -dc $(basename ${LOCAL_PYTORCH_TGZ}) | tar xf -
 
-source "$PREFIX/venv/bin/activate"
-# export PATH="$PREFIX/opt/bin${PATH:+:${PATH}}"
-# export LD_LIBRARY_PATH="$PREFIX/opt/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+source "/local/venv/bin/activate"
+# export PATH="/local/opt/bin${PATH:+:${PATH}}"
+# export LD_LIBRARY_PATH="/local/opt/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
 OUTDIR="${outprefix}/\${PJM_JOBID}"
 [ -e \${OUTDIR} ] || mkdir -p \${OUTDIR}
 
-export NUM_GPUS_PER_NODE=0
-export TOKENIZERS_PARALLELISM=true
-export PROTONN_DISTRIBUTED_BACKEND=MPI
-export WANDB_MODE="disabled"
+MPIEXEC_ARGS=(
+   -of-proc \${OUTDIR}/mpi
+   -x NUM_GPUS_PER_NODE=0
+   -x TOKENIZERS_PARALLELISM=true
+   -x PROTONN_DISTRIBUTED_BACKEND=MPI
+   -x WANDB_MODE="disabled"
+   -x OMP_NUM_THREADS=48
+   -x LD_PRELOAD=/local/opt/lib/libtcmalloc.so
+)
 
-LD_PRELOAD=$PREFIX/opt/lib/libtcmalloc.so OMP_NUM_THREADS=48 \
-    mpirun \
-    -of-proc \${OUTDIR}/mpi \
-    -x TOKENIZERS_PARALLELISM \
-    -x NUM_GPUS_PER_NODE \
-    -x PROTONN_DISTRIBUTED_BACKEND \
-    -x WANDB_MODE \
-    python3 -m langmo.training.mlm pretrain.yaml
+mpirun \${MPIEXEC_ARGS[@]} python3 -m langmo.training.mlm ${YAML_FILE}
 EOF
