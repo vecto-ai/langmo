@@ -3,19 +3,20 @@
 NODES=128
 ELAPSE="8:30:00"
 YAML_FILE=$1
-LOCAL_PYTORCH_TGZ=/home/ra000012/data/NLP/local-v1.13-langmo-mod.tgz
+DATADIR=/home/ra000012/data
 GROUP=ra000012
 X_PARAM="-x PJM_LLIO_GFSCACHE=/vol0004"
 # useful variables: PJM_JOBNAME PJM_JOBID PJM_JOBDIR
 
+LOCAL_PYTORCH_TGZ=${DATADIR}/NLP/local-v1.13-langmo-mod.tgz
 # jobname: as it appears in `pjstat`.
 jobname="langmo-N${NODES}-${YAML_FILE}"
-
 # outprefix: where all the output (stdout, stderr) is dumped.
-outprefix="NLP_outs/${jobname}"
+OUTPREFIX="${DATADIR}/NLP_outs/${jobname}"
 
-# Create ${outprefix} if it doesn't exist!
-[ -e "${outprefix}" ] || mkdir -p "${outprefix}"
+
+# Create ${OUTPREFIX} if it doesn't exist!
+[ -e "${OUTPREFIX}" ] || mkdir -p "${OUTPREFIX}"
 
 if [ ${NODES} -gt 348 ]; then
     rscgrp="large";
@@ -36,9 +37,9 @@ PJSUB_ARGS=(
     -L "elapse=${ELAPSE}"
     -L "node=${NODES}"
     --mpi "proc=${NODES}"
-    -o ${outprefix}/%j.stdout
-    -e ${outprefix}/%j.stderr
-    --spath ${outprefix}/%j.stat
+    -o ${OUTPREFIX}/%j.stdout
+    -e ${OUTPREFIX}/%j.stderr
+    --spath ${OUTPREFIX}/%j.stat
     --llio localtmp-size=40Gi
     -j -S
     ${email_args}
@@ -56,7 +57,7 @@ source "/local/venv/bin/activate"
 # export PATH="/local/opt/bin${PATH:+:${PATH}}"
 # export LD_LIBRARY_PATH="/local/opt/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
-OUTDIR="${outprefix}/\${PJM_JOBID}"
+OUTDIR="${OUTPREFIX}/\${PJM_JOBID}"
 [ -e \${OUTDIR} ] || mkdir -p \${OUTDIR}
 
 MPIEXEC_ARGS=(
