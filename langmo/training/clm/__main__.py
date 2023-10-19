@@ -1,7 +1,7 @@
 import socket
 
 from protonn.pl.cluster_mpi import MPIClusterEnvironment
-from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
+from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 from transformers import logging as tr_logging
 
 from langmo.config import ConfigPretrain as Config
@@ -10,8 +10,8 @@ from langmo.trainer import get_trainer
 from langmo.utils.resolve_callbacks import init_callbacks
 
 from ..base_data import TextDataModule
+from ..mlm.plmodel import PLModel
 from .data import BatchIter
-from .plmodel import PLModel
 
 # from langmo.checkpoint import CheckpointEveryNSteps  # , ScheduleEval
 # from langmo.nn.utils import reinit_model
@@ -20,6 +20,8 @@ from .plmodel import PLModel
 def build_model(params):
     # TODO: support loading weights for continuation of pretraining
     tokenizer = AutoTokenizer.from_pretrained(params["tokenizer_name"])
+    tokenizer.pad_token = tokenizer.eos_token
+
     if params["model_name"] == "cnet":
         from langmo.nn.cnet import get_mlmodel
 
@@ -27,7 +29,8 @@ def build_model(params):
     else:
         config = AutoConfig.from_pretrained(params["model_name"])
         config.update(params["replace_hf_config"])
-        net = AutoModelForMaskedLM.from_config(config)
+        config.is_decoder = True
+        net = AutoModelForCausalLM.from_config(config)
     net.train()
 
     model = PLModel(
@@ -77,7 +80,6 @@ def main():
         tokenizer=model.tokenizer,
         params=params,
     )
-
     model.hparams["corpus"] = data_module.corpus.metadata
 
     model.pylogger.info("calling fit")
