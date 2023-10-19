@@ -10,7 +10,8 @@ from langmo.callbacks.model_snapshots_schedule import Monitor
 # from langmo.config import ConfigResume as Config
 from langmo.trainer import get_trainer
 
-from .data import TextDataModule
+from ..base_data import TextDataModule
+from .data import BatchIter
 from .plmodel import PLModel
 
 
@@ -71,7 +72,8 @@ def main():
     # ok we remove this because train epoch starts adds a new one... but we shouldn't
     # model.hparams["train_logs"] = model.hparams["train_logs"][:-1]
     data_module = TextDataModule(
-        cluster_env,
+        batch_iterator_cls=BatchIter,
+        cluster_env=cluster_env,
         tokenizer=model.tokenizer,
         params=params,
     )
