@@ -1,22 +1,35 @@
 #!/usr/bin/bash
 
-NODES=128
-ELAPSE="8:30:00"
+set -x
+
 YAML_FILE=$1
+NODES=${2:-128}
+ELAPSE=${3:-8:30:00}
 DATADIR=/home/ra000012/data
 GROUP=ra000012
-X_PARAM="-x PJM_LLIO_GFSCACHE=/vol0004"
+CP=$HOME/bin/mpicp
+if [ ! -e ${CP} ]; then
+  CP=cp
+  echo "WARNING: $HOME/bin/mpicp doesn't exist! (Compile it, it should make things faster, using cp instead)"
+fi
+LOCAL_PYTORCH_TGZ=${DATADIR}/NLP/local-v1.13-langmo-mod.tgz
+X_PARAMS=(-x PJM_LLIO_GFSCACHE=/vol0004)
+
+if [ ! -f $YAML_FILE ]; then
+  echo "YAML_FILE: $YAML_FILE (doesn't exist)"
+  echo "NODES: $NODES"
+  echo "ELAPSE: $ELAPSE"
+  echo "USAGE: $0 \$YAML_FILE [ \$NODES ] [ \$ELAPSE ]"
+  exit 0
+fi
+
 # useful variables: PJM_JOBNAME PJM_JOBID PJM_JOBDIR
 
-LOCAL_PYTORCH_TGZ=${DATADIR}/NLP/local-v1.13-langmo-mod.tgz
-# jobname: as it appears in `pjstat`.
-jobname="langmo-N${NODES}-${YAML_FILE}"
+# JOBNAME: as it appears in `pjstat`.
+JOBNAME="langmo-N${NODES}-${YAML_FILE}"
 # outprefix: where all the output (stdout, stderr) is dumped.
-OUTPREFIX="${DATADIR}/NLP_outs/${jobname}"
-
-
-# Create ${OUTPREFIX} if it doesn't exist!
-[ -e "${OUTPREFIX}" ] || mkdir -p "${OUTPREFIX}"
+OUTPREFIX="${DATADIR}/NLP_outs/pretrain/${JOBNAME}"
+mkdir -p "${OUTPREFIX}"
 
 if [ ${NODES} -gt 348 ]; then
     rscgrp="large";
@@ -31,8 +44,8 @@ fi
 
 PJSUB_ARGS=(
     -g ${GROUP}
-    ${X_PARAM}
-    -N ${jobname}
+    ${X_PARAMS[@]}
+    -N ${JOBNAME}
     -L "rscgrp=${rscgrp}"
     -L "elapse=${ELAPSE}"
     -L "node=${NODES}"
@@ -45,21 +58,20 @@ PJSUB_ARGS=(
     ${email_args}
 )
 
-cat << EOF | pjsub ${PJSUB_ARGS[@]}
+pjsub ${PJSUB_ARGS[@]} << EOF 
 #!/usr/bin/bash
+set -x
+
+# Prepare output dir!
+OUTDIR="${OUTPREFIX}/\${PJM_JOBID}"
+mkdir -p \${OUTDIR}
 
 # Prepare venv!
-cp ${LOCAL_PYTORCH_TGZ} /local/
-cd /local
-pigz -dc $(basename ${LOCAL_PYTORCH_TGZ}) | tar xf -
-
+mpirun -of-proc \${OUTDIR}/mpi ${CP} ${LOCAL_PYTORCH_TGZ} /local/
+mpirun -of-proc \${OUTDIR}/mpi tar -I pigz -xf /local/$(basename ${LOCAL_PYTORCH_TGZ}) -C /local
 source "/local/venv/bin/activate"
-# export PATH="/local/opt/bin${PATH:+:${PATH}}"
-# export LD_LIBRARY_PATH="/local/opt/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
-OUTDIR="${OUTPREFIX}/\${PJM_JOBID}"
-[ -e \${OUTDIR} ] || mkdir -p \${OUTDIR}
-
+# Run langmo
 MPIEXEC_ARGS=(
    -of-proc \${OUTDIR}/mpi
    -x NUM_GPUS_PER_NODE=0
@@ -69,6 +81,5 @@ MPIEXEC_ARGS=(
    -x OMP_NUM_THREADS=48
    -x LD_PRELOAD=/local/opt/lib/libtcmalloc.so
 )
-
 mpirun \${MPIEXEC_ARGS[@]} python3 -m langmo.training.mlm ${YAML_FILE}
 EOF
