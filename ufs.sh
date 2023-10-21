@@ -52,7 +52,8 @@ PJSUB_ARGS=(
 
 pjsub ${PJSUB_ARGS[@]} << EOF 
 #!/usr/bin/bash
-set -x
+
+# set -x
 
 # Prepare output dir!
 MPI_OUTDIR="${OUTDIR}/\${PJM_JOBID}"
