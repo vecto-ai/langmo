@@ -4,11 +4,12 @@
 
 source fu_common.src
 
-YAML_FILE=$1
-NODES=${2:-128}
-ELAPSE=${3:-8:30:00}
-DATADIR=/home/ra000012/data
-GROUP=ra000012
+MODULE=${1:-training.mlm}
+YAML_FILE=${2:-pretrain_minimal_test.yaml}
+NODES=${3:-128}
+ELAPSE=${4:-8:30:00}
+DATADIR=${5:-/home/ra000012/data}
+GROUP=${6:-ra000012}
 CP=$HOME/bin/mpicp
 if [ ! -e ${CP} ]; then
   CP=cp
@@ -30,7 +31,7 @@ fi
 # JOBNAME: as it appears in `pjstat`.
 JOBNAME="langmo-N${NODES}-$(basename ${YAML_FILE})"
 # outprefix: where all the output (stdout, stderr) is dumped.
-OUTDIR="${DATADIR}/NLP_outs/pretrain/${JOBNAME}"
+OUTDIR="${DATADIR}/NLP_outs/${MODULE}/${JOBNAME}/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "${OUTDIR}"
 
 PJSUB_ARGS=(
