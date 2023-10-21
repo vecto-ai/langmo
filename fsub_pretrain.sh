@@ -28,8 +28,8 @@ fi
 # JOBNAME: as it appears in `pjstat`.
 JOBNAME="langmo-N${NODES}-${YAML_FILE}"
 # outprefix: where all the output (stdout, stderr) is dumped.
-OUTPREFIX="${DATADIR}/NLP_outs/pretrain/${JOBNAME}"
-mkdir -p "${OUTPREFIX}"
+OUTDIR="${DATADIR}/NLP_outs/pretrain/${JOBNAME}"
+mkdir -p "${OUTDIR}"
 
 if [ ${NODES} -gt 348 ]; then
     rscgrp="large";
@@ -50,9 +50,9 @@ PJSUB_ARGS=(
     -L "elapse=${ELAPSE}"
     -L "node=${NODES}"
     --mpi "proc=${NODES}"
-    -o ${OUTPREFIX}/%j.stdout
-    -e ${OUTPREFIX}/%j.stderr
-    --spath ${OUTPREFIX}/%j.stat
+    -o ${OUTDIR}/%j.stdout
+    -e ${OUTDIR}/%j.stderr
+    --spath ${OUTDIR}/%j.stat
     --llio localtmp-size=40Gi
     -j -S
     ${email_args}
@@ -63,17 +63,17 @@ pjsub ${PJSUB_ARGS[@]} << EOF
 set -x
 
 # Prepare output dir!
-OUTDIR="${OUTPREFIX}/\${PJM_JOBID}"
-mkdir -p \${OUTDIR}
+MPI_OUTDIR="${OUTDIR}/\${PJM_JOBID}"
+mkdir -p \${MPI_OUTDIR}
 
 # Prepare venv!
-mpirun -of-proc \${OUTDIR}/mpi ${CP} ${LOCAL_PYTORCH_TGZ} /local/
-mpirun -of-proc \${OUTDIR}/mpi tar -I pigz -xf /local/$(basename ${LOCAL_PYTORCH_TGZ}) -C /local
+mpirun -of-proc \${MPI_OUTDIR}/mpi ${CP} ${LOCAL_PYTORCH_TGZ} /local/
+mpirun -of-proc \${MPI_OUTDIR}/mpi tar -I pigz -xf /local/$(basename ${LOCAL_PYTORCH_TGZ}) -C /local
 source "/local/venv/bin/activate"
 
 # Run langmo
 MPIEXEC_ARGS=(
-   -of-proc \${OUTDIR}/mpi
+   -of-proc \${MPI_OUTDIR}/mpi
    -x NUM_GPUS_PER_NODE=0
    -x TOKENIZERS_PARALLELISM=true
    -x PROTONN_DISTRIBUTED_BACKEND=MPI
