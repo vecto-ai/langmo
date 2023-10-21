@@ -1,6 +1,8 @@
 #!/usr/bin/bash
 
-set -x
+# set -x
+
+source fu_common.src
 
 YAML_FILE=$1
 NODES=${2:-128}
@@ -26,27 +28,16 @@ fi
 # useful variables: PJM_JOBNAME PJM_JOBID PJM_JOBDIR
 
 # JOBNAME: as it appears in `pjstat`.
-JOBNAME="langmo-N${NODES}-${YAML_FILE}"
+JOBNAME="langmo-N${NODES}-$(basename ${YAML_FILE})"
 # outprefix: where all the output (stdout, stderr) is dumped.
 OUTDIR="${DATADIR}/NLP_outs/pretrain/${JOBNAME}"
 mkdir -p "${OUTDIR}"
-
-if [ ${NODES} -gt 348 ]; then
-    rscgrp="large";
-else
-    rscgrp="small";
-fi
-if email=$(git config --get user.email); then
-    email_args="-m b,e --mail-list ${email}"
-else
-    echo "$0 WARNING: git email not set!"
-fi
 
 PJSUB_ARGS=(
     -g ${GROUP}
     ${X_PARAMS[@]}
     -N ${JOBNAME}
-    -L "rscgrp=${rscgrp}"
+    -L "rscgrp=$(get_rscgrp ${NODES})"
     -L "elapse=${ELAPSE}"
     -L "node=${NODES}"
     --mpi "proc=${NODES}"
@@ -55,7 +46,7 @@ PJSUB_ARGS=(
     --spath ${OUTDIR}/%j.stat
     --llio localtmp-size=40Gi
     -j -S
-    ${email_args}
+    $(get_emailargs)
 )
 
 pjsub ${PJSUB_ARGS[@]} << EOF 

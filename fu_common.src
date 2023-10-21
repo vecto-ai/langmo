@@ -1,0 +1,15 @@
+function get_rscgrp() {
+  if [ $1 -gt 348 ]; then
+      echo "large";
+  else
+      echo "small";
+  fi
+}
+
+function get_emailargs {
+  if email=$(git config --get user.email); then
+      echo -m b,e --mail-list ${email}
+  else
+      >&2 echo "$0 WARNING: git email not set!"
+  fi
+}
