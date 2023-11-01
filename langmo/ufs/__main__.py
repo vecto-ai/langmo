@@ -38,26 +38,39 @@ def make_pjsub_script(args, config_data):
     except Exception as e:
         print(f"Warning: git email not set")
 
-    body = f"""#!/bin/bash
-#PJM -g {group}
-# #PJM ${{X_PARAMS[@]}}
-# #PJM -N ${{JOBNAME}}
-# #PJM -L "rscgrp=$(get_rscgrp ${{NODES}})"
-# #PJM -L "elapse=${{ELAPSE}}"
-# #PJM -L "node=${{NODES}}"
-# #PJM --mpi "proc=${{NODES}}"
-# #PJM -o ${{OUTDIR}}/%j.stdout
-# #PJM -e ${{OUTDIR}}/%j.stderr
-# #PJM --spath ${{OUTDIR}}/%j.stat
-# #PJM --llio localtmp-size=40Gi
-# #PJM -j -S
-# #PJM $(get_emailargs)
-python {module} {result_path}/config.yaml
-"""
     script_path = result_path / "submit.sh"
+    # -x PJM_LLIO_GFSCACHE=/vol0004
+    # -N ${JOBNAME}
+    # -L "rscgrp=$(get_rscgrp ${NODES})"
+    # -L "elapse=${ELAPSE}"
+    # -L "node=${NODES}"
+    # --mpi "proc=${NODES}"
+    # -o ${OUTDIR}/%j.stdout
+    # -e ${OUTDIR}/%j.stderr
+    # --spath ${OUTDIR}/%j.stat
+    # --llio localtmp-size=40Gi
+    # -j -S
     lines = ["#!/bin/bash"]
     lines += [f"#PJM {line}" for line in pjm_lines]
-    lines += [f"python {module}\n"]
+    lines += [
+        f"""
+mpirun -of-proc .../mpi {{CP}} ${{LOCAL_PYTORCH_TGZ}} /local/
+mpirun -of-proc .../mpi tar -I pigz -xf /local/$(basename ${{LOCAL_PYTORCH_TGZ}}) -C /local
+source "/local/venv/bin/activate"
+
+# Run langmo
+MPIEXEC_ARGS=(
+   -of-proc .../mpi
+   -x NUM_GPUS_PER_NODE=0
+   -x TOKENIZERS_PARALLELISM=true
+   -x PROTONN_DISTRIBUTED_BACKEND=MPI
+   -x WANDB_MODE="disabled"
+   -x OMP_NUM_THREADS=48
+   -x LD_PRELOAD=/local/opt/lib/libtcmalloc.so
+)
+mpirun ${{MPIEXEC_ARGS[@]}} python3 -m {args.module} {result_path}/config.yaml
+"""
+    ]
     body = "\n".join(lines)
     script_path.write_text(body)
 
