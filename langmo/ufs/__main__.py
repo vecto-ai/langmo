@@ -17,15 +17,18 @@ def get_config_data(config_path):
 
 
 def make_config_yaml(config_data):
-    decorated_result_path = Path(config_data["path_result"]) / "decorated"
-    decorated_result_path.mkdir(exist_ok=True)
-    config_data["path_result"] = str(decorated_result_path)
+    result_path = Path(config_data["path_result"]) / "decorated"
+    result_path.mkdir(exist_ok=True)
+    config_data["path_result"] = str(result_path)
     config_data["create_unique_path"] = False
-    with open(decorated_result_path / "config.yaml", "w") as f:
+    with open(result_path / "config.yaml", "w") as f:
         yaml.dump(config_data, f)
     return config_data
+
+
 def get_rscgrp(nodes):
     return "small" if nodes < 384 else "large"
+
 
 def get_pjm_lines(job_name, result_path):
     gid = os.stat(result_path).st_gid
@@ -51,11 +54,13 @@ def get_pjm_lines(job_name, result_path):
         print(f"Warning: git email not set")
     return pjm_lines
 
-def make_pjsub_script(args, config_data):
+
+def make_pjsub_script(args, langmo_args, config_data):
     result_path = Path(config_data["path_result"])
     script_path = result_path / "submit.sh"
     job_name = f"{args.config.with_suffix('')}-{args.nodes}"
     pjm_lines = get_pjm_lines(job_name, result_path)
+
     lines = ["#!/bin/bash"]
     lines += [f"#PJM {line}" for line in pjm_lines]
     lines += [
@@ -74,7 +79,7 @@ MPIEXEC_ARGS=(
    -x OMP_NUM_THREADS=48
    -x LD_PRELOAD=/local/opt/lib/libtcmalloc.so
 )
-mpirun ${{MPIEXEC_ARGS[@]}} python3 -m {args.module} {result_path}/config.yaml
+mpirun ${{MPIEXEC_ARGS[@]}} python3 -m {' '.join(langmo_args)} {result_path}/config.yaml
 """
     ]
     body = "\n".join(lines)
@@ -86,19 +91,21 @@ mpirun ${{MPIEXEC_ARGS[@]}} python3 -m {args.module} {result_path}/config.yaml
         os.system(cmd)
 
 
-def main(args):
+def main(args, langmo_args):
     print(args.config)
     config_data = get_config_data(args.config)
     config_data = make_config_yaml(config_data)
-    make_pjsub_script(args, config_data)
+    make_pjsub_script(args, langmo_args, config_data)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("module", type=str)
     parser.add_argument("config", type=Path)
     parser.add_argument("-n", "--nodes", type=int, default=128)
     parser.add_argument("-e", "--elapse", type=str, default="12:00:00")
     parser.add_argument("--dry-run", action="store_true")
-    args = parser.parse_args()
-    main(args)
+    args, langmo_args = parser.parse_known_args()
+    print(f"args={args}")
+    print(f"langmo_args={langmo_args}")
+
+    main(args, langmo_args)
