@@ -24,32 +24,38 @@ def make_config_yaml(config_data):
     with open(decorated_result_path / "config.yaml", "w") as f:
         yaml.dump(config_data, f)
     return config_data
+def get_rscgrp(nodes):
+    return "small" if nodes < 384 else "large"
 
-
-def make_pjsub_script(args, config_data):
-    result_path = Path(config_data["path_result"])
-    module = "foobar"
+def get_pjm_lines(job_name, result_path):
     gid = os.stat(result_path).st_gid
     group = grp.getgrgid(gid)[0]
-    pjm_lines = [f"-g {group}"]
+    pjm_lines = [
+        f"-g {group}",
+        f"-x PJM_LLIO_GFSCACHE=/vol0004",
+        f"-N {job_name}",
+        f"-L rscgrp={get_rscgrp(args.nodes)}",
+        f"-L elapse={args.elapse}",
+        f"-L node={args.nodes}",
+        f"--mpi proc={args.nodes}",
+        f"-o {result_path}/%j.stdout",
+        f"-e {result_path}/%j.stderr",
+        f"--spath {result_path}/%j.stat",
+        f"--llio localtmp-size=40Gi",
+        f"-j -S",
+    ]
     try:
         email = git.config.GitConfigParser().get_value("user", "email")
         pjm_lines.append(f"-m b,e --mail-list {email}")
     except Exception as e:
         print(f"Warning: git email not set")
+    return pjm_lines
 
+def make_pjsub_script(args, config_data):
+    result_path = Path(config_data["path_result"])
     script_path = result_path / "submit.sh"
-    # -x PJM_LLIO_GFSCACHE=/vol0004
-    # -N ${JOBNAME}
-    # -L "rscgrp=$(get_rscgrp ${NODES})"
-    # -L "elapse=${ELAPSE}"
-    # -L "node=${NODES}"
-    # --mpi "proc=${NODES}"
-    # -o ${OUTDIR}/%j.stdout
-    # -e ${OUTDIR}/%j.stderr
-    # --spath ${OUTDIR}/%j.stat
-    # --llio localtmp-size=40Gi
-    # -j -S
+    job_name = f"{args.config.with_suffix('')}-{args.nodes}"
+    pjm_lines = get_pjm_lines(job_name, result_path)
     lines = ["#!/bin/bash"]
     lines += [f"#PJM {line}" for line in pjm_lines]
     lines += [
@@ -73,6 +79,11 @@ mpirun ${{MPIEXEC_ARGS[@]}} python3 -m {args.module} {result_path}/config.yaml
     ]
     body = "\n".join(lines)
     script_path.write_text(body)
+    cmd = f"pjsub {script_path}"
+    if args.dry_run:
+        print(cmd)
+    else:
+        os.system(cmd)
 
 
 def main(args):
@@ -86,5 +97,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("module", type=str)
     parser.add_argument("config", type=Path)
+    parser.add_argument("-n", "--nodes", type=int, default=128)
+    parser.add_argument("-e", "--elapse", type=str, default="12:00:00")
+    parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     main(args)
