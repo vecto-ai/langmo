@@ -11,6 +11,8 @@ from lightning.pytorch.strategies import DDPStrategy
 
 from langmo.logger_dummy import DummyLogger
 
+from transformers import set_seed
+
 # from langmo.callbacks.layernorm import LayerNormCallback
 # from langmo.callbacks.monitor import Monitor
 
@@ -40,6 +42,7 @@ def get_trainer(params, cluster_env, extra_callbacks):
     else:
         logger = DummyLogger()
     strategy = DDPStrategy(**params["ddp_strategy_params"])
+    set_seed(params["seed"])
     trainer = pl.Trainer(
         strategy=strategy,
         plugins=[cluster_env],

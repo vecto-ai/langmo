@@ -7,7 +7,6 @@ from pathlib import Path
 import yaml
 from protonn.experiment_config import BaseConfig
 from protonn.utils import get_time_str
-from transformers import set_seed
 
 from langmo.log_helper import set_root_logger
 from langmo.utils import parse_float
@@ -140,7 +139,6 @@ class LangmoConfig(BaseConfig):
         # Convert to "FP16" to (int) 16
         if isinstance(self["precision"], str):
             self["precision"] = int(self["precision"].lower().replace("fp", ""))
-        set_seed(self["seed"])
         # TODO: we put it here for now for simplicitly
         # this needs to be revisited when we do model parallel
         # TODO: also we whould think what we do when we resume with different number of workers
