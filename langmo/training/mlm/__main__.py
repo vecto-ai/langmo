@@ -1,13 +1,12 @@
 import socket
 
-from protonn.pl.cluster_mpi import MPIClusterEnvironment
-from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
-from transformers import logging as tr_logging
-
 from langmo.config import ConfigPretrain as Config
 from langmo.log_helper import set_root_logger
 from langmo.trainer import get_trainer
 from langmo.utils.resolve_callbacks import init_callbacks
+from protonn.pl.cluster_mpi import MPIClusterEnvironment
+from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
+from transformers import logging as tr_logging
 
 from .data import TextDataModule
 from .plmodel import PLModel
@@ -55,7 +54,8 @@ def main():
     if cluster_env.global_rank() != 0:
         tr_logging.set_verbosity_error()  # to reduce warning of unused weights
     name_task = "pretrain"
-    params = Config(name_task=name_task, cluster_env=cluster_env)
+    # TODO: create is_master in cluster_env
+    params = Config(name_task=name_task, is_master=(cluster_env.global_rank() == 0))
     # TODO: make logging report rank and size and use logging
     params["name_run"] = get_run_name(params)
     cluster_env.barrier()

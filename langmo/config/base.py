@@ -1,15 +1,13 @@
 import logging
 import os
-
 # import time
 from pathlib import Path
 
 import yaml
-from protonn.experiment_config import BaseConfig
-from protonn.utils import get_time_str
-
 from langmo.log_helper import set_root_logger
 from langmo.utils import parse_float
+from protonn.experiment_config import BaseConfig
+from protonn.utils import get_time_str
 
 CONFIG_OPTIONS = {
     "snapshot_strategy": ["per_epoch", "best_only", "none"],
@@ -88,15 +86,9 @@ def load_yaml_config(path_config):
 
 
 class LangmoConfig(BaseConfig):
-    def __init__(self, name_task, cluster_env, param_path=None):
+    def __init__(self, name_task, param_path=None, is_master=True):
         set_root_logger()
-        super().__init__(name_task, cluster_env, param_path)
-        if "process_group_backend" in self["ddp_strategy_params"]:
-            _logger = logging.getLogger(__name__)
-            _logger.warning(
-                f"'ddp_strategy_params.process_group_backend' was defined in the config file but will be ignore! Environment variable 'PROTONN_DISTRIBUTED_BACKEND={cluster_env.distributed_backend}' takes precedence!"
-            )
-        self["ddp_strategy_params"]["process_group_backend"] = cluster_env.distributed_backend
+        super().__init__(name_task, param_path)
 
         if "working_directory" not in self["optimizer"]:
             self["optimizer"]["working_directory"] = None
@@ -157,41 +149,41 @@ class LangmoConfig(BaseConfig):
         pass
 
     def set_defaults(self):
-        self.defaults = dict(
-            cnt_gpus_per_node=int(os.environ["NUM_GPUS_PER_NODE"]),
-            # TODO: read this from the environment variables
-            classifier="huggingface",
-            test=False,
-            precision=32,
-            batch_size=32,
-            padding="max_length",
-            max_length=128,
-            randomize=False,
-            path_results="./logs",
-            create_unique_path=True,
-            uncase=False,
-            cnt_epochs=5,
-            weight_decay=0,
-            max_lr=5e-5,
-            initial_lr=0.0,
-            tokenizer_name=None,
-            gradient_clip_val=0.0,
-            accumulate_batches={1: 1},
-            percent_warmup=6.0,
-            log_every_n_steps=50,
-            minutes_between_snapshots=60,
-            overwrite_timer_snapshot=True,
-            num_sanity_val_steps=-1,
-            metric_to_monitor=None,
-            snapshot_strategy="per_epoch",
-            replace_hf_config={},
-            seed=0,
-            params_without_weight_decay=["bias", "gamma", "beta", "LayerNorm", "layer_norm"],
-            callbacks=None,
-            snapshot_schedule=None,
-            ddp_strategy_params={},
-            optimizer=DEFAULT_OPTIMIZER,
-        )
+        super().set_defaults()
+        
+        self.defaults["cnt_gpus_per_node"] = int(os.environ["NUM_GPUS_PER_NODE"])
+
+        self.defaults["classifier"]="huggingface"
+        self.defaults["test"]=False
+        self.defaults["precision"]=32
+        self.defaults["batch_size"]=32
+        self.defaults["padding"]="max_length"
+        self.defaults["max_length"]=128
+        self.defaults["randomize"]=False
+        self.defaults["path_results"]="./logs"
+        self.defaults["create_unique_path"]=True
+        self.defaults["uncase"]=False
+        self.defaults["cnt_epochs"]=5
+        self.defaults["weight_decay"]=0
+        self.defaults["max_lr"]=5e-5
+        self.defaults["initial_lr"]=0.0
+        self.defaults["tokenizer_name"]=None
+        self.defaults["gradient_clip_val"]=0.0
+        self.defaults["accumulate_batches"]={1: 1}
+        self.defaults["percent_warmup"]=6.0
+        self.defaults["log_every_n_steps"]=50
+        self.defaults["minutes_between_snapshots"]=60
+        self.defaults["overwrite_timer_snapshot"]=True
+        self.defaults["num_sanity_val_steps"]=-1
+        self.defaults["metric_to_monitor"]=None
+        self.defaults["snapshot_strategy"]="per_epoch"
+        self.defaults["replace_hf_config"]={}
+        self.defaults["seed"]=0
+        self.defaults["params_without_weight_decay"]=["bias", "gamma", "beta", "LayerNorm", "layer_norm"]
+        self.defaults["callbacks"]=None
+        self.defaults["snapshot_schedule"]=None
+        self.defaults["optimizer"]=DEFAULT_OPTIMIZER
+
         self.required_options = set()
         self.required_options.add("model_name")
 

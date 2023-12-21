@@ -3,14 +3,11 @@ import os
 import lightning as pl
 import lightning_utilities
 import torch
+from langmo.logger_dummy import DummyLogger
 from lightning.pytorch.callbacks import GradientAccumulationScheduler
-
 # from pytorch_lightning.callbacks import LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.strategies import DDPStrategy
-
-from langmo.logger_dummy import DummyLogger
-
 from transformers import set_seed
 
 # from langmo.callbacks.layernorm import LayerNormCallback
@@ -41,6 +38,7 @@ def get_trainer(params, cluster_env, extra_callbacks):
         )
     else:
         logger = DummyLogger()
+    # TODO: this should be made cleaner
     strategy = DDPStrategy(**params["ddp_strategy_params"])
     set_seed(params["seed"])
     trainer = pl.Trainer(
