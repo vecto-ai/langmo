@@ -1,5 +1,6 @@
 import logging
 import os
+
 # import time
 from pathlib import Path
 
@@ -150,39 +151,39 @@ class LangmoConfig(BaseConfig):
 
     def set_defaults(self):
         super().set_defaults()
-        
+
         self.defaults["cnt_gpus_per_node"] = int(os.environ["NUM_GPUS_PER_NODE"])
 
-        self.defaults["classifier"]="huggingface"
-        self.defaults["test"]=False
-        self.defaults["precision"]=32
-        self.defaults["batch_size"]=32
-        self.defaults["padding"]="max_length"
-        self.defaults["max_length"]=128
-        self.defaults["randomize"]=False
-        self.defaults["path_results"]="./logs"
-        self.defaults["create_unique_path"]=True
-        self.defaults["uncase"]=False
-        self.defaults["cnt_epochs"]=5
-        self.defaults["weight_decay"]=0
-        self.defaults["max_lr"]=5e-5
-        self.defaults["initial_lr"]=0.0
-        self.defaults["tokenizer_name"]=None
-        self.defaults["gradient_clip_val"]=0.0
-        self.defaults["accumulate_batches"]={1: 1}
-        self.defaults["percent_warmup"]=6.0
-        self.defaults["log_every_n_steps"]=50
-        self.defaults["minutes_between_snapshots"]=60
-        self.defaults["overwrite_timer_snapshot"]=True
-        self.defaults["num_sanity_val_steps"]=-1
-        self.defaults["metric_to_monitor"]=None
-        self.defaults["snapshot_strategy"]="per_epoch"
-        self.defaults["replace_hf_config"]={}
-        self.defaults["seed"]=0
-        self.defaults["params_without_weight_decay"]=["bias", "gamma", "beta", "LayerNorm", "layer_norm"]
-        self.defaults["callbacks"]=None
-        self.defaults["snapshot_schedule"]=None
-        self.defaults["optimizer"]=DEFAULT_OPTIMIZER
+        self.defaults["classifier"] = "huggingface"
+        self.defaults["test"] = False
+        self.defaults["precision"] = 32
+        self.defaults["batch_size"] = 32
+        self.defaults["padding"] = "max_length"
+        self.defaults["max_length"] = 128
+        self.defaults["randomize"] = False
+        self.defaults["path_results"] = "./logs"
+        self.defaults["create_unique_path"] = True
+        self.defaults["uncase"] = False
+        self.defaults["cnt_epochs"] = 5
+        self.defaults["weight_decay"] = 0
+        self.defaults["max_lr"] = 5e-5
+        self.defaults["initial_lr"] = 0.0
+        self.defaults["tokenizer_name"] = None
+        self.defaults["gradient_clip_val"] = 0.0
+        self.defaults["accumulate_batches"] = {1: 1}
+        self.defaults["percent_warmup"] = 6.0
+        self.defaults["log_every_n_steps"] = 50
+        self.defaults["minutes_between_snapshots"] = 60
+        self.defaults["overwrite_timer_snapshot"] = True
+        self.defaults["num_sanity_val_steps"] = -1
+        self.defaults["metric_to_monitor"] = None
+        self.defaults["snapshot_strategy"] = "per_epoch"
+        self.defaults["replace_hf_config"] = {}
+        self.defaults["seed"] = 0
+        self.defaults["params_without_weight_decay"] = ["bias", "gamma", "beta", "LayerNorm", "layer_norm"]
+        self.defaults["callbacks"] = None
+        self.defaults["snapshot_schedule"] = None
+        self.defaults["optimizer"] = DEFAULT_OPTIMIZER
 
         self.required_options = set()
         self.required_options.add("model_name")
