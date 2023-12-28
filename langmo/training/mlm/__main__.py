@@ -50,11 +50,11 @@ class MLMExperiment(Experiment):
         self.params["name_run"] = self.params.get_run_name()
         # want to do it in super init but this depends on custom config....
         self.maybe_create_unique_path()
+        self.cluster_env.barrier()
         # print(f"!!! Starting on host {socket.gethostname()}, p {trainer.global_rank} of {trainer.world_size}")
 
     def run(self):
         # TODO: make logging report rank and size and use logging
-        self.cluster_env.barrier()
 
         callbacks = init_callbacks(self.params["callbacks"])
         trainer = get_trainer(self.params, self.cluster_env, callbacks)

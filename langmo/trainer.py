@@ -5,6 +5,7 @@ import lightning_utilities
 import torch
 from langmo.logger_dummy import DummyLogger
 from lightning.pytorch.callbacks import GradientAccumulationScheduler
+
 # from pytorch_lightning.callbacks import LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.strategies import DDPStrategy
@@ -32,7 +33,7 @@ def get_trainer(params, cluster_env, extra_callbacks):
     lightning_utilities.core.rank_zero.rank_zero_only.rank = cluster_env.global_rank()
     if "WANDB_MODE" not in os.environ or os.environ["WANDB_MODE"].lower() != "disabled":
         logger = WandbLogger(
-            project=params["name_project"],
+            project=params["name_task"],
             name=params["name_run"],
             save_dir=params["path_results"],
         )

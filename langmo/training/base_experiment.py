@@ -12,6 +12,7 @@ class BaseExperiment(Experiment):
             name_task=self.name_task,
             is_master=self.is_master,
         )
+        self.maybe_create_unique_path()
         self.net, self.name_run = self.create_net()
         self.params["name_run"] = self.name_run
         self.tokenizer = AutoTokenizer.from_pretrained(self.params["tokenizer_name"])

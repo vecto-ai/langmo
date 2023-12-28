@@ -122,13 +122,13 @@ class LangmoConfig(BaseConfig):
 
         self.update(user_config)
 
-        name_project = name_task
+        # name_project = name_task
         if self["test"]:
-            name_project += "_test"
+            name_task += "_test"
             self["cnt_epochs"] = 3
         if "suffix" in user_config:
-            name_project += f"_{user_config['suffix']}"
-        self["name_project"] = name_project
+            name_task += f"_{user_config['suffix']}"
+        # self["name_project"] = name_project
         self["timestamp"] = get_time_str()
         # Convert to "FP16" to (int) 16
         if isinstance(self["precision"], str):
