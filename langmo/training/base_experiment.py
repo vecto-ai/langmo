@@ -12,7 +12,7 @@ class BaseExperiment(Experiment):
             name_task=self.name_task,
             is_master=self.is_master,
         )
-        self.net, self.name_run = create_net(self.params)
+        self.net, self.name_run = self.create_net()
         self.params["name_run"] = self.name_run
         self.tokenizer = AutoTokenizer.from_pretrained(self.params["tokenizer_name"])
         self.trainer = get_trainer(self.params, self.cluster_env, extra_callbacks=[FinetuneMonitor()])
@@ -24,6 +24,10 @@ class BaseExperiment(Experiment):
             params=self.params,
         )
 
+    def run(self):
+        self.trainer.fit(self.model, self.data_module)
+
 
 class BaseFinetuneExperiment(BaseExperiment):
-    pass
+    def create_net(self):
+        return create_net(self.params)

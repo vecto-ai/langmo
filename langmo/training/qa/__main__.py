@@ -23,7 +23,7 @@ from .model import QAModel, QANet
 
 
 class QAExperiment(BaseExperiment):
-    def __init__(self, name_task, class_data_module, class_model, config_type=QAConfig):
+    def __init__(self, name_task, class_model, class_data_module, config_type=QAConfig):
         super().__init__(name_task, class_data_module, class_model, config_type)
 
     def create_net(self):

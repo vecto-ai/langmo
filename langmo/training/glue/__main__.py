@@ -48,12 +48,6 @@ class GLUEExperiment(BaseFinetuneExperiment):
                 tok_emb = self.net.get_input_embeddings().weight[tok_id]
                 reinit_tensor(tok_emb)
 
-    def run(self):
-        # TODO: name_task should be renamed to glue_task
-        # finetuner = GLUEFinetuner(name_task, GLUEDataModule, GLUEModel)
-        # finetuner.run()
-        self.trainer.fit(self.model, self.data_module)
-
 
 if __name__ == "__main__":
     experiment = GLUEExperiment()
