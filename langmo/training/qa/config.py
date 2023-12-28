@@ -1,4 +1,4 @@
-from langmo.config.base import ConfigFinetune
+from langmo.config.finetune import ConfigFinetune
 
 QATASKS = ["squad", "squad_v2"]
 
