@@ -9,6 +9,7 @@ from langmo.log_helper import set_root_logger
 from langmo.utils import parse_float
 from protonn.experiment_config import BaseConfig
 from protonn.utils import get_time_str
+import platform
 
 CONFIG_OPTIONS = {
     "snapshot_strategy": ["per_epoch", "best_only", "none"],
@@ -161,7 +162,6 @@ class LangmoConfig(BaseConfig):
         self.defaults["padding"] = "max_length"
         self.defaults["max_length"] = 128
         self.defaults["randomize"] = False
-        self.defaults["path_results"] = "./logs"
         self.defaults["create_unique_path"] = True
         self.defaults["uncase"] = False
         self.defaults["cnt_epochs"] = 5
@@ -188,8 +188,32 @@ class LangmoConfig(BaseConfig):
         self.required_options = set()
         self.required_options.add("model_name")
 
+    def get_run_folder(self):
+        path_results = Path(self["path_base"])
+        path_results /= self["name_task"]
+        path_results /= self["model_name"]
+        timestamp = self["timestamp"][:-3]
+        hostname = platform.node().split(".")[0]
+        # run_folder = f"{timestamp}_w{workers}_lr{lr:.4f}_s{seed}_{hostname}"
+        # lr = self["max_lr"] * self["cnt_workers"]
+        seed = self["seed"]
+        run_folder = f"{timestamp}_s{seed}_{hostname}"
+        path_results /= run_folder
 
-# TODO: this needs to be rewritten
+        # self["path_results"] = os.path.join(self["path_results"], self["name_project"])
+        # # TODO: it's hacky, but for the time being for langmo
+        # # ideally should be a list of names to concat into path
+        # if "model_name" in self:
+        #     self["path_results"] = os.path.join(self["path_results"], self["model_name"])
+
+        # workers = self["cnt_workers"]
+        # TODO: this might be dynamic
+        # lr = self["max_lr"] * self["cnt_workers"]
+        # TODO: make this trully unique
+        return path_results
+
+
+# TODO: where is this coming from???
 # here is a good place to check if BS changed etc
 # class ConfigResume(Config):
 #     def __init__(self, name_task, old_params, is_master=False, param_path=None):
@@ -199,14 +223,3 @@ class LangmoConfig(BaseConfig):
 #     def set_defaults(self):
 #         self.defaults = self.old_params
 #         self.required_options = set()
-
-
-class ConfigFinetune(LangmoConfig):
-    def set_defaults(self):
-        super().set_defaults()
-        self.defaults["siamese"] = False
-        self.defaults["freeze_encoder"] = False
-        self.defaults["encoder_wrapper"] = "pooler"
-        self.defaults["shuffle"] = False
-        self.defaults["cnt_seps"] = -1
-        self.defaults["save_predictions"] = False

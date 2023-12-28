@@ -5,7 +5,6 @@ from pathlib import Path
 
 from protonn.utils import load_json
 
-from .base import ConfigFinetune
 from .glue import GLUEConfig
 
 

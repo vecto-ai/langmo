@@ -1,6 +1,7 @@
 import yaml
 
-from langmo.config.base import TASKTOMETRIC, ConfigFinetune
+from langmo.config.base import TASKTOMETRIC
+from langmo.config.finetune import ConfigFinetune
 
 TASKS_YAML = """
 cola:

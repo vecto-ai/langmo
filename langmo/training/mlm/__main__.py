@@ -48,6 +48,9 @@ class MLMExperiment(Experiment):
             is_master=self.is_master,
         )
         self.params["name_run"] = self.params.get_run_name()
+        # want to do it in super init but this depends on custom config....
+        self.maybe_create_unique_path()
+        # print(f"!!! Starting on host {socket.gethostname()}, p {trainer.global_rank} of {trainer.world_size}")
 
     def run(self):
         # TODO: make logging report rank and size and use logging
@@ -61,7 +64,6 @@ class MLMExperiment(Experiment):
         # params["batch_size_effective"] = (
         #     params["batch_size"] * params["cnt_workers"] * params["accumulate_batches"]
         # )
-        print(f"!!! Starting on host {socket.gethostname()}, p {trainer.global_rank} of {trainer.world_size}")
         model = build_model(self.params)
 
         data_module = TextDataModule(
