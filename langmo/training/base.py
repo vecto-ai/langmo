@@ -29,7 +29,7 @@ class BaseFinetuner:
     def __init__(self, name_task, class_data_module, class_model, config_type=ConfigFinetune):
         # TODO: refactor this into sub-methods
         cluster_env = MPIClusterEnvironment()
-        self.params = config_type(name_task, cluster_env)
+        self.params = config_type(name_task, is_master=cluster_env.is_master)
         if cluster_env.global_rank() != 0:
             tr_logging.set_verbosity_error()  # to reduce warning of unused weights
         cluster_env.barrier()

@@ -21,3 +21,14 @@ class ConfigPretrain(LangmoConfig):
         if self["snapshot_schedule"] is not None:
             if list(self["snapshot_schedule"].keys())[0] != 0:
                 raise Exception(f"snapshot_schedule should start from 0.")
+
+    def get_run_name(self):
+        name_run = self["model_name"]
+        # TODO: revisit this when we have model parallel training
+        name_run += f"_{self['timestamp']}"
+        # name_run += f"_bs{params['batch_size'] * params['cnt_workers']}"
+        name_run += f"_lr{self['max_lr']}"
+        # TODO: add batch size
+        # name_run += f"_wd{params['weight_decay']}"
+        # name_run += f"_bs{params['batch_size_effective']}"
+        return name_run

@@ -89,7 +89,7 @@ def load_yaml_config(path_config):
 class LangmoConfig(BaseConfig):
     def __init__(self, name_task, param_path=None, is_master=True):
         set_root_logger()
-        super().__init__(name_task, param_path)
+        super().__init__(name_task, param_path, is_master)
 
         if "working_directory" not in self["optimizer"]:
             self["optimizer"]["working_directory"] = None
