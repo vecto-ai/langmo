@@ -51,11 +51,14 @@ class PLModel(PLBase):
         # TODO: move this to train_epoch_end when it is fixed
         # self.log("epoch", self.current_epoch)
         cnt_epochs = float(self.trainer.train_dataloader.cnt_restarts)
-        self.hparams["cnt_samples_processed"] += self.hparams["batch_size"] * self.hparams["cnt_workers"]
+        # print("batch forward")
+        # print(self.hparams["cnt_samples_processed"])
+        # self.hparams["cnt_tokens_processed"] += (
+        #     self.hparams["batch_size"] * self.hparams["cnt_workers"] * self.hparams["max_length"]
+        # )
         self.log("loss", loss, sync_dist=True)
         self.log("true_epochs", float(cnt_epochs))
         # print("logging samples processed as", self.hparams["cnt_samples_processed"])
-        self.log("samples_processed", float(self.hparams["cnt_samples_processed"]))
         # TODO: we are not using LR monitor from PL but logging LR here
         # to logs on the same wandb call so that wandb can render LR against processed samples
         # TODO: move this to some hook in base PL class to reuse in finetune

@@ -57,6 +57,8 @@ class PLBase(pl.LightningModule):
             batch_in_span = params["batch_size"] * params["cnt_workers"] * schedule[i][1]
             steps_in_epoch = math.ceil(samples_per_epoch / batch_in_span)
             steps_total += steps_in_epoch * epochs_in_span
+        self.hparams["expected_cnt_steps"] = steps_total
+        print("$$$$$$$ Estimate train streps as ", steps_total)
         return steps_total
 
     def configure_optimizers(self):
@@ -133,6 +135,8 @@ class PLBase(pl.LightningModule):
         if "train_logs" not in self.hparams:
             self.hparams["train_logs"] = []
             self.hparams["cnt_samples_processed"] = 0
+            self.hparams["cnt_tokens_processed"] = 0
+            self.hparams["cnt_steps"] = 0
             self.hparams["train_logs"].append({})
             self.hparams["train_logs"][-1]["epoch"] = -1
             self.hparams["train_logs"][-1]["epoch_time"] = 0.0
