@@ -16,7 +16,7 @@ from .plmodel import PLModel
 
 def load_model_from_checkpoint(path, params):
     # TODO: consider checkpoint files being moved
-    path_hf = path / "checkpoints" / "ep_-01_smpl_0" / "hf"
+    path_hf = path / "checkpoints" / "snap_000_smpl_0" / "hf"
     tokenizer = AutoTokenizer.from_pretrained(path_hf)
     config = AutoConfig.from_pretrained(path_hf)
     # TODO: assert batch size didn't change or think how to deal with it

@@ -55,7 +55,6 @@ class MLMExperiment(Experiment):
 
     def run(self):
         # TODO: make logging report rank and size and use logging
-
         callbacks = init_callbacks(self.params["callbacks"])
         trainer = get_trainer(self.params, self.cluster_env, callbacks)
         # TODO: this is done in add_distributed info

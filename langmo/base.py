@@ -80,8 +80,12 @@ class PLBase(pl.LightningModule):
         # print(optimizer_grouped_parameters)
         # TODO: double check if wd working when in grouped params
         # weight_decay=self.hparams["weight_decay"],
-        optimizer_params = self.hparams["optimizer"].pop("params")
-        class_optimizer = load_class(**self.hparams["optimizer"])
+        optimizer_params = self.hparams["optimizer"]["params"]
+        class_optimizer = load_class(
+            working_directory=self.hparams["optimizer"]["working_directory"],
+            module=self.hparams["optimizer"]["module"],
+            class_name=self.hparams["optimizer"]["class_name"],
+        )
         optimizer = class_optimizer(optimizer_grouped_parameters, lr=self.hparams["initial_lr"], **optimizer_params)
         # optimizer = FusedLAMB(
         #     optimizer_grouped_parameters,
