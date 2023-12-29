@@ -15,6 +15,10 @@ class BaseExperiment(Experiment):
         self.maybe_create_unique_path()
         self.net, self.name_run = self.create_net()
         self.params["name_run"] = self.name_run
+        if self.params["randomize"]:
+            reinit_model(self.net)
+            self.params["name_run"] += "_RND"
+        self.params["name_run"] += f"_{'↓' if self.params['uncase'] else '◯'}_{self.params['timestamp'][:-3]}"
         self.tokenizer = AutoTokenizer.from_pretrained(self.params["tokenizer_name"])
         self.trainer = get_trainer(self.params, self.cluster_env, extra_callbacks=[FinetuneMonitor()])
         self.params["cnt_workers"] = self.trainer.world_size

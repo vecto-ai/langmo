@@ -23,10 +23,6 @@ class GLUEExperiment(BaseFinetuneExperiment):
         # bottom = AutoModel.from_pretrained(name_model)
         # net = Siamese(bottom, TopMLP2())
         # TODO: implement this by creating model from config vs pretrained
-        if self.params["randomize"]:
-            reinit_model(self.net)
-            self.params["name_run"] += "_RND"
-        self.params["name_run"] += f"_{'↓' if self.params['uncase'] else '◯'}_{self.params['timestamp'][:-3]}"
         self.maybe_randomize_special_tokens()
 
         self.cluster_env.barrier()
