@@ -24,7 +24,6 @@ class Callbacks(unittest.TestCase):
     def test_backward_compatibility(self):
         params = Config(
             name_task="test_callbacks_1",
-            cluster_env=self.cluster_env,
             param_path="tests/test_params/pretraining_minimal_callback_test.yaml",
         )
         params["name_run"] = "test_callbacks_1"
@@ -35,7 +34,6 @@ class Callbacks(unittest.TestCase):
 
         params = Config(
             name_task="test_callbacks_2",
-            cluster_env=self.cluster_env,
             param_path="tests/test_params/pretraining_minimal_test.yaml",
         )
         params["name_run"] = "test_callbacks_2"
@@ -49,7 +47,6 @@ class Callbacks(unittest.TestCase):
     def test_langmo_base_config_dafault_callback(self):
         params = LangmoConfig(
             name_task="test_callbacks_2",
-            cluster_env=self.cluster_env,
             param_path="tests/test_params/minimal_callback_test.yaml",
         )
         params["name_run"] = "test_callbacks_2"
@@ -82,7 +79,6 @@ class ExternalCallbacks(unittest.TestCase):
     def test_external(self):
         params = Config(
             name_task="test_callbacks_1",
-            cluster_env=self.cluster_env,
             param_path="tests/test_params/pretraining_minimal_external_callback_test.yaml",
         )
         params["name_run"] = "test_callbacks_1"
