@@ -10,7 +10,7 @@ from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
 
 from langmo.callbacks.model_snapshots_schedule import Monitor
-from langmo.config import ConfigPretrain as Config
+from langmo.training.mlm.config import ConfigPretrain as Config
 from langmo.config.base import LangmoConfig
 from langmo.trainer import get_trainer
 from langmo.training.mlm.data import TextDataModule

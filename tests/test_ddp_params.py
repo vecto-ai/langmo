@@ -19,7 +19,6 @@ class DDPParams(unittest.TestCase):
     def test_langmo_base_config_dafault_callback(self):
         params = LangmoConfig(
             name_task="test",
-            cluster_env=self.cluster_env,
             param_path="tests/test_params/ddp_strategy_params_test.yaml",
         )
         params["name_run"] = "test"
