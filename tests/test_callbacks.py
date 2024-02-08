@@ -6,7 +6,7 @@ from protonn.pl.cluster_mpi import MPIClusterEnvironment
 from transformers import logging as tr_logging
 
 from langmo.callbacks.model_snapshots_schedule import Monitor
-from langmo.config import ConfigPretrain as Config
+from langmo.training.mlm.config import ConfigPretrain as Config
 from langmo.config.base import LangmoConfig
 from langmo.trainer import get_trainer
 from langmo.utils.resolve_callbacks import init_callbacks
