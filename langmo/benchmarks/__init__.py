@@ -6,7 +6,7 @@ from pathlib import Path
 import yaml
 
 from langmo.config.base import load_yaml_or_empty
-from langmo.config.glue import GLUE_TASKS
+from langmo.training.glue.config import GLUE_TASKS
 from langmo.training.qa.config import QATASKS
 
 # TODO: make console logs go to the target dir
