@@ -153,8 +153,6 @@ class LangmoConfig(BaseConfig):
     def set_defaults(self):
         super().set_defaults()
 
-        self.defaults["cnt_gpus_per_node"] = int(os.environ["NUM_GPUS_PER_NODE"])
-
         self.defaults["classifier"] = "huggingface"
         self.defaults["test"] = False
         self.defaults["precision"] = 32
