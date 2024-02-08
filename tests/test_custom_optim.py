@@ -75,7 +75,6 @@ class Optimizer(unittest.TestCase):
     def test_custom_optim(self):
         params = Config(
             name_task="test_custom_optim",
-            cluster_env=self.cluster_env,
             param_path="tests/test_params/custom_optimizer.yaml",
         )
         params["name_run"] = "test_custom_optim"
