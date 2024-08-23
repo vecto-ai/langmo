@@ -7,7 +7,8 @@ from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
 
 from .config import ConfigPretrain as Config
-from .data import TextDataModule
+from ..base_data import TextDataModule
+from .data import BatchIter
 from .plmodel import PLModel
 from protonn.experiment import Experiment
 
@@ -70,6 +71,25 @@ class MLMExperiment(Experiment):
             tokenizer=model.tokenizer,
             params=self.params,
         )
+        model.hparams["corpus"] = data_module.corpus.metadata
+
+        callbacks = init_callbacks(self.params["callbacks"])
+        trainer = get_trainer(self.params, self.cluster_env, callbacks)
+        self.params["cnt_workers"] = trainer.world_size
+        # TODO: get current accumulation of batched dynamically and log per epoch
+        # params["batch_size_effective"] = (
+        #     params["batch_size"] * params["cnt_workers"] * params["accumulate_batches"]
+        # )
+        print(f"!!! Starting on host {socket.gethostname()}, p {trainer.global_rank} of {trainer.world_size}")
+        model = build_model(self.params)
+
+        data_module = TextDataModule(
+            batch_iterator_cls=BatchIter,
+            cluster_env=self.cluster_env,
+            tokenizer=model.tokenizer,
+            params=self.params,
+        )
+
         model.hparams["corpus"] = data_module.corpus.metadata
 
         model.pylogger.info("calling fit")
