@@ -33,6 +33,7 @@ if [[ $# -gt 0 ]]; then
         "-o"|"--output"     ) OUTPUT="$1";    shift;;
         "-p"|"--py-env"     ) PY_ENV="$1";    shift;;
         *                   ) echo "ERROR: Invalid option: \""$opt"\"" >&2
+                              print_usage
                               exit 1;;
       esac
     done

@@ -15,7 +15,7 @@ function get_emailargs {
 }
 
 function print_usage {
-    echo "usage: $0 [-ceghmnop] [-c config] [-e elapse] [-g group] [-h help] [-m module] [-n nodes] [-o output] [-p py-env]"
+    echo "usage: $0 [-h] [-c config] [-e elapse] [-g group] [-h help] [-m module] [-n nodes] [-o output] [-p py-env]"
     echo "  -h help     display help"
     echo "  -c config   specifies the config yaml file for langmo"
     echo "  -e elapse   defines elapse time"
