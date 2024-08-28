@@ -66,13 +66,6 @@ class MLMExperiment(Experiment):
         # )
         model = build_model(self.params)
 
-        data_module = TextDataModule(
-            cluster_env=self.cluster_env,
-            tokenizer=model.tokenizer,
-            params=self.params,
-        )
-        model.hparams["corpus"] = data_module.corpus.metadata
-
         callbacks = init_callbacks(self.params["callbacks"])
         trainer = get_trainer(self.params, self.cluster_env, callbacks)
         self.params["cnt_workers"] = trainer.world_size
