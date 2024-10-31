@@ -15,15 +15,15 @@ number of shared words to the total number of words in the ground truth
 """
 import sys
 
-from langmo.training.base import BaseFinetuner
+from langmo.training.base_experiment import BaseExperiment
 
 from .config import QAConfig
 from .data import QADataModule as DataModule
 from .model import QAModel, QANet
 
 
-class QAFinetuner(BaseFinetuner):
-    def __init__(self, name_task, class_data_module, class_model, config_type=QAConfig):
+class QAExperiment(BaseExperiment):
+    def __init__(self, name_task, class_model, class_data_module, config_type=QAConfig):
         super().__init__(name_task, class_data_module, class_model, config_type)
 
     def create_net(self):
@@ -35,7 +35,7 @@ class QAFinetuner(BaseFinetuner):
 
 def main():
     name_task = sys.argv[2]
-    finetuner = QAFinetuner(name_task, DataModule, QAModel)
+    finetuner = QAExperiment(name_task, DataModule, QAModel)
     finetuner.run()
 
 

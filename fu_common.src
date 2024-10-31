@@ -1,0 +1,28 @@
+function get_rscgrp() {
+  if [ $1 -gt 348 ]; then
+      echo "large";
+  else
+      echo "small";
+  fi
+}
+
+function get_emailargs {
+  if email=$(git config --get user.email); then
+      echo -m b,e --mail-list ${email}
+  else
+      >&2 echo "$0 WARNING: git email not set!"
+  fi
+}
+
+function print_usage {
+    echo "usage: $0 [-h] [-c config] [-e elapse] [-g group] [-h help] [-m module] [-n nodes] [-o output] [-p py-env]"
+    echo "  -h help     display help"
+    echo "  -c config   specifies the config yaml file for langmo"
+    echo "  -e elapse   defines elapse time"
+    echo "  -g group    group id"
+    echo "  -m module   langmo module"
+    echo "  -n nodes    number of nodes"
+    echo "  -o output   output dir within data path"
+    echo "  -p py-env   path to python env to be deployed"
+    exit 1
+}

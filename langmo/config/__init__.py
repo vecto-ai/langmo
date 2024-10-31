@@ -5,11 +5,6 @@ from pathlib import Path
 
 from protonn.utils import load_json
 
-from .base import ConfigFinetune
-from .glue import GLUEConfig
-from .pretrain import ConfigPretrain
-
-
 def is_yaml_config(path):
     return path.is_file() and path.suffix in {".yaml", ".yml"}
 

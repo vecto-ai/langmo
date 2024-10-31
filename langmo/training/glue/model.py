@@ -6,8 +6,8 @@ import torch.nn.functional as F
 import torchmetrics
 from torchmetrics.functional import accuracy, pearson_corrcoef
 
-from langmo.config import GLUEConfig
-from langmo.training.base import BaseClassificationModel, ClassificationFinetuner
+from .config import GLUEConfig
+from langmo.training.base import BaseClassificationModel  # , ClassificationFinetuner
 
 
 class GLUEModel(BaseClassificationModel):
@@ -126,6 +126,6 @@ class GLUEModel(BaseClassificationModel):
         # TODO: make sure metrics are logged
 
 
-class GLUEFinetuner(ClassificationFinetuner):
-    def __init__(self, name_task, class_data_module, class_model):
-        super().__init__(name_task, class_data_module, class_model, config_type=GLUEConfig)
+# class GLUEFinetuner(ClassificationFinetuner):
+#     def __init__(self, name_task, class_data_module, class_model):
+#         super().__init__(name_task, class_data_module, class_model, config_type=GLUEConfig)

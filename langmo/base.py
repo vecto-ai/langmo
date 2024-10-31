@@ -57,6 +57,8 @@ class PLBase(pl.LightningModule):
             batch_in_span = params["batch_size"] * params["cnt_workers"] * schedule[i][1]
             steps_in_epoch = math.ceil(samples_per_epoch / batch_in_span)
             steps_total += steps_in_epoch * epochs_in_span
+        self.hparams["expected_cnt_steps"] = steps_total
+        print("$$$$$$$ Estimate train streps as ", steps_total)
         return steps_total
 
     def configure_optimizers(self):
@@ -80,8 +82,12 @@ class PLBase(pl.LightningModule):
         # print(optimizer_grouped_parameters)
         # TODO: double check if wd working when in grouped params
         # weight_decay=self.hparams["weight_decay"],
-        optimizer_params = self.hparams["optimizer"].pop("params")
-        class_optimizer = load_class(**self.hparams["optimizer"])
+        optimizer_params = self.hparams["optimizer"]["params"]
+        class_optimizer = load_class(
+            working_directory=self.hparams["optimizer"]["working_directory"],
+            module=self.hparams["optimizer"]["module"],
+            class_name=self.hparams["optimizer"]["class_name"],
+        )
         optimizer = class_optimizer(optimizer_grouped_parameters, lr=self.hparams["initial_lr"], **optimizer_params)
         # optimizer = FusedLAMB(
         #     optimizer_grouped_parameters,
@@ -129,6 +135,8 @@ class PLBase(pl.LightningModule):
         if "train_logs" not in self.hparams:
             self.hparams["train_logs"] = []
             self.hparams["cnt_samples_processed"] = 0
+            self.hparams["cnt_tokens_processed"] = 0
+            self.hparams["cnt_steps"] = 0
             self.hparams["train_logs"].append({})
             self.hparams["train_logs"][-1]["epoch"] = -1
             self.hparams["train_logs"][-1]["epoch_time"] = 0.0

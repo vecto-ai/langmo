@@ -10,7 +10,7 @@ from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
 
 from langmo.callbacks.model_snapshots_schedule import Monitor
-from langmo.config import ConfigPretrain as Config
+from langmo.training.mlm.config import ConfigPretrain as Config
 from langmo.config.base import LangmoConfig
 from langmo.trainer import get_trainer
 from langmo.training.mlm.data import TextDataModule
@@ -75,7 +75,6 @@ class Optimizer(unittest.TestCase):
     def test_custom_optim(self):
         params = Config(
             name_task="test_custom_optim",
-            cluster_env=self.cluster_env,
             param_path="tests/test_params/custom_optimizer.yaml",
         )
         params["name_run"] = "test_custom_optim"

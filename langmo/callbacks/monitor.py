@@ -10,7 +10,6 @@ import lightning as pl
 
 
 class Monitor(pl.Callback):
-
     # def append_metrics_to_train_logs(self, metrics):
     #     entry = dict(epoch=metrics["epoch"])
     #     for k, v in metrics.items():
@@ -131,6 +130,7 @@ class Monitor(pl.Callback):
     def save_resume_checkpoint(self, trainer, pl_module):
         # TODO: can't we just make it on init point to the same variable?
         self.update_epoch_time()
+        print("SAVING RESUME")
         if trainer.global_rank == 0:
             path_for_resume = Path(pl_module.hparams["path_results"]) / "resume"
             trainer.save_checkpoint(path_for_resume / "PL_model.ckpt")
@@ -178,6 +178,14 @@ class Monitor(pl.Callback):
         batch_idx,
         unused=0,
     ):
-        self.maybe_save_on_cnt_samples(trainer, pl_module)
-        self.maybe_save_on_timer(trainer, pl_module)
-        pass
+        # TODO: multiply current accumulation
+        pl_module.hparams["cnt_samples_processed"] += self.hparams["batch_size"] * self.hparams["cnt_workers"]
+        pl_module.hparams["cnt_tokens_processed"] += (
+            self.hparams["batch_size"] * self.hparams["cnt_workers"] * self.hparams["max_length"]
+        )
+        pl_module.log("samples_processed", float(self.hparams["cnt_samples_processed"]))
+        pl_module.log("tokens_processed", float(self.hparams["cnt_tokens_processed"]))
+        if (batch_idx + 1) % trainer.accumulate_grad_batches == 0:
+            self.maybe_save_on_cnt_samples(trainer, pl_module)
+            self.maybe_save_on_timer(trainer, pl_module)
+            pl_module.hparams["cnt_steps"] += 1
