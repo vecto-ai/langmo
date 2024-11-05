@@ -5,17 +5,17 @@ import unittest
 from shutil import copytree, rmtree
 
 import nltk
+from langmo.callbacks.model_snapshots_schedule import Monitor
+from langmo.config.base import LangmoConfig
+from langmo.training.mlm.data import BatchIter
+from langmo.trainer import get_trainer
+from langmo.training.base_data import TextDataModule
+from langmo.training.mlm.config import ConfigPretrain as Config
+from langmo.training.mlm.plmodel import PLModel
+from langmo.utils.resolve_callbacks import init_callbacks
 from protonn.pl.cluster_mpi import MPIClusterEnvironment
 from transformers import AutoConfig, AutoModelForMaskedLM, AutoTokenizer
 from transformers import logging as tr_logging
-
-from langmo.callbacks.model_snapshots_schedule import Monitor
-from langmo.training.mlm.config import ConfigPretrain as Config
-from langmo.config.base import LangmoConfig
-from langmo.trainer import get_trainer
-from langmo.training.mlm.data import TextDataModule
-from langmo.training.mlm.plmodel import PLModel
-from langmo.utils.resolve_callbacks import init_callbacks
 
 nltk.download("punkt")
 
@@ -82,9 +82,11 @@ class Optimizer(unittest.TestCase):
 
         callbacks = init_callbacks(params["callbacks"])
         trainer = get_trainer(params, self.cluster_env, callbacks)
+        params["cnt_workers"] = trainer.world_size
         model = build_model(params)
 
         data_module = TextDataModule(
+            batch_iterator_cls=BatchIter,
             cluster_env=self.cluster_env,
             tokenizer=model.tokenizer,
             params=params,
